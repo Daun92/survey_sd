@@ -33,7 +33,7 @@ export function SurveyStart({
     >
       <SurveyHeader
         currentIndex={0}
-        totalQuestions={questionCount}
+        totalSteps={questionCount}
         showProgress={false}
       />
 

@@ -11,7 +11,7 @@ export function SurveyCompletion() {
     >
       <SurveyHeader
         currentIndex={0}
-        totalQuestions={0}
+        totalSteps={0}
         showProgress={false}
       />
 

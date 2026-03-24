@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, use } from "react";
+import { useEffect, useState, useMemo, use } from "react";
 import { SurveyStart } from "@/components/respond/survey-start";
 import { SurveyHeader } from "@/components/respond/survey-header";
 import { SurveyQuestion } from "@/components/respond/survey-question";
@@ -30,11 +30,16 @@ interface SurveyData {
   customer: { companyName: string; contactName: string | null };
 }
 
+interface CategoryGroup {
+  category: string;
+  questions: Question[];
+}
+
 type ViewStep =
   | { kind: "loading" }
   | { kind: "error"; message: string }
   | { kind: "start" }
-  | { kind: "question"; index: number }
+  | { kind: "category"; index: number }
   | { kind: "submitting" }
   | { kind: "done" };
 
@@ -47,7 +52,24 @@ export default function RespondPage({
   const [step, setStep] = useState<ViewStep>({ kind: "loading" });
   const [data, setData] = useState<SurveyData | null>(null);
   const [answers, setAnswers] = useState<Record<number, string>>({});
-  const [currentError, setCurrentError] = useState<number | null>(null);
+  const [errors, setErrors] = useState<Set<number>>(new Set());
+
+  // 카테고리별 그룹핑
+  const categoryGroups = useMemo<CategoryGroup[]>(() => {
+    if (!data) return [];
+    const groups: CategoryGroup[] = [];
+    let current: CategoryGroup | null = null;
+
+    for (const q of data.questions) {
+      const cat = q.category || "기타";
+      if (!current || current.category !== cat) {
+        current = { category: cat, questions: [] };
+        groups.push(current);
+      }
+      current.questions.push(q);
+    }
+    return groups;
+  }, [data]);
 
   // Fetch survey data
   useEffect(() => {
@@ -55,10 +77,7 @@ export default function RespondPage({
       .then(async (res) => {
         const json = await res.json();
         if (!res.ok) {
-          setStep({
-            kind: "error",
-            message: json.message || "오류가 발생했습니다",
-          });
+          setStep({ kind: "error", message: json.message || "오류가 발생했습니다" });
           return;
         }
         setData(json);
@@ -69,57 +88,55 @@ export default function RespondPage({
       });
   }, [token]);
 
-  // Validate current question
-  function validateCurrent(questionIndex: number): boolean {
-    if (!data) return false;
-    const q = data.questions[questionIndex];
-    if (q.required && !answers[q.id]?.trim()) {
-      setCurrentError(q.id);
-      return false;
+  // 현재 카테고리의 필수 문항 검증
+  function validateCategory(catIndex: number): boolean {
+    const group = categoryGroups[catIndex];
+    if (!group) return true;
+    const newErrors = new Set<number>();
+    for (const q of group.questions) {
+      if (q.required && !answers[q.id]?.trim()) {
+        newErrors.add(q.id);
+      }
     }
-    setCurrentError(null);
-    return true;
+    setErrors(newErrors);
+    if (newErrors.size > 0) {
+      // 첫 에러 문항으로 스크롤
+      setTimeout(() => {
+        document.querySelector("[data-error]")?.scrollIntoView({ behavior: "smooth", block: "center" });
+      }, 100);
+    }
+    return newErrors.size === 0;
   }
 
-  // Navigate next
   function goNext() {
-    if (!data) return;
-
     if (step.kind === "start") {
-      setStep({ kind: "question", index: 0 });
+      setStep({ kind: "category", index: 0 });
+      window.scrollTo({ top: 0, behavior: "smooth" });
       return;
     }
-
-    if (step.kind === "question") {
-      // Validate current question
-      if (!validateCurrent(step.index)) return;
-
-      // Last question → submit
-      if (step.index === data.questions.length - 1) {
+    if (step.kind === "category") {
+      if (!validateCategory(step.index)) return;
+      if (step.index === categoryGroups.length - 1) {
         handleSubmit();
         return;
       }
-
-      // Next question
-      setStep({ kind: "question", index: step.index + 1 });
+      setErrors(new Set());
+      setStep({ kind: "category", index: step.index + 1 });
       window.scrollTo({ top: 0, behavior: "smooth" });
     }
   }
 
-  // Navigate previous
   function goPrev() {
-    if (step.kind === "question" && step.index > 0) {
-      setCurrentError(null);
-      setStep({ kind: "question", index: step.index - 1 });
+    if (step.kind === "category" && step.index > 0) {
+      setErrors(new Set());
+      setStep({ kind: "category", index: step.index - 1 });
       window.scrollTo({ top: 0, behavior: "smooth" });
     }
   }
 
-  // Submit
   async function handleSubmit() {
     if (!data) return;
     setStep({ kind: "submitting" });
-
     try {
       const res = await fetch(`/api/respond/${token}`, {
         method: "POST",
@@ -130,15 +147,11 @@ export default function RespondPage({
             .map(([qId, value]) => ({ questionId: parseInt(qId), value })),
         }),
       });
-
       if (res.ok) {
         setStep({ kind: "done" });
       } else {
         const err = await res.json();
-        setStep({
-          kind: "error",
-          message: err.error || "제출 중 오류가 발생했습니다",
-        });
+        setStep({ kind: "error", message: err.error || "제출 중 오류가 발생했습니다" });
       }
     } catch {
       setStep({ kind: "error", message: "서버에 연결할 수 없습니다" });
@@ -148,18 +161,10 @@ export default function RespondPage({
   // ─── Loading ───
   if (step.kind === "loading") {
     return (
-      <div
-        className="flex min-h-screen items-center justify-center"
-        style={{ backgroundColor: "var(--expert-bg)" }}
-      >
+      <div className="flex min-h-screen items-center justify-center" style={{ backgroundColor: "var(--expert-bg)" }}>
         <div className="text-center space-y-3">
-          <ClipboardList
-            className="mx-auto h-8 w-8 animate-pulse"
-            style={{ color: "var(--expert-on-surface-variant)" }}
-          />
-          <p style={{ color: "var(--expert-on-surface-variant)" }}>
-            설문을 불러오는 중...
-          </p>
+          <ClipboardList className="mx-auto h-8 w-8 animate-pulse" style={{ color: "var(--expert-on-surface-variant)" }} />
+          <p style={{ color: "var(--expert-on-surface-variant)" }}>설문을 불러오는 중...</p>
         </div>
       </div>
     );
@@ -168,33 +173,11 @@ export default function RespondPage({
   // ─── Error ───
   if (step.kind === "error") {
     return (
-      <div
-        className="flex min-h-screen items-center justify-center p-4"
-        style={{ backgroundColor: "var(--expert-bg)" }}
-      >
-        <div
-          className="max-w-md w-full py-12 px-8 text-center space-y-4 rounded-xl"
-          style={{
-            backgroundColor: "var(--expert-surface-lowest)",
-            boxShadow: "var(--expert-shadow)",
-          }}
-        >
-          <AlertCircle
-            className="mx-auto h-12 w-12"
-            style={{ color: "var(--expert-on-surface-variant)" }}
-          />
-          <p
-            className="text-lg font-medium font-headline"
-            style={{ color: "var(--expert-on-surface)" }}
-          >
-            {step.message}
-          </p>
-          <p
-            className="text-sm"
-            style={{ color: "var(--expert-on-surface-variant)" }}
-          >
-            문의사항이 있으시면 담당자에게 연락해 주세요.
-          </p>
+      <div className="flex min-h-screen items-center justify-center p-4" style={{ backgroundColor: "var(--expert-bg)" }}>
+        <div className="max-w-md w-full py-12 px-8 text-center space-y-4 rounded-xl" style={{ backgroundColor: "var(--expert-surface-lowest)", boxShadow: "var(--expert-shadow)" }}>
+          <AlertCircle className="mx-auto h-12 w-12" style={{ color: "var(--expert-on-surface-variant)" }} />
+          <p className="text-lg font-medium font-headline" style={{ color: "var(--expert-on-surface)" }}>{step.message}</p>
+          <p className="text-sm" style={{ color: "var(--expert-on-surface-variant)" }}>문의사항이 있으시면 담당자에게 연락해 주세요.</p>
         </div>
       </div>
     );
@@ -217,63 +200,83 @@ export default function RespondPage({
     return <SurveyCompletion />;
   }
 
-  // ─── Question / Submitting ───
-  if ((step.kind === "question" || step.kind === "submitting") && data) {
-    const questionIndex =
-      step.kind === "question"
-        ? step.index
-        : data.questions.length - 1;
-    const question = data.questions[questionIndex];
-    const isLast = questionIndex === data.questions.length - 1;
+  // ─── Category View (multiple questions) ───
+  if ((step.kind === "category" || step.kind === "submitting") && data) {
+    const catIndex = step.kind === "category" ? step.index : categoryGroups.length - 1;
+    const group = categoryGroups[catIndex];
+    const isLast = catIndex === categoryGroups.length - 1;
     const isSubmitting = step.kind === "submitting";
 
     return (
-      <div
-        className="min-h-screen flex flex-col"
-        style={{ backgroundColor: "var(--expert-bg)" }}
-      >
+      <div className="min-h-screen flex flex-col" style={{ backgroundColor: "var(--expert-bg)" }}>
         <SurveyHeader
-          currentIndex={questionIndex}
-          totalQuestions={data.questions.length}
+          currentIndex={catIndex}
+          totalSteps={categoryGroups.length}
+          categoryName={group.category}
         />
 
-        {/* Main Content */}
         <main className="flex-grow pt-24 pb-32 px-6 max-w-[760px] mx-auto w-full">
-          <SurveyQuestion
-            question={question}
-            value={answers[question.id] || ""}
-            onChange={(v) => {
-              setAnswers({ ...answers, [question.id]: v });
-              if (currentError === question.id) {
-                setCurrentError(null);
-              }
-            }}
-            index={questionIndex}
-            total={data.questions.length}
-            hasError={currentError === question.id}
-          />
+          {/* 카테고리 제목 */}
+          <div className="mb-10">
+            <span
+              className="font-headline text-sm font-semibold uppercase tracking-widest"
+              style={{ color: "var(--expert-primary-accent)" }}
+            >
+              {group.category}
+            </span>
+            <div className="mt-2 h-[2px] w-12 rounded-full" style={{ backgroundColor: "var(--expert-primary-accent)" }} />
+          </div>
+
+          {/* 문항 목록 */}
+          <div className="space-y-12">
+            {group.questions.map((question, qIdx) => {
+              // 전체 문항 중 인덱스 계산
+              const globalIndex = categoryGroups
+                .slice(0, catIndex)
+                .reduce((sum, g) => sum + g.questions.length, 0) + qIdx;
+
+              return (
+                <div
+                  key={question.id}
+                  {...(errors.has(question.id) ? { "data-error": true } : {})}
+                >
+                  <SurveyQuestion
+                    question={question}
+                    value={answers[question.id] || ""}
+                    onChange={(v) => {
+                      setAnswers({ ...answers, [question.id]: v });
+                      if (errors.has(question.id)) {
+                        const next = new Set(errors);
+                        next.delete(question.id);
+                        setErrors(next);
+                      }
+                    }}
+                    index={globalIndex}
+                    total={data.questions.length}
+                    hasError={errors.has(question.id)}
+                  />
+                </div>
+              );
+            })}
+          </div>
         </main>
 
-        {/* Background Decorative Elements */}
+        {/* Background decorative */}
         <div className="fixed top-0 left-0 w-full h-full -z-10 pointer-events-none opacity-20 overflow-hidden">
           <div
             className="absolute top-[-10%] right-[-10%] w-[40%] h-[40%] rounded-full blur-[120px]"
-            style={{
-              background: `linear-gradient(to bottom right, var(--expert-primary-fixed), transparent)`,
-            }}
+            style={{ background: "linear-gradient(to bottom right, var(--expert-primary-fixed), transparent)" }}
           />
           <div
             className="absolute bottom-[-10%] left-[-10%] w-[40%] h-[40%] rounded-full blur-[120px]"
-            style={{
-              background: `linear-gradient(to top right, rgba(93, 91, 124, 0.3), transparent)`,
-            }}
+            style={{ background: "linear-gradient(to top right, rgba(93, 91, 124, 0.3), transparent)" }}
           />
         </div>
 
         <SurveyBottomNav
-          onPrev={questionIndex > 0 ? goPrev : undefined}
+          onPrev={catIndex > 0 ? goPrev : undefined}
           onNext={goNext}
-          showPrev={questionIndex > 0}
+          showPrev={catIndex > 0}
           nextLabel={isLast ? "제출하기" : "다음"}
           isSubmitting={isSubmitting}
         />

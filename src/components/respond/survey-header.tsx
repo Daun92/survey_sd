@@ -4,19 +4,21 @@ import { X } from "lucide-react";
 
 interface SurveyHeaderProps {
   currentIndex: number;
-  totalQuestions: number;
+  totalSteps: number;
+  categoryName?: string;
   showProgress?: boolean;
   onClose?: () => void;
 }
 
 export function SurveyHeader({
   currentIndex,
-  totalQuestions,
+  totalSteps,
+  categoryName,
   showProgress = true,
   onClose,
 }: SurveyHeaderProps) {
-  const progressPercent = totalQuestions > 0
-    ? Math.round(((currentIndex + 1) / totalQuestions) * 100)
+  const progressPercent = totalSteps > 0
+    ? Math.round(((currentIndex + 1) / totalSteps) * 100)
     : 0;
 
   return (
@@ -31,7 +33,8 @@ export function SurveyHeader({
         {showProgress && (
           <div className="flex flex-col items-center flex-1 max-w-md px-8">
             <span className="text-xs font-semibold text-[var(--expert-primary-accent)] mb-1 font-headline">
-              {currentIndex + 1}/{totalQuestions} 질문
+              {currentIndex + 1}/{totalSteps}
+              {categoryName && <span className="ml-1.5 text-[var(--expert-on-surface-variant)]">· {categoryName}</span>}
             </span>
             <div className="w-full h-1.5 bg-[var(--expert-surface-high)] rounded-full overflow-hidden">
               <div
@@ -57,7 +60,6 @@ export function SurveyHeader({
           <div className="w-9" />
         )}
       </div>
-      {/* Bottom accent line */}
       <div className="bg-[var(--expert-surface-high)] h-[1px] w-full" />
     </header>
   );
