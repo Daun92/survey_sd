@@ -117,6 +117,43 @@
   --sidebar-ring: oklch(0.556 0 0);
 }
 
+/* Expert Intelligence Framework — scoped to respondent pages */
+.expert-theme {
+  --expert-primary: #006a3c;
+  --expert-primary-accent: #009A5A;
+  --expert-primary-container: #00864e;
+  --expert-primary-fixed: #81fab0;
+  --expert-primary-fixed-dim: #63dd96;
+  --expert-secondary: #5d5b7c;
+  --expert-tertiary: #4742e0;
+  --expert-tertiary-container: #615ffa;
+  --expert-lavender: #F7EBFF;
+  --expert-bg: #fbf9f8;
+  --expert-surface-lowest: #ffffff;
+  --expert-surface-low: #f6f3f2;
+  --expert-surface-container: #f0eded;
+  --expert-surface-high: #eae8e7;
+  --expert-on-surface: #1b1c1c;
+  --expert-on-surface-variant: #3d4a40;
+  --expert-outline: #6d7a6f;
+  --expert-outline-variant: #bccabd;
+  --expert-on-primary: #ffffff;
+  --expert-nps-red: #EB3737;
+  --expert-nps-red-bg: #FDECEC;
+  --expert-nps-yellow-bg: #FFF3E0;
+  --expert-nps-green-bg: #E8F5EE;
+  --expert-shadow: 0 12px 32px rgba(61, 59, 90, 0.06);
+  color-scheme: light;
+  font-family: var(--font-expert-body, "Inter", sans-serif);
+  letter-spacing: -0.425px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.expert-theme .font-headline {
+  font-family: var(--font-expert-heading, "Manrope", sans-serif);
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
