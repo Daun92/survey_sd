@@ -24,7 +24,7 @@ export default function RespondLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className={`expert-theme ${manrope.variable} ${inter.variable}`}>
+    <div className={`expert-theme ${manrope.variable} ${inter.variable} !block`}>
       {children}
     </div>
   );
