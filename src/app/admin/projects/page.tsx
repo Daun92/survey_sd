@@ -86,9 +86,10 @@ export default async function ProjectsPage() {
             );
 
             return (
-              <div
+              <Link
                 key={project.id}
-                className="rounded-xl border border-stone-200 bg-white shadow-sm hover:shadow-md transition-shadow"
+                href={`/admin/projects/${project.id}`}
+                className="rounded-xl border border-stone-200 bg-white shadow-sm hover:shadow-md transition-shadow block"
               >
                 <div className="p-5">
                   <div className="flex items-start justify-between mb-3">
@@ -164,7 +165,7 @@ export default async function ProjectsPage() {
                     </span>
                   </div>
                 </div>
-              </div>
+              </Link>
             );
           })}
         </div>
