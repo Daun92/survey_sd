@@ -149,16 +149,21 @@ export default async function DashboardPage() {
                 <div className="flex-1 text-xs font-medium text-stone-500">
                   생성일
                 </div>
+                <div className="w-20 text-xs font-medium text-stone-500 text-right">
+                  액션
+                </div>
               </div>
               {data.recentSurveys.map((survey) => {
                 const status = statusLabels[survey.status] ?? statusLabels.draft;
                 return (
                   <div
                     key={survey.id}
-                    className="flex items-center px-5 h-12 border-b border-stone-100 last:border-0"
+                    className="flex items-center px-5 h-12 border-b border-stone-100 last:border-0 hover:bg-stone-50/50 transition-colors"
                   >
                     <div className="flex-[3] text-sm font-medium text-stone-800 truncate pr-4">
-                      {survey.title}
+                      <Link href={`/admin/surveys/${survey.id}`} className="hover:text-teal-600 transition-colors">
+                        {survey.title}
+                      </Link>
                     </div>
                     <div className="flex-1">
                       <span
@@ -169,6 +174,17 @@ export default async function DashboardPage() {
                     </div>
                     <div className="flex-1 text-[13px] text-stone-500">
                       {formatDate(survey.created_at)}
+                    </div>
+                    <div className="w-20 flex items-center justify-end gap-0.5">
+                      <Link href={`/admin/surveys/${survey.id}`} className="rounded p-1 text-stone-400 hover:text-teal-600 hover:bg-teal-50 transition-colors" title="보기">
+                        <Eye size={14} />
+                      </Link>
+                      <Link href="/admin/distribute" className="rounded p-1 text-stone-400 hover:text-teal-600 hover:bg-teal-50 transition-colors" title="배포">
+                        <Send size={14} />
+                      </Link>
+                      <Link href={`/admin/reports?survey=${survey.id}`} className="rounded p-1 text-stone-400 hover:text-teal-600 hover:bg-teal-50 transition-colors" title="리포트">
+                        <FileBarChart size={14} />
+                      </Link>
                     </div>
                   </div>
                 );
