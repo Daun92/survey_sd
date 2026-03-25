@@ -10,6 +10,7 @@ import {
   MessageSquare,
   ChartColumn,
   QrCode,
+  Zap,
   FileSearch,
   PenTool,
   Users,
@@ -21,6 +22,7 @@ import {
 
 const eduMenuItems = [
   { href: "/admin", label: "대시보드", icon: LayoutDashboard },
+  { href: "/admin/quick-create", label: "간편 생성", icon: Zap },
   { href: "/admin/projects", label: "프로젝트", icon: FolderOpen },
   { href: "/admin/surveys", label: "설문 관리", icon: ClipboardList },
   { href: "/admin/cs-templates", label: "CS 문항 템플릿", icon: BookOpen },
