@@ -195,11 +195,11 @@ export default async function ResponsesPage() {
                   {/* Action Buttons */}
                   <div className="flex items-center gap-2 pt-3 border-t border-stone-100">
                     <Link
-                      href={`/admin/surveys/${survey.id}`}
+                      href={`/admin/responses/${survey.id}`}
                       className="inline-flex items-center gap-1.5 rounded-lg border border-stone-200 bg-white px-3 py-2 text-[13px] font-medium text-stone-700 hover:bg-stone-50 transition-colors flex-1 justify-center"
                     >
                       <Eye size={14} />
-                      상세
+                      응답 보기
                     </Link>
                     <Link
                       href={`/admin/reports?survey=${survey.id}`}

@@ -5,6 +5,10 @@ import {
   FolderOpen,
   ClipboardList,
   ChartColumn,
+  Zap,
+  Eye,
+  Send,
+  FileBarChart,
 } from "lucide-react";
 
 export const revalidate = 60;
@@ -69,11 +73,29 @@ export default async function DashboardPage() {
 
   return (
     <div>
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-stone-800">대시보드</h1>
-        <p className="text-sm text-stone-500 mt-1">
-          교육 설문 현황을 한눈에 확인하세요
-        </p>
+      <div className="mb-8 flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-stone-800">대시보드</h1>
+          <p className="text-sm text-stone-500 mt-1">
+            교육 설문 현황을 한눈에 확인하세요
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Link
+            href="/admin/quick-create"
+            className="inline-flex items-center gap-1.5 rounded-lg bg-teal-600 px-4 py-2 text-sm font-semibold text-white hover:bg-teal-700 transition-colors"
+          >
+            <Zap size={14} />
+            간편 생성
+          </Link>
+          <Link
+            href="/admin/projects"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-stone-200 bg-white px-4 py-2 text-sm font-medium text-stone-700 hover:bg-stone-50 transition-colors"
+          >
+            <FolderOpen size={14} />
+            프로젝트
+          </Link>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">

@@ -2,11 +2,12 @@ import { supabase } from "@/lib/supabase";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
-  ArrowLeft,
-  ClipboardList,
+  ChevronRight,
   Calendar,
   Hash,
   MessageSquare,
+  ClipboardList,
+  Send,
 } from "lucide-react";
 import SurveyEditor from "./SurveyEditor";
 
@@ -26,7 +27,19 @@ async function getSurveyDetail(id: string) {
   ] = await Promise.all([
     supabase
       .from("edu_surveys")
-      .select("*")
+      .select(`
+        *,
+        sessions (
+          id, name,
+          courses (
+            id, name,
+            projects (
+              id, name,
+              customers ( id, company_name )
+            )
+          )
+        )
+      `)
       .eq("id", id)
       .single(),
     supabase
@@ -42,10 +55,21 @@ async function getSurveyDetail(id: string) {
 
   if (surveyError || !survey) return null;
 
+  // 프로젝트/고객사 정보 추출
+  const session = survey.sessions as any;
+  const course = session?.courses;
+  const project = course?.projects;
+  const customer = project?.customers;
+
   return {
     survey,
     questions: questions ?? [],
     submissionCount: submissionCount ?? 0,
+    projectContext: {
+      projectId: project?.id ?? null,
+      projectName: project?.name ?? null,
+      customerName: customer?.company_name ?? null,
+    },
   };
 }
 
@@ -61,40 +85,65 @@ export default async function SurveyDetailPage({
     notFound();
   }
 
-  const { survey, questions, submissionCount } = data;
+  const { survey, questions, submissionCount, projectContext } = data;
 
   return (
     <div>
-      <div className="mb-6 flex items-center justify-between">
-        <Link
-          href="/admin/surveys"
-          className="inline-flex items-center gap-1.5 text-sm text-stone-500 hover:text-stone-700 transition-colors"
-        >
-          <ArrowLeft size={16} />
-          설문 목록으로 돌아가기
-        </Link>
+      {/* 브레드크럼 + 메타 정보 */}
+      <div className="mb-5">
+        <nav className="flex items-center gap-1.5 text-[13px] text-stone-400 mb-3">
+          <Link href="/admin/projects" className="hover:text-stone-600 transition-colors">
+            프로젝트
+          </Link>
+          {projectContext.projectId && (
+            <>
+              <ChevronRight size={12} />
+              <Link
+                href={`/admin/projects/${projectContext.projectId}`}
+                className="hover:text-stone-600 transition-colors"
+              >
+                {projectContext.customerName && (
+                  <span className="text-stone-500">{projectContext.customerName} · </span>
+                )}
+                {projectContext.projectName || "프로젝트"}
+              </Link>
+            </>
+          )}
+          <ChevronRight size={12} />
+          <span className="text-stone-600 font-medium">{survey.title}</span>
+        </nav>
 
-        <div className="flex flex-wrap items-center gap-4">
-          {survey.survey_type && (
+        <div className="flex items-center justify-between">
+          <div className="flex flex-wrap items-center gap-4">
+            {survey.survey_type && (
+              <div className="flex items-center gap-1.5 text-[13px] text-stone-500">
+                <ClipboardList size={14} className="text-stone-400" />
+                {survey.survey_type}
+              </div>
+            )}
+            {survey.education_type && (
+              <div className="flex items-center gap-1.5 text-[13px] text-stone-500">
+                <Hash size={14} className="text-stone-400" />
+                {survey.education_type}
+              </div>
+            )}
             <div className="flex items-center gap-1.5 text-[13px] text-stone-500">
-              <ClipboardList size={14} className="text-stone-400" />
-              {survey.survey_type}
+              <Calendar size={14} className="text-stone-400" />
+              {formatDate(survey.starts_at)} ~ {formatDate(survey.ends_at)}
             </div>
-          )}
-          {survey.education_type && (
             <div className="flex items-center gap-1.5 text-[13px] text-stone-500">
-              <Hash size={14} className="text-stone-400" />
-              {survey.education_type}
+              <MessageSquare size={14} className="text-stone-400" />
+              응답 {submissionCount}건
             </div>
-          )}
-          <div className="flex items-center gap-1.5 text-[13px] text-stone-500">
-            <Calendar size={14} className="text-stone-400" />
-            {formatDate(survey.starts_at)} ~ {formatDate(survey.ends_at)}
           </div>
-          <div className="flex items-center gap-1.5 text-[13px] text-stone-500">
-            <MessageSquare size={14} className="text-stone-400" />
-            응답 {submissionCount}건
-          </div>
+
+          <Link
+            href="/admin/distribute"
+            className="inline-flex items-center gap-1.5 rounded-lg bg-teal-600 px-4 py-2 text-xs font-semibold text-white hover:bg-teal-700 transition-colors"
+          >
+            <Send size={13} />
+            배포하기
+          </Link>
         </div>
       </div>
 

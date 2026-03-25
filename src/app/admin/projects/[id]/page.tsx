@@ -12,6 +12,7 @@ import {
   ClipboardList,
   FolderOpen,
   StickyNote,
+  Plus,
 } from "lucide-react";
 import { ProjectActions } from "./ProjectActions";
 
@@ -322,11 +323,20 @@ export default async function ProjectDetailPage({
 
       {/* Surveys */}
       <div className="rounded-xl border border-stone-200 bg-white shadow-sm">
-        <div className="p-5 border-b border-stone-100">
-          <h2 className="text-base font-semibold text-stone-900">설문 목록</h2>
-          <p className="text-sm text-stone-500 mt-0.5">
-            총 {surveys.length}개 설문
-          </p>
+        <div className="p-5 border-b border-stone-100 flex items-center justify-between">
+          <div>
+            <h2 className="text-base font-semibold text-stone-900">설문 목록</h2>
+            <p className="text-sm text-stone-500 mt-0.5">
+              총 {surveys.length}개 설문
+            </p>
+          </div>
+          <Link
+            href={`/admin/quick-create?project=${project.id}`}
+            className="inline-flex items-center gap-1.5 rounded-lg bg-teal-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-teal-700 transition-colors"
+          >
+            <Plus size={13} />
+            설문 추가
+          </Link>
         </div>
 
         {surveys.length === 0 ? (
