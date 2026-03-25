@@ -15,6 +15,9 @@ import {
   FileText,
   Users,
   Layers,
+  Settings2,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
 import {
   DndContext,
@@ -37,6 +40,7 @@ import AiFab from "./ai-fab";
 import SurveyPreview from "./survey-preview";
 import {
   updateSurvey,
+  updateSurveySettings,
   deleteSurvey,
   addQuestion,
   updateQuestion,
@@ -45,6 +49,15 @@ import {
 } from "./actions";
 
 // ─── Types ───
+
+interface SurveySettings {
+  collect_respondent_info?: boolean;
+  anonymous?: boolean;
+  show_progress?: boolean;
+  thank_you_message?: string;
+  landing_notice?: string;
+  ending_title?: string;
+}
 
 interface Survey {
   id: string;
@@ -56,6 +69,7 @@ interface Survey {
   starts_at: string | null;
   ends_at: string | null;
   url_token: string;
+  settings?: SurveySettings | null;
 }
 
 interface Question {
@@ -352,6 +366,9 @@ function SortableQuestionRow({ question, index, surveyId, onRefresh }: {
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: question.id });
   const [editing, setEditing] = useState(false);
+  const [inlineEditing, setInlineEditing] = useState(false);
+  const [inlineText, setInlineText] = useState(question.question_text);
+  const [savingInline, setSavingInline] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
 
@@ -361,6 +378,17 @@ function SortableQuestionRow({ question, index, surveyId, onRefresh }: {
     setDeleting(true);
     try { await deleteQuestion(question.id, surveyId); onRefresh(); }
     catch (e) { alert(e instanceof Error ? e.message : "삭제 실패"); setDeleting(false); setConfirmDelete(false); }
+  };
+
+  const handleInlineSave = async () => {
+    if (!inlineText.trim() || inlineText === question.question_text) { setInlineEditing(false); return; }
+    setSavingInline(true);
+    try {
+      await updateQuestion(question.id, surveyId, { question_text: inlineText.trim() });
+      setInlineEditing(false);
+      onRefresh();
+    } catch (e) { alert(e instanceof Error ? e.message : "수정 실패"); }
+    finally { setSavingInline(false); }
   };
 
   if (editing) {
@@ -385,12 +413,31 @@ function SortableQuestionRow({ question, index, surveyId, onRefresh }: {
         {question.question_code || `Q${index + 1}`}
       </span>
 
-      {/* Content */}
+      {/* Content — 클릭하면 인라인 편집 */}
       <div className="flex-1 min-w-0">
-        <p className="text-sm text-stone-800 leading-relaxed">
-          {question.question_text}
-          {question.is_required && <span className="text-red-400 ml-0.5">*</span>}
-        </p>
+        {inlineEditing ? (
+          <div className="flex items-start gap-1.5">
+            <textarea
+              autoFocus
+              value={inlineText}
+              onChange={(e) => setInlineText(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleInlineSave(); } if (e.key === "Escape") { setInlineText(question.question_text); setInlineEditing(false); } }}
+              rows={2}
+              className="flex-1 rounded-lg border border-teal-300 px-2.5 py-1.5 text-sm focus:border-teal-500 focus:ring-1 focus:ring-teal-500 outline-none resize-none"
+            />
+            <button onClick={handleInlineSave} disabled={savingInline} className="shrink-0 rounded p-1 text-teal-600 hover:bg-teal-50" title="저장 (Enter)">
+              {savingInline ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
+            </button>
+            <button onClick={() => { setInlineText(question.question_text); setInlineEditing(false); }} className="shrink-0 rounded p-1 text-stone-400 hover:bg-stone-100" title="취소 (Esc)">
+              <X size={14} />
+            </button>
+          </div>
+        ) : (
+          <p className="text-sm text-stone-800 leading-relaxed cursor-text hover:bg-teal-50/50 rounded px-1 -mx-1 transition-colors" onClick={() => { setInlineText(question.question_text); setInlineEditing(true); }}>
+            {question.question_text}
+            {question.is_required && <span className="text-red-400 ml-0.5">*</span>}
+          </p>
+        )}
         {opts.length > 0 && (
           <div className="flex flex-wrap gap-1 mt-1">
             {opts.map((opt, i) => <span key={i} className="inline-flex rounded bg-stone-100 px-1.5 py-0.5 text-[11px] text-stone-500">{opt}</span>)}
@@ -424,6 +471,9 @@ function SortableQuestionRow({ question, index, surveyId, onRefresh }: {
 export default function SurveyEditor({ survey: initialSurvey, questions: initialQuestions, submissionCount }: Props) {
   const router = useRouter();
   const [showAddForm, setShowAddForm] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  const [savingSettings, setSavingSettings] = useState(false);
+  const [settings, setSettings] = useState<SurveySettings>(() => (initialSurvey.settings as SurveySettings) ?? {});
 
   const survey = initialSurvey;
   const questions = initialQuestions;
@@ -487,6 +537,70 @@ export default function SurveyEditor({ survey: initialSurvey, questions: initial
             <DeleteSurveyButton surveyId={survey.id} />
           </div>
         </div>
+      </div>
+
+      {/* 설문 설정 패널 */}
+      <div className="rounded-xl border border-stone-200 bg-white shadow-sm">
+        <button
+          onClick={() => setShowSettings(!showSettings)}
+          className="w-full flex items-center justify-between px-5 py-3.5 text-sm font-semibold text-stone-700 hover:bg-stone-50/50 transition-colors"
+        >
+          <div className="flex items-center gap-2">
+            <Settings2 size={15} className="text-stone-400" />
+            랜딩 · 엔딩 페이지 설정
+          </div>
+          {showSettings ? <ChevronUp size={15} className="text-stone-400" /> : <ChevronDown size={15} className="text-stone-400" />}
+        </button>
+        {showSettings && (
+          <div className="px-5 pb-5 border-t border-stone-100 pt-4 space-y-4">
+            {/* 토글 설정 */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <label className="flex items-center gap-2.5 rounded-lg border border-stone-200 px-3 py-2.5 cursor-pointer hover:bg-stone-50 transition-colors">
+                <input type="checkbox" checked={settings.collect_respondent_info !== false} onChange={(e) => setSettings({ ...settings, collect_respondent_info: e.target.checked })} className="accent-teal-600" />
+                <span className="text-sm text-stone-700">응답자 정보 수집</span>
+              </label>
+              <label className="flex items-center gap-2.5 rounded-lg border border-stone-200 px-3 py-2.5 cursor-pointer hover:bg-stone-50 transition-colors">
+                <input type="checkbox" checked={settings.anonymous ?? false} onChange={(e) => setSettings({ ...settings, anonymous: e.target.checked })} className="accent-teal-600" />
+                <span className="text-sm text-stone-700">익명 설문</span>
+              </label>
+              <label className="flex items-center gap-2.5 rounded-lg border border-stone-200 px-3 py-2.5 cursor-pointer hover:bg-stone-50 transition-colors">
+                <input type="checkbox" checked={settings.show_progress !== false} onChange={(e) => setSettings({ ...settings, show_progress: e.target.checked })} className="accent-teal-600" />
+                <span className="text-sm text-stone-700">진행률 표시</span>
+              </label>
+            </div>
+
+            {/* 랜딩 페이지 */}
+            <div>
+              <label className="block text-[13px] font-medium text-stone-600 mb-1">개인정보 안내문 (랜딩 페이지 하단)</label>
+              <input type="text" value={settings.landing_notice ?? ""} onChange={(e) => setSettings({ ...settings, landing_notice: e.target.value })} placeholder="모든 응답은 익명으로 안전하게 처리됩니다" className="w-full rounded-lg border border-stone-200 px-3 py-2 text-sm focus:border-teal-500 focus:ring-1 focus:ring-teal-500 outline-none" />
+            </div>
+
+            {/* 엔딩 페이지 */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-[13px] font-medium text-stone-600 mb-1">엔딩 제목</label>
+                <input type="text" value={settings.ending_title ?? ""} onChange={(e) => setSettings({ ...settings, ending_title: e.target.value })} placeholder="응답이 제출되었습니다" className="w-full rounded-lg border border-stone-200 px-3 py-2 text-sm focus:border-teal-500 focus:ring-1 focus:ring-teal-500 outline-none" />
+              </div>
+              <div>
+                <label className="block text-[13px] font-medium text-stone-600 mb-1">감사 메시지</label>
+                <input type="text" value={settings.thank_you_message ?? ""} onChange={(e) => setSettings({ ...settings, thank_you_message: e.target.value })} placeholder="소중한 의견에 감사드립니다." className="w-full rounded-lg border border-stone-200 px-3 py-2 text-sm focus:border-teal-500 focus:ring-1 focus:ring-teal-500 outline-none" />
+              </div>
+            </div>
+
+            <button
+              onClick={async () => {
+                setSavingSettings(true);
+                try { await updateSurveySettings(survey.id, settings as Record<string, unknown>); refresh(); }
+                catch (e) { alert(e instanceof Error ? e.message : "설정 저장 실패"); }
+                finally { setSavingSettings(false); }
+              }}
+              disabled={savingSettings}
+              className="inline-flex items-center gap-1.5 rounded-lg bg-teal-600 px-4 py-2 text-xs font-semibold text-white hover:bg-teal-700 transition-colors disabled:opacity-50"
+            >
+              {savingSettings ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />} 설정 저장
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Two-column layout: Editor + Preview */}

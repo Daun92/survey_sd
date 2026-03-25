@@ -30,6 +30,8 @@ interface SurveyData {
     collect_respondent_info?: boolean
     show_progress?: boolean
     thank_you_message?: string
+    landing_notice?: string
+    ending_title?: string
   }
   sessionName: string
   sections: SurveySection[]
@@ -197,7 +199,7 @@ export default function SurveyForm({ survey, groupToken }: { survey: SurveyData;
           </button>
           <div className="flex items-center justify-center gap-1.5 mt-3">
             <Shield size={12} className="text-stone-400" />
-            <span className="text-[11px] text-stone-400">모든 응답은 익명으로 안전하게 처리됩니다</span>
+            <span className="text-[11px] text-stone-400">{survey.settings.landing_notice || '모든 응답은 익명으로 안전하게 처리됩니다'}</span>
           </div>
         </div>
       </div>
@@ -215,7 +217,7 @@ export default function SurveyForm({ survey, groupToken }: { survey: SurveyData;
             <CheckCircle2 className="w-8 h-8 text-teal-600" />
           </div>
           <div className="text-center space-y-2">
-            <h2 className="text-[22px] font-bold text-stone-900">응답이 제출되었습니다</h2>
+            <h2 className="text-[22px] font-bold text-stone-900">{survey.settings.ending_title || '응답이 제출되었습니다'}</h2>
             <p className="text-sm text-stone-500 leading-relaxed whitespace-pre-line">
               {survey.settings.thank_you_message || '소중한 의견에 감사드립니다.\n응답 내용은 서비스 품질 개선에 활용됩니다.'}
             </p>
