@@ -8,6 +8,7 @@ import {
   CalendarDays,
   Users,
   TrendingUp,
+  Download,
 } from "lucide-react";
 import { AIReportComment } from "./ai-comment";
 import { AIOpenAnalysis } from "./ai-open-analysis";
@@ -117,10 +118,21 @@ export default async function ReportsPage({
             <ChevronLeft size={16} />
             목록으로 돌아가기
           </Link>
-          <h1 className="text-2xl font-bold text-stone-800">리포트</h1>
-          <p className="text-sm text-stone-500 mt-1">
-            교육 설문 결과를 분석하세요
-          </p>
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl font-bold text-stone-800">리포트</h1>
+              <p className="text-sm text-stone-500 mt-1">
+                교육 설문 결과를 분석하세요
+              </p>
+            </div>
+            <a
+              href={`/api/surveys/${report.id}/export`}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-stone-200 bg-white px-3.5 py-2 text-sm font-medium text-stone-700 hover:bg-stone-50 transition-colors shadow-sm"
+            >
+              <Download size={14} />
+              CSV 내보내기
+            </a>
+          </div>
         </div>
 
         <div className="rounded-xl border border-stone-200 bg-white shadow-sm mb-6">
