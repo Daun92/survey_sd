@@ -46,7 +46,7 @@ export default async function SurveysPage() {
           </p>
         </div>
         <Link
-          href="#"
+          href="/admin/quick-create"
           className="inline-flex items-center gap-2 rounded-lg bg-teal-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-teal-700 transition-colors"
         >
           <Plus size={16} />

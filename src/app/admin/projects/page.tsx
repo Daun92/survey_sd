@@ -29,7 +29,7 @@ async function getProjects() {
   const { data, error } = await supabase
     .from("projects")
     .select(
-      "id, name, bris_code, project_type, status, am_name, start_date, end_date, created_at, customer_id, customers(id, company_name), courses(id), sessions(id)"
+      "id, name, bris_code, project_type, status, am_name, start_date, end_date, created_at, customer_id, customers(id, company_name), courses(id, sessions(id))"
     )
     .order("created_at", { ascending: false });
 
@@ -75,12 +75,15 @@ export default async function ProjectsPage() {
             const customer = Array.isArray(project.customers)
               ? project.customers[0]
               : project.customers;
-            const courseCount = Array.isArray(project.courses)
-              ? project.courses.length
-              : 0;
-            const sessionCount = Array.isArray(project.sessions)
-              ? project.sessions.length
-              : 0;
+            const courses = Array.isArray(project.courses)
+              ? project.courses
+              : [];
+            const courseCount = courses.length;
+            const sessionCount = courses.reduce(
+              (sum: number, c: { sessions?: { id: string }[] }) =>
+                sum + (Array.isArray(c.sessions) ? c.sessions.length : 0),
+              0
+            );
 
             return (
               <div
