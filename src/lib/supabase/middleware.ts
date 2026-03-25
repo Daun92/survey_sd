@@ -30,17 +30,8 @@ export async function updateSession(request: NextRequest) {
   );
 
   // 세션 갱신 — getUser()는 Auth 서버를 직접 호출하여 안전함
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  // /admin 경로는 인증 필요
-  if (!user && request.nextUrl.pathname.startsWith("/admin")) {
-    const url = request.nextUrl.clone();
-    url.pathname = "/login";
-    url.searchParams.set("redirect", request.nextUrl.pathname);
-    return NextResponse.redirect(url);
-  }
+  // 인증 시스템 완전 구축 전까지 세션 갱신만 수행
+  await supabase.auth.getUser();
 
   return supabaseResponse;
 }
