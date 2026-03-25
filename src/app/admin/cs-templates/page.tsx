@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabase";
+import Link from "next/link";
 import {
   FileText,
   CheckCircle2,
@@ -57,9 +58,10 @@ export default async function CSTemplatesPage() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {templates.map((template) => (
-            <div
+            <Link
+              href={`/admin/cs-templates/${template.id}`}
               key={template.id}
-              className="rounded-xl border border-stone-200 bg-white shadow-sm hover:shadow-md transition-shadow"
+              className="rounded-xl border border-stone-200 bg-white shadow-sm hover:shadow-md transition-shadow block"
             >
               <div className="p-5">
                 <div className="flex items-start justify-between mb-3">
@@ -104,7 +106,7 @@ export default async function CSTemplatesPage() {
                   </span>
                 </div>
               </div>
-            </div>
+            </Link>
           ))}
         </div>
       )}
