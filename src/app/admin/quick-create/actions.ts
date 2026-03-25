@@ -39,7 +39,7 @@ export async function quickCreateSurvey(formData: FormData): Promise<QuickCreate
     templateId: formData.get("templateId") as string,
   };
 
-  if (!input.customerName || !input.projectName || !input.templateId || !input.startDate || !input.endDate) {
+  if (!input.customerName || !input.projectName || !input.startDate || !input.endDate) {
     throw new Error("필수 항목을 모두 입력해주세요.");
   }
 
@@ -136,14 +136,15 @@ export async function quickCreateSurvey(formData: FormData): Promise<QuickCreate
     throw new Error("설문 생성 실패: " + surveyError?.message);
   }
 
-  // 6. Copy questions from template
+  // 6. Copy questions from template (skip if no template selected)
+  let questionCount = 0;
+  if (input.templateId) {
   const { data: templateQuestions } = await supabase
     .from("cs_survey_questions")
     .select("question_no, question_text, question_type, response_options, section_label, sort_order")
     .eq("template_id", input.templateId)
     .order("sort_order", { ascending: true });
 
-  let questionCount = 0;
   if (templateQuestions && templateQuestions.length > 0) {
     const eduQuestions = templateQuestions.map((tq) => {
       const options = parseResponseOptions(tq.response_options);
@@ -167,6 +168,7 @@ export async function quickCreateSurvey(formData: FormData): Promise<QuickCreate
       throw new Error("문항 복사 실패: " + questionsError.message);
     }
     questionCount = eduQuestions.length;
+  }
   }
 
   return {

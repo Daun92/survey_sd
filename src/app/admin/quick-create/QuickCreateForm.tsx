@@ -243,13 +243,21 @@ export function QuickCreateForm({ customers, templates, serviceTypes }: Props) {
                     type="text"
                     value={customerSearch}
                     onChange={(e) => {
-                      setCustomerSearch(e.target.value);
+                      const val = e.target.value;
+                      setCustomerSearch(val);
                       setShowDropdown(true);
-                      if (selectedCustomer) setSelectedCustomer("");
+                      // Only clear selection if user actually changed the text
+                      if (selectedCustomer && val !== selectedCustomer) {
+                        setSelectedCustomer("");
+                      }
                     }}
-                    onFocus={() => setShowDropdown(true)}
+                    onFocus={() => {
+                      if (!selectedCustomer) setShowDropdown(true);
+                    }}
                     placeholder={`고객사명 검색 (총 ${customers.length}개)`}
-                    className="w-full rounded-lg border border-stone-300 pl-9 pr-3 py-2 text-sm focus:border-teal-500 focus:ring-1 focus:ring-teal-500 outline-none"
+                    className={`w-full rounded-lg border pl-9 pr-3 py-2 text-sm focus:border-teal-500 focus:ring-1 focus:ring-teal-500 outline-none ${
+                      selectedCustomer ? "border-teal-400 bg-teal-50/30" : "border-stone-300"
+                    }`}
                   />
                 </div>
 
@@ -364,9 +372,35 @@ export function QuickCreateForm({ customers, templates, serviceTypes }: Props) {
 
           <div>
             <label className="block text-[13px] font-medium text-stone-600 mb-2">
-              템플릿 선택 <span className="text-red-400">*</span>
+              템플릿 선택
             </label>
             <div className="grid grid-cols-1 gap-2">
+              <label
+                className={`flex items-center justify-between rounded-lg border px-4 py-3 cursor-pointer transition-colors ${
+                  selectedTemplate === "__none__"
+                    ? "border-teal-500 bg-teal-50/50"
+                    : "border-stone-200 hover:border-stone-300"
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <input
+                    type="radio"
+                    name="templateId"
+                    value=""
+                    checked={selectedTemplate === "__none__"}
+                    onChange={() => setSelectedTemplate("__none__")}
+                    className="accent-teal-600"
+                  />
+                  <div>
+                    <span className="text-sm font-medium text-stone-800">
+                      빈 설문으로 시작
+                    </span>
+                    <span className="text-xs text-stone-400 ml-2">
+                      직접 문항 추가
+                    </span>
+                  </div>
+                </div>
+              </label>
               {templates.map((t) => (
                 <label
                   key={t.id}
@@ -381,7 +415,6 @@ export function QuickCreateForm({ customers, templates, serviceTypes }: Props) {
                       type="radio"
                       name="templateId"
                       value={t.id}
-                      required
                       checked={selectedTemplate === t.id}
                       onChange={() => setSelectedTemplate(t.id)}
                       className="accent-teal-600"
@@ -411,6 +444,13 @@ export function QuickCreateForm({ customers, templates, serviceTypes }: Props) {
               </p>
             </div>
           )}
+          {selectedTemplate === "__none__" && (
+            <div className="mt-3 rounded-lg bg-stone-50 px-4 py-2.5">
+              <p className="text-xs text-stone-500">
+                빈 설문이 생성됩니다. 생성 후 설문 상세에서 문항을 추가할 수 있습니다.
+              </p>
+            </div>
+          )}
         </div>
 
         {/* Error */}
@@ -423,7 +463,7 @@ export function QuickCreateForm({ customers, templates, serviceTypes }: Props) {
         {/* Submit */}
         <button
           type="submit"
-          disabled={pending || (!isNew && !selectedCustomer)}
+          disabled={pending || (!isNew && !selectedCustomer) || !selectedTemplate}
           className="w-full flex items-center justify-center gap-2 rounded-xl bg-teal-600 px-4 py-3 text-sm font-semibold text-white hover:bg-teal-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {pending ? (
