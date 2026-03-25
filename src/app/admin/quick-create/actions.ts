@@ -1,7 +1,6 @@
 "use server";
 
 import { supabase } from "@/lib/supabase";
-import { redirect } from "next/navigation";
 
 interface QuickCreateInput {
   customerName: string;
@@ -13,17 +12,23 @@ interface QuickCreateInput {
   templateId: string;
 }
 
+export interface QuickCreateResult {
+  surveyId: string;
+  urlToken: string;
+  projectName: string;
+  customerName: string;
+  questionCount: number;
+}
+
 function parseResponseOptions(raw: string | null): string[] | null {
   if (!raw) return null;
-  // "처음/1년미만/1년이상" → ["처음", "1년미만", "1년이상"]
-  // "매우만족~매우불만" → keep as-is (likert label)
   if (raw.includes("/")) {
     return raw.split("/").map((s) => s.trim());
   }
   return null;
 }
 
-export async function quickCreateSurvey(formData: FormData) {
+export async function quickCreateSurvey(formData: FormData): Promise<QuickCreateResult> {
   const input: QuickCreateInput = {
     customerName: formData.get("customerName") as string,
     serviceTypeId: Number(formData.get("serviceTypeId")),
@@ -34,7 +39,6 @@ export async function quickCreateSurvey(formData: FormData) {
     templateId: formData.get("templateId") as string,
   };
 
-  // Validate
   if (!input.customerName || !input.projectName || !input.templateId || !input.startDate || !input.endDate) {
     throw new Error("필수 항목을 모두 입력해주세요.");
   }
@@ -139,6 +143,7 @@ export async function quickCreateSurvey(formData: FormData) {
     .eq("template_id", input.templateId)
     .order("sort_order", { ascending: true });
 
+  let questionCount = 0;
   if (templateQuestions && templateQuestions.length > 0) {
     const eduQuestions = templateQuestions.map((tq) => {
       const options = parseResponseOptions(tq.response_options);
@@ -161,7 +166,14 @@ export async function quickCreateSurvey(formData: FormData) {
     if (questionsError) {
       throw new Error("문항 복사 실패: " + questionsError.message);
     }
+    questionCount = eduQuestions.length;
   }
 
-  redirect(`/admin/surveys/${survey.id}`);
+  return {
+    surveyId: survey.id,
+    urlToken: survey.url_token,
+    projectName: input.projectName,
+    customerName: input.customerName,
+    questionCount,
+  };
 }
