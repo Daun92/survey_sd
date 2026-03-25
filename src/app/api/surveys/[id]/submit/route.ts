@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
+import { submitSurveySchema } from '@/lib/validations/submission'
 
 export async function POST(
   request: NextRequest,
@@ -8,11 +9,16 @@ export async function POST(
   try {
     const { id: token } = await params
     const body = await request.json()
-    const { answers, respondent_name, respondent_department, respondent_position, class_group_id } = body
 
-    if (!answers || typeof answers !== 'object') {
-      return NextResponse.json({ error: '응답 데이터가 필요합니다' }, { status: 400 })
+    const parsed = submitSurveySchema.safeParse(body)
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: '입력값 오류: ' + parsed.error.issues[0].message },
+        { status: 400 }
+      )
     }
+
+    const { answers, respondent_name, respondent_department, respondent_position, class_group_id } = parsed.data
 
     // 설문 조회
     const { data: survey, error: surveyError } = await supabase
