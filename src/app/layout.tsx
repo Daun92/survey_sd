@@ -13,7 +13,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="ko">
-      <body className="min-h-screen bg-stone-50 antialiased">{children}</body>
+      <body className="min-h-screen bg-stone-50 antialiased" style={{ fontFamily: "'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, system-ui, Roboto, 'Helvetica Neue', 'Segoe UI', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', sans-serif" }}>{children}</body>
     </html>
   );
 }

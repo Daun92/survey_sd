@@ -78,7 +78,7 @@ export function Sidebar() {
                   href={item.href}
                   className={`flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition-colors ${
                     active
-                      ? "bg-teal-500/15 text-teal-400 font-medium"
+                      ? "bg-teal-50/10 text-teal-300 font-medium"
                       : "text-stone-400 hover:bg-stone-800 hover:text-white"
                   }`}
                 >
@@ -105,7 +105,7 @@ export function Sidebar() {
                   href={item.href}
                   className={`flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition-colors ${
                     active
-                      ? "bg-teal-500/15 text-teal-400 font-medium"
+                      ? "bg-teal-50/10 text-teal-300 font-medium"
                       : "text-stone-400 hover:bg-stone-800 hover:text-white"
                   }`}
                 >
@@ -122,7 +122,7 @@ export function Sidebar() {
             href="/admin/settings"
             className={`flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition-colors ${
               isActive(pathname, "/admin/settings")
-                ? "bg-teal-500/15 text-teal-400 font-medium"
+                ? "bg-teal-50/10 text-teal-300 font-medium"
                 : "text-stone-400 hover:bg-stone-800 hover:text-white"
             }`}
           >

@@ -15,7 +15,7 @@ const statusLabels: Record<string, { label: string; className: string }> = {
   completed: { label: "완료", className: "bg-stone-100 text-stone-800" },
   draft: {
     label: "준비중",
-    className: "border border-stone-300 text-stone-700 bg-white",
+    className: "border border-stone-200 text-stone-700 bg-white",
   },
 };
 

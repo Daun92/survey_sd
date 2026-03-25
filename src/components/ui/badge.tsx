@@ -10,7 +10,7 @@ const variantStyles = {
   success: 'bg-emerald-100 text-emerald-800',
   warning: 'bg-amber-100 text-amber-800',
   destructive: 'bg-rose-100 text-rose-800',
-  outline: 'border border-stone-300 text-stone-700',
+  outline: 'border border-stone-200 text-stone-700',
 }
 
 export function Badge({ className = '', variant = 'default', ...props }: BadgeProps) {

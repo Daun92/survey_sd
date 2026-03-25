@@ -19,26 +19,26 @@ export const dynamic = "force-dynamic";
 
 const statusLabels: Record<string, { label: string; className: string }> = {
   active: { label: "진행중", className: "bg-emerald-100 text-emerald-800" },
-  completed: { label: "완료", className: "bg-stone-100 text-stone-800" },
+  completed: { label: "완료", className: "bg-rose-100 text-rose-800" },
   draft: {
     label: "준비중",
-    className: "border border-stone-300 text-stone-700 bg-white",
+    className: "border border-stone-200 text-stone-700 bg-white",
   },
 };
 
 const surveyStatusLabels: Record<string, { label: string; className: string }> = {
   active: { label: "진행중", className: "bg-emerald-100 text-emerald-800" },
-  closed: { label: "마감", className: "bg-stone-100 text-stone-800" },
+  closed: { label: "마감", className: "bg-rose-100 text-rose-800" },
   draft: {
     label: "초안",
-    className: "border border-stone-300 text-stone-700 bg-white",
+    className: "border border-stone-200 text-stone-700 bg-white",
   },
 };
 
 const sessionStatusLabels: Record<string, { label: string; className: string }> = {
   scheduled: { label: "예정", className: "bg-blue-100 text-blue-800" },
   in_progress: { label: "진행중", className: "bg-emerald-100 text-emerald-800" },
-  completed: { label: "완료", className: "bg-stone-100 text-stone-800" },
+  completed: { label: "완료", className: "bg-rose-100 text-rose-800" },
   cancelled: { label: "취소", className: "bg-red-100 text-red-800" },
 };
 

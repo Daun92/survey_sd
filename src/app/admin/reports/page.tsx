@@ -66,8 +66,8 @@ async function getSurveyList() {
 
 const statusLabels: Record<string, { label: string; className: string }> = {
   active: { label: "진행중", className: "bg-emerald-100 text-emerald-800" },
-  closed: { label: "마감", className: "bg-stone-100 text-stone-800" },
-  draft: { label: "초안", className: "border border-stone-300 text-stone-700" },
+  closed: { label: "마감", className: "bg-rose-100 text-rose-800" },
+  draft: { label: "초안", className: "border border-stone-200 text-stone-700" },
 };
 
 export default async function ReportsPage({
