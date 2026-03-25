@@ -5,7 +5,7 @@
  * - 서술형 응답 분석
  */
 
-const GEMINI_MODEL = 'gemini-2.0-flash-lite'
+const GEMINI_MODEL = 'gemini-3.1-flash-lite-preview'
 
 interface GeminiOptions {
   temperature?: number
