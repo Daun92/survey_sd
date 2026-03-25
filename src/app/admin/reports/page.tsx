@@ -9,6 +9,8 @@ import {
   Users,
   TrendingUp,
 } from "lucide-react";
+import { AIReportComment } from "./ai-comment";
+import { AIOpenAnalysis } from "./ai-open-analysis";
 
 export const revalidate = 60;
 
@@ -176,6 +178,19 @@ export default async function ReportsPage({
             </div>
           </div>
         </div>
+
+        {/* AI 리포트 코멘트 */}
+        <AIReportComment
+          reportData={{
+            courseName: report.title,
+            sessionName: "",
+            overallAvg: report.avgScore,
+            responseRate: 0,
+            totalResponses: report.submissionCount,
+            sectionScores: [],
+            questionScores: [],
+          }}
+        />
 
         {report.submissions.length > 0 ? (
           <div className="rounded-xl border border-stone-200 bg-white shadow-sm">

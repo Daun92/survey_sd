@@ -15,6 +15,7 @@ import {
   AlertTriangle,
   Check,
 } from "lucide-react";
+import AiFab from "./ai-fab";
 import {
   updateSurvey,
   deleteSurvey,
@@ -867,6 +868,9 @@ export default function SurveyEditor({
           </div>
         )}
       </div>
+
+      {/* AI FAB */}
+      <AiFab surveyId={survey.id} educationType={survey.education_type || ""} templates={[]} onQuestionsAdded={refresh} />
     </div>
   );
 }
