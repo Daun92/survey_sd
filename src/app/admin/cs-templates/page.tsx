@@ -7,30 +7,19 @@ import {
   Inbox,
 } from "lucide-react";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 300;
 
 async function getTemplatesWithQuestionCounts() {
   const { data: templates } = await supabase
     .from("cs_survey_templates")
-    .select("id, division, division_label, name, description, is_active, created_at")
+    .select("id, division, division_label, name, description, is_active, created_at, cs_survey_questions(count)")
     .order("created_at", { ascending: false });
 
   if (!templates || templates.length === 0) return [];
 
-  const { data: questions } = await supabase
-    .from("cs_survey_questions")
-    .select("id, template_id");
-
-  const countMap: Record<string, number> = {};
-  if (questions) {
-    for (const q of questions) {
-      countMap[q.template_id] = (countMap[q.template_id] || 0) + 1;
-    }
-  }
-
   return templates.map((t) => ({
     ...t,
-    questionCount: countMap[t.id] || 0,
+    questionCount: (t.cs_survey_questions as unknown as { count: number }[])?.[0]?.count ?? 0,
   }));
 }
 

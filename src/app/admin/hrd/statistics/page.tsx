@@ -6,7 +6,7 @@ import {
   TrendingUp,
 } from "lucide-react";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 60;
 
 async function getData() {
   const { data: rounds } = await supabase
@@ -18,46 +18,50 @@ async function getData() {
   const currentRound = rounds?.[0] ?? null;
   if (!currentRound) return { currentRound: null, summary: null, parts: [] };
 
-  const [{ data: responses }, { data: parts }] = await Promise.all([
+  const [{ data: responses }, { data: parts }, { data: items }] = await Promise.all([
     supabase
       .from("hrd_responses")
-      .select("id, respondent_id, part_id, item_id, value")
+      .select("id, respondent_id, item_id, value_number")
       .eq("round_id", currentRound.id),
     supabase
       .from("hrd_survey_parts")
       .select("id, part_code, part_name, sort_order")
       .eq("round_id", currentRound.id)
       .order("sort_order", { ascending: true }),
+    supabase
+      .from("hrd_survey_items")
+      .select("id, part_id")
+      .eq("round_id", currentRound.id),
   ]);
 
   const responseList = responses ?? [];
   const partList = parts ?? [];
+  const itemList = items ?? [];
+
+  // Map item_id -> part_id
+  const itemPartMap: Record<string, string> = {};
+  itemList.forEach((item) => { itemPartMap[item.id] = item.part_id; });
 
   const totalResponses = responseList.length;
-  const uniqueRespondents = new Set(responseList.map((r) => r.respondent_id))
-    .size;
+  const uniqueRespondents = new Set(responseList.map((r) => r.respondent_id)).size;
   const uniqueItems = new Set(responseList.map((r) => r.item_id)).size;
 
   const numericValues = responseList
-    .map((r) => parseFloat(r.value))
-    .filter((v) => !isNaN(v));
+    .map((r) => r.value_number)
+    .filter((v): v is number => v !== null && !isNaN(v));
   const avgScore =
     numericValues.length > 0
-      ? (
-          numericValues.reduce((a, b) => a + b, 0) / numericValues.length
-        ).toFixed(2)
+      ? (numericValues.reduce((a, b) => a + b, 0) / numericValues.length).toFixed(2)
       : "-";
 
   const partStats = partList.map((part) => {
-    const partResponses = responseList.filter((r) => r.part_id === part.id);
+    const partResponses = responseList.filter((r) => itemPartMap[r.item_id] === part.id);
     const partNumeric = partResponses
-      .map((r) => parseFloat(r.value))
-      .filter((v) => !isNaN(v));
+      .map((r) => r.value_number)
+      .filter((v): v is number => v !== null && !isNaN(v));
     const partAvg =
       partNumeric.length > 0
-        ? (
-            partNumeric.reduce((a, b) => a + b, 0) / partNumeric.length
-          ).toFixed(2)
+        ? (partNumeric.reduce((a, b) => a + b, 0) / partNumeric.length).toFixed(2)
         : "-";
     return {
       ...part,

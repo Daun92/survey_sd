@@ -2,7 +2,7 @@ import { supabase } from "@/lib/supabase";
 import Link from "next/link";
 import { ClipboardList, Plus, ExternalLink } from "lucide-react";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 60;
 
 const statusLabels: Record<string, { label: string; className: string }> = {
   active: { label: "진행중", className: "bg-emerald-100 text-emerald-800" },
@@ -22,30 +22,14 @@ function formatDate(dateStr: string | null) {
 async function getSurveys() {
   const { data: surveys, error } = await supabase
     .from("edu_surveys")
-    .select("id, title, status, survey_type, education_type, url_token, starts_at, ends_at, created_at")
+    .select("id, title, status, survey_type, education_type, url_token, starts_at, ends_at, created_at, edu_submissions(count)")
     .order("created_at", { ascending: false });
 
-  if (error) {
-    console.error("Error fetching surveys:", error);
-    return [];
-  }
-
-  if (!surveys || surveys.length === 0) return [];
-
-  const surveyIds = surveys.map((s) => s.id);
-  const { data: submissions } = await supabase
-    .from("edu_submissions")
-    .select("survey_id")
-    .in("survey_id", surveyIds);
-
-  const countMap: Record<string, number> = {};
-  (submissions ?? []).forEach((sub) => {
-    countMap[sub.survey_id] = (countMap[sub.survey_id] || 0) + 1;
-  });
+  if (error || !surveys) return [];
 
   return surveys.map((s) => ({
     ...s,
-    submission_count: countMap[s.id] || 0,
+    submission_count: (s.edu_submissions as unknown as { count: number }[])?.[0]?.count ?? 0,
   }));
 }
 

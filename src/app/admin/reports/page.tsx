@@ -10,7 +10,7 @@ import {
   TrendingUp,
 } from "lucide-react";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 60;
 
 function formatDate(dateStr: string) {
   const d = new Date(dateStr);
@@ -49,37 +49,16 @@ async function getSurveyReport(surveyId: string) {
 async function getSurveyList() {
   const { data: surveys } = await supabase
     .from("edu_surveys")
-    .select("id, title, status, created_at")
+    .select("id, title, status, created_at, edu_submissions(count)")
     .order("created_at", { ascending: false });
 
   if (!surveys || surveys.length === 0) return [];
 
-  const { data: submissions } = await supabase
-    .from("edu_submissions")
-    .select("id, survey_id, total_score");
-
-  const statsMap: Record<string, { count: number; totalScore: number }> = {};
-  if (submissions) {
-    for (const s of submissions) {
-      if (!statsMap[s.survey_id]) {
-        statsMap[s.survey_id] = { count: 0, totalScore: 0 };
-      }
-      statsMap[s.survey_id].count += 1;
-      statsMap[s.survey_id].totalScore += s.total_score ?? 0;
-    }
-  }
-
-  return surveys.map((sv) => {
-    const stats = statsMap[sv.id] ?? { count: 0, totalScore: 0 };
-    return {
-      ...sv,
-      submissionCount: stats.count,
-      avgScore:
-        stats.count > 0
-          ? Math.round((stats.totalScore / stats.count) * 10) / 10
-          : 0,
-    };
-  });
+  return surveys.map((sv) => ({
+    ...sv,
+    submissionCount: (sv.edu_submissions as unknown as { count: number }[])?.[0]?.count ?? 0,
+    avgScore: 0,
+  }));
 }
 
 const statusLabels: Record<string, { label: string; className: string }> = {

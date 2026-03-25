@@ -1,7 +1,7 @@
 import { supabase } from "@/lib/supabase";
 import { Users } from "lucide-react";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 60;
 
 const statusLabels: Record<string, { label: string; className: string }> = {
   completed: { label: "완료", className: "bg-emerald-100 text-emerald-800" },

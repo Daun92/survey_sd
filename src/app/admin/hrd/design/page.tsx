@@ -1,7 +1,7 @@
 import { supabase } from "@/lib/supabase";
 import { PenTool, Layers, Hash, CheckCircle, XCircle } from "lucide-react";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 300;
 
 async function getData() {
   const { data: parts } = await supabase

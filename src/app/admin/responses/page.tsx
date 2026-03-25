@@ -2,7 +2,7 @@ import { supabase } from "@/lib/supabase";
 import Link from "next/link";
 import { Eye, MessageSquare, Inbox } from "lucide-react";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 30;
 
 const statusLabels: Record<string, { label: string; className: string }> = {
   active: { label: "진행중", className: "bg-emerald-100 text-emerald-800" },
@@ -27,23 +27,18 @@ interface SurveyWithResponses {
 }
 
 async function getSurveysWithResponses(): Promise<SurveyWithResponses[]> {
-  // Fetch surveys that have submissions
-  const { data: surveys, error: surveyError } = await supabase
-    .from("edu_surveys")
-    .select("id, title, status, session_id")
-    .order("created_at", { ascending: false });
+  // Fetch surveys with submission counts and session info in parallel
+  const [{ data: surveys }, { data: submissions }] = await Promise.all([
+    supabase
+      .from("edu_surveys")
+      .select("id, title, status, session_id, sessions(name, capacity)")
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("edu_submissions")
+      .select("survey_id, answers"),
+  ]);
 
-  if (surveyError || !surveys || surveys.length === 0) return [];
-
-  const surveyIds = surveys.map((s) => s.id);
-
-  // Fetch submissions with answers for these surveys
-  const { data: submissions } = await supabase
-    .from("edu_submissions")
-    .select("id, survey_id, answers")
-    .in("survey_id", surveyIds);
-
-  if (!submissions || submissions.length === 0) return [];
+  if (!surveys || !submissions || submissions.length === 0) return [];
 
   // Build submission stats per survey
   const statsMap: Record<
@@ -56,7 +51,6 @@ async function getSurveysWithResponses(): Promise<SurveyWithResponses[]> {
     }
     statsMap[sub.survey_id].count += 1;
 
-    // Calculate average score from answers if available
     if (sub.answers && typeof sub.answers === "object") {
       const answers = Object.values(sub.answers) as unknown[];
       answers.forEach((val) => {
@@ -69,44 +63,25 @@ async function getSurveysWithResponses(): Promise<SurveyWithResponses[]> {
     }
   });
 
-  // Only include surveys that have submissions
-  const surveysWithSubs = surveys.filter((s) => statsMap[s.id]);
-
-  // Fetch session info for surveys that have session_id
-  const sessionIds = surveysWithSubs
-    .map((s) => s.session_id)
-    .filter((id): id is string => !!id);
-
-  let sessionMap: Record<string, { name: string; capacity: number | null }> =
-    {};
-  if (sessionIds.length > 0) {
-    const { data: sessions } = await supabase
-      .from("sessions")
-      .select("id, name, capacity")
-      .in("id", sessionIds);
-
-    (sessions ?? []).forEach((s) => {
-      sessionMap[s.id] = { name: s.name, capacity: s.capacity };
+  return surveys
+    .filter((s) => statsMap[s.id])
+    .map((s) => {
+      const stats = statsMap[s.id];
+      const session = s.sessions as unknown as { name: string; capacity: number | null } | null;
+      return {
+        id: s.id,
+        title: s.title,
+        status: s.status,
+        session_id: s.session_id,
+        session_name: session?.name ?? null,
+        session_capacity: session?.capacity ?? null,
+        submission_count: stats.count,
+        avg_score:
+          stats.scoreCount > 0
+            ? Math.round((stats.totalScore / stats.scoreCount) * 10) / 10
+            : null,
+      };
     });
-  }
-
-  return surveysWithSubs.map((s) => {
-    const stats = statsMap[s.id];
-    const session = s.session_id ? sessionMap[s.session_id] : null;
-    return {
-      id: s.id,
-      title: s.title,
-      status: s.status,
-      session_id: s.session_id,
-      session_name: session?.name ?? null,
-      session_capacity: session?.capacity ?? null,
-      submission_count: stats.count,
-      avg_score:
-        stats.scoreCount > 0
-          ? Math.round((stats.totalScore / stats.scoreCount) * 10) / 10
-          : null,
-    };
-  });
 }
 
 export default async function ResponsesPage() {

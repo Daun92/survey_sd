@@ -7,7 +7,7 @@ import {
   ChartColumn,
 } from "lucide-react";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 60;
 
 async function getDashboardData() {
   const [

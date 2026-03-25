@@ -1,7 +1,7 @@
 import { supabase } from "@/lib/supabase";
 import { Building2, FileText } from "lucide-react";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 60;
 
 const statusLabels: Record<string, { label: string; className: string }> = {
   generated: {

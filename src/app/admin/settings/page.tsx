@@ -9,7 +9,7 @@ import {
   Layers,
 } from "lucide-react";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 300;
 
 async function getSettingsData() {
   const [{ data: appSettings }, { data: serviceTypes }] = await Promise.all([
