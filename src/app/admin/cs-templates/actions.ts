@@ -147,3 +147,47 @@ export async function updateTemplate(templateId: string, data: { name?: string; 
   if (error) throw new Error("수정 실패: " + error.message);
   revalidatePath("/admin/cs-templates");
 }
+
+// ── 템플릿 문항 추가 ──
+export async function addTemplateQuestion(templateId: string, data: {
+  question_no: string;
+  question_text: string;
+  question_type: string;
+  response_options?: string;
+  section_label?: string;
+  page_type?: string;
+  sort_order: number;
+}) {
+  const { error } = await supabase
+    .from("cs_survey_questions")
+    .insert({ template_id: templateId, ...data, page_type: data.page_type || "1P" });
+  if (error) throw new Error("문항 추가 실패: " + error.message);
+  revalidatePath(`/admin/cs-templates/${templateId}`);
+}
+
+// ── 템플릿 문항 수정 ──
+export async function updateTemplateQuestion(questionId: string, templateId: string, data: {
+  question_no?: string;
+  question_text?: string;
+  question_type?: string;
+  response_options?: string;
+  section_label?: string;
+}) {
+  const updateData: Record<string, unknown> = {};
+  if (data.question_no !== undefined) updateData.question_no = data.question_no;
+  if (data.question_text !== undefined) updateData.question_text = data.question_text;
+  if (data.question_type !== undefined) updateData.question_type = data.question_type;
+  if (data.response_options !== undefined) updateData.response_options = data.response_options;
+  if (data.section_label !== undefined) updateData.section_label = data.section_label;
+
+  const { error } = await supabase.from("cs_survey_questions").update(updateData).eq("id", questionId);
+  if (error) throw new Error("문항 수정 실패: " + error.message);
+  revalidatePath(`/admin/cs-templates/${templateId}`);
+}
+
+// ── 템플릿 문항 삭제 ──
+export async function deleteTemplateQuestion(questionId: string, templateId: string) {
+  const { error } = await supabase.from("cs_survey_questions").delete().eq("id", questionId);
+  if (error) throw new Error("문항 삭제 실패: " + error.message);
+  revalidatePath(`/admin/cs-templates/${templateId}`);
+}

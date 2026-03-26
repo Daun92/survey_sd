@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, ListChecks, Calendar } from "lucide-react";
 import { TemplateDetailActions } from "./detail-actions";
+import { TemplateEditor } from "./template-editor";
 
 export const dynamic = "force-dynamic";
 
@@ -125,7 +126,21 @@ export default async function CSTemplateDetailPage({
         </div>
       </div>
 
-      {/* Questions List */}
+      {/* Template Editor (user templates only) */}
+      {!((template as Record<string, unknown>).is_system) && (
+        <div className="rounded-xl border border-stone-200 bg-white shadow-sm p-5 mb-8">
+          <TemplateEditor
+            templateId={template.id}
+            templateName={template.name}
+            templateDescription={template.description || ""}
+            isSystem={(template as Record<string, unknown>).is_system as boolean ?? false}
+            questions={questions}
+          />
+        </div>
+      )}
+
+      {/* Questions List (read-only for system templates) */}
+      {!!((template as Record<string, unknown>).is_system) && (
       <div className="rounded-xl border border-stone-200 bg-white shadow-sm">
         <div className="p-5 border-b border-stone-100">
           <h2 className="text-base font-semibold text-stone-900">문항 목록</h2>
@@ -188,6 +203,7 @@ export default async function CSTemplateDetailPage({
           </div>
         )}
       </div>
+      )}
     </div>
   );
 }
