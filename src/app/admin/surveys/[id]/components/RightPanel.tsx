@@ -58,6 +58,7 @@ export function RightPanel({
       ) : (
         <div className="rounded-xl border border-stone-200 bg-white shadow-sm p-5">
           <QuestionForm
+            key={panelMode === "edit" ? editingQuestion?.id : "__add__"}
             surveyId={surveyId}
             question={panelMode === "edit" ? (editingQuestion ?? undefined) : undefined}
             nextSortOrder={nextSortOrder}
