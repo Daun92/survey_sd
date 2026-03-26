@@ -51,6 +51,12 @@ export async function POST(
       }
     }
 
+    // total_score 계산 (숫자형 응답 합산)
+    const totalScore = Object.values(answers).reduce((sum: number, val) => {
+      const num = Number(val)
+      return !isNaN(num) && typeof val === 'number' ? sum + num : sum
+    }, 0)
+
     // 응답 저장
     const { data: submission, error: submitError } = await supabase
       .from('edu_submissions')
@@ -62,6 +68,7 @@ export async function POST(
         respondent_department: respondent_department || null,
         respondent_position: respondent_position || null,
         answers,
+        total_score: totalScore,
         channel: 'online',
         is_complete: true,
         ip_address: request.headers.get('x-forwarded-for')?.split(',')[0] || null,

@@ -104,6 +104,7 @@ export default function SurveyForm({ survey, groupToken }: { survey: SurveyData;
   const scrollContainerRef = useRef<HTMLDivElement>(null)
   const [elapsedTime, setElapsedTime] = useState('')
   const [currentSectionIdx, setCurrentSectionIdx] = useState(0)
+  const [toast, setToast] = useState<string | null>(null)
 
   const respondentFields: RespondentFieldConfig[] =
     survey.settings.respondent_fields?.filter((f) => f.enabled) ?? DEFAULT_RESPONDENT_FIELDS
@@ -200,8 +201,18 @@ export default function SurveyForm({ survey, groupToken }: { survey: SurveyData;
         {/* Center-aligned content area */}
         <div className="flex-1 flex flex-col justify-center">
 
+        {/* Survey Title */}
+        <div className="flex flex-col items-center pt-8 pb-2 px-6">
+          <h1 className="text-[20px] font-bold text-stone-900 text-center leading-tight tracking-tight">
+            {String(survey.title ?? '')}
+          </h1>
+          {survey.sessionName && (
+            <p className="text-[13px] text-stone-500 mt-1.5">{String(survey.sessionName ?? '')}</p>
+          )}
+        </div>
+
         {/* Welcome Message */}
-        <div className="px-6 pt-8 pb-2">
+        <div className="px-6 pb-2">
           {survey.settings.welcome_message ? (
             <p className="text-[14px] text-stone-600 leading-relaxed whitespace-pre-line text-center">
               {survey.settings.welcome_message}
@@ -213,17 +224,7 @@ export default function SurveyForm({ survey, groupToken }: { survey: SurveyData;
               제공하는 데 큰 도움이 됩니다.
             </p>
           )}
-        </div>
-
-        {/* Survey Title */}
-        <div className="flex flex-col items-center py-5 px-6">
-          <div className="w-10 h-px bg-stone-200 mb-5" />
-          <h1 className="text-[20px] font-bold text-stone-900 text-center leading-tight tracking-tight">
-            {String(survey.title ?? '')}
-          </h1>
-          {survey.sessionName && (
-            <p className="text-[13px] text-stone-500 mt-1.5">{String(survey.sessionName ?? '')}</p>
-          )}
+          <div className="w-10 h-px bg-stone-200 mx-auto mt-5" />
         </div>
 
         {/* Content */}
@@ -369,8 +370,6 @@ export default function SurveyForm({ survey, groupToken }: { survey: SurveyData;
       }, 150)
     }
   }
-
-  const [toast, setToast] = useState<string | null>(null)
 
   const showToast = (msg: string) => {
     setToast(msg)
@@ -544,9 +543,9 @@ export default function SurveyForm({ survey, groupToken }: { survey: SurveyData;
         })()}
       </div>
 
-      {/* Toast */}
+      {/* Toast — fixed top, highest z-index */}
       {toast && (
-        <div className="mx-6 mb-2 bg-amber-50 border border-amber-200 rounded-xl p-3 text-sm text-amber-800 flex items-center gap-2 animate-in fade-in slide-in-from-bottom-2">
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[9999] w-[calc(100%-2rem)] max-w-sm bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-sm text-amber-800 flex items-center gap-2 shadow-lg">
           <span className="text-amber-500 shrink-0">⚠</span>
           {toast}
         </div>

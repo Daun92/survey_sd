@@ -2,6 +2,7 @@ import { supabase } from "@/lib/supabase";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, ListChecks, Calendar } from "lucide-react";
+import { TemplateDetailActions } from "./detail-actions";
 
 export const dynamic = "force-dynamic";
 
@@ -25,7 +26,7 @@ async function getTemplateDetail(id: string) {
   const [{ data: template, error }, { data: questions }] = await Promise.all([
     supabase
       .from("cs_survey_templates")
-      .select("id, division, division_label, name, description, is_active, created_at")
+      .select("id, division, division_label, name, description, is_active, is_system, created_at")
       .eq("id", id)
       .single(),
     supabase
@@ -75,13 +76,20 @@ export default async function CSTemplateDetailPage({
       </div>
 
       <div className="mb-8">
-        <div className="flex items-start gap-3 mb-2">
-          <h1 className="text-2xl font-bold text-stone-800">
-            {template.name}
-          </h1>
-          <span className="inline-flex items-center rounded-full bg-teal-50 px-2.5 py-0.5 text-xs font-medium text-teal-700 mt-1.5 shrink-0">
-            {template.division_label}
-          </span>
+        <div className="flex items-start justify-between mb-2">
+          <div className="flex items-start gap-3">
+            <h1 className="text-2xl font-bold text-stone-800">
+              {template.name}
+            </h1>
+            <span className="inline-flex items-center rounded-full bg-teal-50 px-2.5 py-0.5 text-xs font-medium text-teal-700 mt-1.5 shrink-0">
+              {template.division_label}
+            </span>
+          </div>
+          <TemplateDetailActions
+            templateId={template.id}
+            isSystem={(template as Record<string, unknown>).is_system as boolean ?? false}
+            isActive={template.is_active}
+          />
         </div>
         {template.description && (
           <p className="text-sm text-stone-500 mt-1">{template.description}</p>

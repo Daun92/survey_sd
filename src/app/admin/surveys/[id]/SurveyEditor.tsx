@@ -188,6 +188,7 @@ export default function SurveyEditor({ survey, questions, submissionCount }: Edi
           onPreviewTabChange={setPreviewTab}
           surveyId={survey.id}
           surveyTitle={survey.title}
+          surveyDescription={survey.description || ""}
           questions={questions}
           liveSettings={liveSettings}
           editingQuestion={editingQuestion}

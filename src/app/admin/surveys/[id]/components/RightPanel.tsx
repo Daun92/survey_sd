@@ -11,6 +11,7 @@ interface Props {
   onPreviewTabChange: (tab: PreviewTab) => void;
   surveyId: string;
   surveyTitle: string;
+  surveyDescription: string;
   questions: Question[];
   liveSettings: SurveySettings;
   editingQuestion: Question | null;
@@ -22,7 +23,7 @@ interface Props {
 
 export function RightPanel({
   panelMode, previewTab, onPreviewTabChange,
-  surveyId, surveyTitle, questions, liveSettings,
+  surveyId, surveyTitle, surveyDescription, questions, liveSettings,
   editingQuestion, nextSortOrder,
   onSaved, onCancel, onDeleted,
 }: Props) {
@@ -50,6 +51,7 @@ export function RightPanel({
       {isPreview ? (
         <SurveyPreview
           surveyTitle={surveyTitle}
+          surveyDescription={surveyDescription}
           questions={questions}
           settings={liveSettings}
           activeTab={previewTab}
