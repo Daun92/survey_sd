@@ -29,7 +29,7 @@ export function RightPanel({
   const isPreview = panelMode === "preview";
 
   return (
-    <div className="sticky top-4 max-h-[calc(100vh-2rem)] overflow-y-auto">
+    <div className="sticky top-4 h-[calc(100vh-3rem)] overflow-y-auto">
       {/* Mode tabs */}
       <div className="flex items-center gap-1 mb-3">
         <button
