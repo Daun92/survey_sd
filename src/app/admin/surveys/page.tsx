@@ -1,6 +1,6 @@
 import { supabase } from "@/lib/supabase";
 import Link from "next/link";
-import { ClipboardList, Plus, ExternalLink } from "lucide-react";
+import { ClipboardList, Plus, ExternalLink, Building2 } from "lucide-react";
 
 export const revalidate = 60;
 
@@ -22,19 +22,46 @@ function formatDate(dateStr: string | null) {
 async function getSurveys() {
   const { data: surveys, error } = await supabase
     .from("edu_surveys")
-    .select("id, title, status, survey_type, education_type, url_token, starts_at, ends_at, created_at, edu_submissions(count)")
+    .select("id, title, status, survey_type, education_type, url_token, starts_at, ends_at, created_at, project_id, projects(id, name, customers(company_name)), edu_submissions(count)")
     .order("created_at", { ascending: false });
 
   if (error || !surveys) return [];
 
-  return surveys.map((s) => ({
-    ...s,
-    submission_count: (s.edu_submissions as unknown as { count: number }[])?.[0]?.count ?? 0,
-  }));
+  return surveys.map((s) => {
+    const project = Array.isArray(s.projects) ? s.projects[0] : s.projects;
+    const customer = project?.customers
+      ? Array.isArray(project.customers)
+        ? project.customers[0]
+        : project.customers
+      : null;
+    return {
+      ...s,
+      submission_count: (s.edu_submissions as unknown as { count: number }[])?.[0]?.count ?? 0,
+      project_name: (project as { name?: string } | null)?.name ?? null,
+      customer_name: (customer as { company_name?: string } | null)?.company_name ?? null,
+    };
+  });
 }
 
-export default async function SurveysPage() {
-  const surveys = await getSurveys();
+async function getProjects() {
+  const { data } = await supabase
+    .from("projects")
+    .select("id, name")
+    .order("name");
+  return data ?? [];
+}
+
+export default async function SurveysPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ project?: string }>;
+}) {
+  const params = await searchParams;
+  const projectFilter = params.project;
+  const [allSurveys, projects] = await Promise.all([getSurveys(), getProjects()]);
+  const surveys = projectFilter
+    ? allSurveys.filter((s) => s.project_id === projectFilter)
+    : allSurveys;
 
   return (
     <div>
@@ -42,7 +69,7 @@ export default async function SurveysPage() {
         <div>
           <h1 className="text-2xl font-bold text-stone-800">설문 관리</h1>
           <p className="text-sm text-stone-500 mt-1">
-            교육 설문을 생성하고 관리하세요
+            설문을 생성하고 관리하세요
           </p>
         </div>
         <Link
@@ -53,6 +80,38 @@ export default async function SurveysPage() {
           새 설문 만들기
         </Link>
       </div>
+
+      {/* 프로젝트 필터 */}
+      {projects.length > 0 && (
+        <div className="mb-4 flex items-center gap-2">
+          <Building2 size={16} className="text-stone-400" />
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <Link
+              href="/admin/surveys"
+              className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+                !projectFilter
+                  ? "bg-teal-600 text-white"
+                  : "bg-stone-100 text-stone-600 hover:bg-stone-200"
+              }`}
+            >
+              전체
+            </Link>
+            {projects.map((p) => (
+              <Link
+                key={p.id}
+                href={`/admin/surveys?project=${p.id}`}
+                className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+                  projectFilter === p.id
+                    ? "bg-teal-600 text-white"
+                    : "bg-stone-100 text-stone-600 hover:bg-stone-200"
+                }`}
+              >
+                {p.name}
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
 
       {surveys.length === 0 ? (
         <div className="rounded-xl border border-stone-200 bg-white shadow-sm p-12 text-center">
@@ -78,7 +137,7 @@ export default async function SurveysPage() {
                     설문명
                   </th>
                   <th className="text-left px-5 h-9 text-xs font-medium text-stone-500">
-                    유형
+                    프로젝트
                   </th>
                   <th className="text-left px-5 h-9 text-xs font-medium text-stone-500">
                     상태
@@ -109,9 +168,13 @@ export default async function SurveysPage() {
                         </span>
                       </td>
                       <td className="px-5 h-12">
-                        <span className="text-[13px] text-stone-600">
-                          {survey.survey_type ?? "-"}
-                        </span>
+                        {survey.project_name ? (
+                          <span className="text-[13px] text-stone-600 line-clamp-1">
+                            {survey.project_name}
+                          </span>
+                        ) : (
+                          <span className="text-[13px] text-stone-400">-</span>
+                        )}
                       </td>
                       <td className="px-5 h-12">
                         <span
