@@ -1,3 +1,4 @@
+import { redirect } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import {
   Settings2,
@@ -9,6 +10,7 @@ import {
   Layers,
 } from "lucide-react";
 import { GeminiSettings } from "./gemini-settings";
+import { getUserProfile, canAccessSettings } from "@/lib/auth";
 
 export const revalidate = 300;
 
@@ -28,6 +30,11 @@ async function getSettingsData() {
 }
 
 export default async function SettingsPage() {
+  const profile = await getUserProfile();
+  if (!canAccessSettings(profile)) {
+    redirect("/admin?error=unauthorized");
+  }
+
   const { appSettings, serviceTypes } = await getSettingsData();
 
   return (
