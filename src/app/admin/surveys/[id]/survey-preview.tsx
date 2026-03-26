@@ -78,7 +78,7 @@ function LandingPreview({ title, description, settings, questionCount }: { title
     <div className="flex flex-col min-h-full overflow-y-auto">
       {/* Top bar */}
       <div className="flex items-center gap-2 px-5 py-2.5 bg-white border-b border-stone-100">
-        <Image src="/logo-expert.svg" alt="EXPERT" width={80} height={16} className="h-3.5 w-auto" />
+        <Image src="/logo_exc.png" alt="EXPERT" width={80} height={16} className="h-3.5 w-auto" />
         <span className="text-[9px] text-stone-400 ml-auto">Satisfaction Survey</span>
       </div>
 
@@ -338,7 +338,7 @@ function EndingPreview({ settings }: { settings: SurveySettings }) {
       </div>
 
       <div className="flex items-center gap-2 opacity-30">
-        <Image src="/logo-expert.svg" alt="EXPERT" width={60} height={12} className="h-3 w-auto" />
+        <Image src="/logo_exc.png" alt="EXPERT" width={60} height={12} className="h-3 w-auto" />
       </div>
       <p className="text-[9px] text-stone-300 mt-1">Powered by EXC-Survey</p>
     </div>

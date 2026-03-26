@@ -2,6 +2,15 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 
 export type AppRole = "admin" | "creator" | "viewer";
+export type AppDepartment = "im" | "am" | "sales" | "marketing" | "consulting";
+
+export interface UserProfile {
+  id: string;
+  email: string;
+  displayName: string;
+  role: AppRole;
+  department: AppDepartment | null;
+}
 
 /**
  * 현재 로그인한 사용자 정보를 가져옵니다.
@@ -21,20 +30,34 @@ export async function requireAuth() {
 }
 
 /**
- * 현재 사용자의 역할을 가져옵니다.
- * user_roles 테이블에 레코드가 없으면 'viewer'를 기본값으로 반환합니다.
+ * 인증 + 역할 + 부서를 한번에 가져옵니다.
+ * user_roles 레코드가 없으면 viewer/부서없음 기본값.
  */
-export async function getUserRole(): Promise<AppRole> {
+export async function getUserProfile(): Promise<UserProfile> {
   const user = await requireAuth();
   const supabase = await createClient();
 
   const { data } = await supabase
     .from("user_roles")
-    .select("role")
+    .select("role, department, display_name")
     .eq("user_id", user.id)
     .single();
 
-  return (data?.role as AppRole) || "viewer";
+  return {
+    id: user.id,
+    email: user.email || "",
+    displayName: data?.display_name || user.email?.split("@")[0] || "",
+    role: (data?.role as AppRole) || "viewer",
+    department: (data?.department as AppDepartment) || null,
+  };
+}
+
+/**
+ * 현재 사용자의 역할을 가져옵니다.
+ */
+export async function getUserRole(): Promise<AppRole> {
+  const profile = await getUserProfile();
+  return profile.role;
 }
 
 /**
@@ -55,4 +78,14 @@ export async function requireRole(minRole: AppRole) {
   }
 
   return role;
+}
+
+/** HRD 섹션 접근 가능 여부 (admin 또는 마케팅 부서) */
+export function canAccessHrd(profile: UserProfile): boolean {
+  return profile.role === "admin" || profile.department === "marketing";
+}
+
+/** 설정 페이지 접근 가능 여부 (admin만) */
+export function canAccessSettings(profile: UserProfile): boolean {
+  return profile.role === "admin";
 }
