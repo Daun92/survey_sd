@@ -13,6 +13,41 @@ import {
   MessageSquare,
 } from "lucide-react";
 
+export function ViewToggle({
+  view,
+  onChange,
+}: {
+  view: "list" | "card";
+  onChange: (v: "list" | "card") => void;
+}) {
+  return (
+    <div className="flex items-center rounded-lg border border-stone-200 bg-white p-0.5">
+      <button
+        onClick={() => onChange("list")}
+        className={`rounded-md p-1.5 transition-colors ${
+          view === "list"
+            ? "bg-stone-900 text-white"
+            : "text-stone-400 hover:text-stone-600"
+        }`}
+        title="리스트 뷰"
+      >
+        <List size={15} />
+      </button>
+      <button
+        onClick={() => onChange("card")}
+        className={`rounded-md p-1.5 transition-colors ${
+          view === "card"
+            ? "bg-stone-900 text-white"
+            : "text-stone-400 hover:text-stone-600"
+        }`}
+        title="카드 뷰"
+      >
+        <LayoutGrid size={15} />
+      </button>
+    </div>
+  );
+}
+
 export interface SurveyItem {
   id: string;
   title: string;
@@ -59,10 +94,10 @@ function DateRange({ starts_at, ends_at }: { starts_at: string | null; ends_at: 
 interface Props {
   surveys: SurveyItem[];
   query: string;
+  view: "list" | "card";
 }
 
-export function SurveyListClient({ surveys, query }: Props) {
-  const [view, setView] = useState<"list" | "card">("list");
+export function SurveyListClient({ surveys, query, view }: Props) {
 
   if (surveys.length === 0) {
     return (
@@ -84,34 +119,6 @@ export function SurveyListClient({ surveys, query }: Props) {
 
   return (
     <div>
-      {/* 뷰 토글 */}
-      <div className="flex justify-end mb-3">
-        <div className="flex items-center rounded-lg border border-stone-200 bg-white p-0.5">
-          <button
-            onClick={() => setView("list")}
-            className={`rounded-md p-1.5 transition-colors ${
-              view === "list"
-                ? "bg-stone-900 text-white"
-                : "text-stone-400 hover:text-stone-600"
-            }`}
-            title="리스트 뷰"
-          >
-            <List size={15} />
-          </button>
-          <button
-            onClick={() => setView("card")}
-            className={`rounded-md p-1.5 transition-colors ${
-              view === "card"
-                ? "bg-stone-900 text-white"
-                : "text-stone-400 hover:text-stone-600"
-            }`}
-            title="카드 뷰"
-          >
-            <LayoutGrid size={15} />
-          </button>
-        </div>
-      </div>
-
       {view === "list" ? (
         <ListView surveys={surveys} />
       ) : (
