@@ -137,6 +137,7 @@ export default function SurveyForm({ survey, groupToken }: { survey: SurveyData;
   }
 
   const handleSubmit = async () => {
+    if (!validateCurrentSection()) return
     setIsSubmitting(true)
     setError(null)
 
@@ -369,7 +370,34 @@ export default function SurveyForm({ survey, groupToken }: { survey: SurveyData;
     }
   }
 
+  const [toast, setToast] = useState<string | null>(null)
+
+  const showToast = (msg: string) => {
+    setToast(msg)
+    setTimeout(() => setToast(null), 3000)
+  }
+
+  const validateCurrentSection = (): boolean => {
+    if (!currentSection) return true
+    const visibleQuestions = currentSection.questions.filter((q) => shouldShowQuestion(q, answers))
+    const unanswered = visibleQuestions.find((q) => q.required && answers[q.id] === undefined)
+    if (unanswered) {
+      showToast(`"${String(unanswered.text).slice(0, 30)}..." 문항에 응답해 주세요`)
+      setTimeout(() => {
+        const el = document.getElementById(`q-${unanswered.id}`)
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+          el.classList.add('ring-2', 'ring-rose-400', 'ring-offset-2', 'rounded-xl')
+          setTimeout(() => el.classList.remove('ring-2', 'ring-rose-400', 'ring-offset-2', 'rounded-xl'), 2000)
+        }
+      }, 100)
+      return false
+    }
+    return true
+  }
+
   const handleNextSection = () => {
+    if (!validateCurrentSection()) return
     if (currentSectionIdx < totalSections - 1) {
       setCurrentSectionIdx(currentSectionIdx + 1)
       scrollToTop()
@@ -514,6 +542,14 @@ export default function SurveyForm({ survey, groupToken }: { survey: SurveyData;
         })}
       </div>
 
+      {/* Toast */}
+      {toast && (
+        <div className="mx-6 mb-2 bg-amber-50 border border-amber-200 rounded-xl p-3 text-sm text-amber-800 flex items-center gap-2 animate-in fade-in slide-in-from-bottom-2">
+          <span className="text-amber-500 shrink-0">⚠</span>
+          {toast}
+        </div>
+      )}
+
       {/* Error */}
       {error && (
         <div className="mx-6 mb-2 bg-rose-50 border border-rose-200 rounded-xl p-3 text-sm text-rose-700">
@@ -537,7 +573,7 @@ export default function SurveyForm({ survey, groupToken }: { survey: SurveyData;
           {isLastSection ? (
             <button
               onClick={handleSubmit}
-              disabled={isSubmitting || !allRequiredAnswered}
+              disabled={isSubmitting}
               className="flex items-center gap-1.5 h-10 px-5 bg-teal-600 hover:bg-teal-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold text-sm rounded-xl transition-colors"
             >
               {isSubmitting ? (
