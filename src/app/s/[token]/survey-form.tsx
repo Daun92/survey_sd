@@ -243,6 +243,41 @@ export default function SurveyForm({ survey, groupToken }: { survey: SurveyData;
     )
   }
 
+  const [currentSectionIdx, setCurrentSectionIdx] = useState(0)
+  const totalSections = survey.sections.length
+  const currentSection = survey.sections[Math.min(currentSectionIdx, totalSections - 1)]
+
+  const handleLikertChangeWithScroll = (questionId: string, value: number) => {
+    handleLikertChange(questionId, value)
+    // Auto-scroll to next question
+    const currentQuestions = currentSection?.questions ?? []
+    const idx = currentQuestions.findIndex((q) => q.id === questionId)
+    if (idx >= 0 && idx < currentQuestions.length - 1) {
+      const nextId = currentQuestions[idx + 1].id
+      setTimeout(() => {
+        document.getElementById(`q-${nextId}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      }, 150)
+    }
+  }
+
+  const handleNextSection = () => {
+    if (currentSectionIdx < totalSections - 1) {
+      setCurrentSectionIdx(currentSectionIdx + 1)
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+    }
+  }
+
+  const handlePrevSection = () => {
+    if (currentSectionIdx > 0) {
+      setCurrentSectionIdx(currentSectionIdx - 1)
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+    } else {
+      setStep('landing')
+    }
+  }
+
+  const isLastSection = currentSectionIdx >= totalSections - 1
+
   // ─── Questions Page ───
   return (
     <MobileFrame>
@@ -251,7 +286,7 @@ export default function SurveyForm({ survey, groupToken }: { survey: SurveyData;
       <div className="bg-white sticky top-0 z-10">
         <div className="flex items-center justify-between px-6 py-3.5">
           <button
-            onClick={() => setStep('landing')}
+            onClick={handlePrevSection}
             className="flex items-center gap-1 text-stone-500 hover:text-stone-700 transition-colors"
           >
             <ChevronLeft size={18} />
@@ -262,70 +297,69 @@ export default function SurveyForm({ survey, groupToken }: { survey: SurveyData;
         <div className="h-[3px] bg-stone-100">
           <div
             className="h-full bg-teal-500 transition-all duration-300 rounded-r-full"
-            style={{ width: `${progress}%` }}
+            style={{ width: `${totalSections > 1 ? ((currentSectionIdx + 1) / totalSections) * 100 : progress}%` }}
           />
         </div>
+        {/* Section header */}
+        {totalSections > 1 && currentSection && (
+          <div className="px-6 py-2.5 border-b border-stone-100 bg-white">
+            <div className="flex items-center gap-2">
+              <span className="text-[13px] font-semibold text-teal-600">{currentSectionIdx + 1}/{totalSections}</span>
+              <span className="text-[15px] font-semibold text-stone-800">{currentSection.name}</span>
+            </div>
+          </div>
+        )}
       </div>
 
-      {/* Questions */}
+      {/* Questions — current section only */}
       <div className="flex-1 max-w-2xl mx-auto w-full px-6 py-6 space-y-6">
-        {survey.sections.map((section, sectionIdx) => (
-          <div key={sectionIdx} className="space-y-5">
-            {survey.sections.length > 1 && (
-              <div className="flex items-center gap-2 pb-1">
-                <span className="text-[13px] font-semibold text-teal-600">{sectionIdx + 1}/{survey.sections.length}</span>
-                <span className="text-[15px] font-semibold text-stone-800">{section.name}</span>
+        {currentSection && currentSection.questions.map((question, qIdx) => (
+          <div key={question.id} id={`q-${question.id}`} className="space-y-3">
+            <p className="text-[15px] text-stone-800 leading-relaxed">
+              <span className="text-[13px] font-semibold text-teal-600 mr-2">
+                {String(qIdx + 1).padStart(2, '0')}
+              </span>
+              {question.text}
+              {question.required && <span className="text-rose-400 ml-1">*</span>}
+            </p>
+
+            {question.type === 'likert_5' && (
+              <div className="flex gap-1.5">
+                {[5, 4, 3, 2, 1].map((value) => (
+                  <button
+                    key={value}
+                    type="button"
+                    onClick={() => handleLikertChangeWithScroll(question.id, value)}
+                    className={`flex-1 flex flex-col items-center gap-1.5 py-3 rounded-xl text-sm font-medium border-[1.5px] transition-all ${
+                      answers[question.id] === value
+                        ? 'bg-teal-600 text-white border-teal-600 shadow-sm'
+                        : 'bg-white text-stone-500 border-stone-200 hover:border-teal-300 hover:bg-teal-50'
+                    }`}
+                  >
+                    <span className="text-[16px]">{value}</span>
+                    <span className={`text-[9px] leading-tight ${
+                      answers[question.id] === value ? 'text-white/80' : 'text-stone-400'
+                    }`}>
+                      {likertLabels[value]}
+                    </span>
+                  </button>
+                ))}
               </div>
             )}
-            {section.questions.map((question, qIdx) => (
-              <div key={question.id} className="space-y-3">
-                <p className="text-[15px] text-stone-800 leading-relaxed">
-                  <span className="text-[13px] font-semibold text-teal-600 mr-2">
-                    {String(qIdx + 1).padStart(2, '0')}
-                  </span>
-                  {question.text}
-                  {question.required && <span className="text-rose-400 ml-1">*</span>}
-                </p>
 
-                {question.type === 'likert_5' && (
-                  <div className="flex gap-1.5">
-                    {[5, 4, 3, 2, 1].map((value) => (
-                      <button
-                        key={value}
-                        type="button"
-                        onClick={() => handleLikertChange(question.id, value)}
-                        className={`flex-1 flex flex-col items-center gap-1.5 py-3 rounded-xl text-sm font-medium border-[1.5px] transition-all ${
-                          answers[question.id] === value
-                            ? 'bg-teal-600 text-white border-teal-600 shadow-sm'
-                            : 'bg-white text-stone-500 border-stone-200 hover:border-teal-300 hover:bg-teal-50'
-                        }`}
-                      >
-                        <span className="text-[16px]">{value}</span>
-                        <span className={`text-[9px] leading-tight ${
-                          answers[question.id] === value ? 'text-white/80' : 'text-stone-400'
-                        }`}>
-                          {likertLabels[value]}
-                        </span>
-                      </button>
-                    ))}
-                  </div>
-                )}
+            {question.type === 'text' && (
+              <Textarea
+                placeholder="의견을 입력해 주세요..."
+                rows={3}
+                className="rounded-xl"
+                value={(answers[question.id] as string) || ''}
+                onChange={(e) => handleTextChange(question.id, e.target.value)}
+              />
+            )}
 
-                {question.type === 'text' && (
-                  <Textarea
-                    placeholder="의견을 입력해 주세요..."
-                    rows={3}
-                    className="rounded-xl"
-                    value={(answers[question.id] as string) || ''}
-                    onChange={(e) => handleTextChange(question.id, e.target.value)}
-                  />
-                )}
-
-                {qIdx < section.questions.length - 1 && (
-                  <div className="h-px bg-stone-100" />
-                )}
-              </div>
-            ))}
+            {qIdx < currentSection.questions.length - 1 && (
+              <div className="h-px bg-stone-100" />
+            )}
           </div>
         ))}
       </div>
@@ -337,28 +371,39 @@ export default function SurveyForm({ survey, groupToken }: { survey: SurveyData;
         </div>
       )}
 
-      {/* Bottom Nav */}
+      {/* Bottom Nav — section-aware */}
       <div className="bg-white border-t border-stone-100 sticky bottom-0">
         <div className="max-w-2xl mx-auto w-full flex items-center justify-between px-6 py-4">
           <button
-            onClick={() => setStep('landing')}
+            onClick={handlePrevSection}
             className="flex items-center gap-1 text-stone-500 hover:text-stone-700 transition-colors"
           >
             <ChevronLeft size={16} />
             <span className="text-sm font-medium">이전</span>
           </button>
-          <span className="text-xs text-stone-400">{answeredLikert}/{totalLikert} 응답 완료</span>
-          <button
-            onClick={handleSubmit}
-            disabled={isSubmitting || !allRequiredAnswered}
-            className="flex items-center gap-1.5 h-10 px-5 bg-teal-600 hover:bg-teal-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold text-sm rounded-xl transition-colors"
-          >
-            {isSubmitting ? (
-              <><Loader2 size={16} className="animate-spin" />제출 중</>
-            ) : (
-              <>제출하기<ChevronRight size={16} /></>
-            )}
-          </button>
+          <span className="text-xs text-stone-400">
+            {totalSections > 1 ? `${currentSectionIdx + 1}/${totalSections} 섹션` : `${answeredLikert}/${totalLikert} 응답 완료`}
+          </span>
+          {isLastSection ? (
+            <button
+              onClick={handleSubmit}
+              disabled={isSubmitting || !allRequiredAnswered}
+              className="flex items-center gap-1.5 h-10 px-5 bg-teal-600 hover:bg-teal-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold text-sm rounded-xl transition-colors"
+            >
+              {isSubmitting ? (
+                <><Loader2 size={16} className="animate-spin" />제출 중</>
+              ) : (
+                <>제출하기<ChevronRight size={16} /></>
+              )}
+            </button>
+          ) : (
+            <button
+              onClick={handleNextSection}
+              className="flex items-center gap-1.5 h-10 px-5 bg-teal-600 hover:bg-teal-700 text-white font-semibold text-sm rounded-xl transition-colors"
+            >
+              다음<ChevronRight size={16} />
+            </button>
+          )}
         </div>
       </div>
     </div>
