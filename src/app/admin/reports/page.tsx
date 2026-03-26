@@ -8,7 +8,13 @@ import {
   CalendarDays,
   Users,
   TrendingUp,
+  Download,
 } from "lucide-react";
+import { AIReportComment } from "./ai-comment";
+import { AIOpenAnalysis } from "./ai-open-analysis";
+import { ScoreBarChart, type SectionScore } from "@/components/charts/score-bar-chart";
+import { LikertDistribution, type QuestionDistribution } from "@/components/charts/likert-distribution";
+import { ResponseTrend, type DailyResponse } from "@/components/charts/response-trend";
 
 export const revalidate = 60;
 
@@ -26,10 +32,19 @@ async function getSurveyReport(surveyId: string) {
 
   if (!survey) return null;
 
+  // 응답 데이터 (answers JSONB 포함)
   const { data: submissions } = await supabase
     .from("edu_submissions")
-    .select("id, total_score, created_at")
-    .eq("survey_id", surveyId);
+    .select("id, total_score, answers, created_at")
+    .eq("survey_id", surveyId)
+    .order("created_at", { ascending: true });
+
+  // 문항 데이터
+  const { data: questions } = await supabase
+    .from("edu_questions")
+    .select("id, question_text, question_type, question_code, section, sort_order")
+    .eq("survey_id", surveyId)
+    .order("sort_order", { ascending: true });
 
   const submissionCount = submissions?.length ?? 0;
   const avgScore =
@@ -38,11 +53,77 @@ async function getSurveyReport(surveyId: string) {
           submissionCount)
       : 0;
 
+  // ── 차트 데이터 집계 ──
+
+  // 1. 섹션별 평균 점수
+  const sectionScores: SectionScore[] = [];
+  if (questions && submissions && submissionCount > 0) {
+    const sectionMap = new Map<string, { sum: number; count: number }>();
+    for (const q of questions) {
+      if (!q.question_type?.startsWith("likert") && q.question_type !== "rating") continue;
+      const section = q.section || "일반";
+      if (!sectionMap.has(section)) sectionMap.set(section, { sum: 0, count: 0 });
+      const entry = sectionMap.get(section)!;
+      for (const sub of submissions) {
+        const ans = (sub.answers as Record<string, unknown>)?.[q.id];
+        const num = Number(ans);
+        if (!isNaN(num) && num >= 1 && num <= 5) {
+          entry.sum += num;
+          entry.count += 1;
+        }
+      }
+    }
+    for (const [name, { sum, count }] of sectionMap) {
+      if (count > 0) {
+        sectionScores.push({ name, avg: Math.round((sum / count) * 100) / 100, count });
+      }
+    }
+  }
+
+  // 2. 문항별 Likert 분포
+  const questionDistributions: QuestionDistribution[] = [];
+  if (questions && submissions && submissionCount > 0) {
+    for (const q of questions) {
+      if (!q.question_type?.startsWith("likert") && q.question_type !== "rating") continue;
+      const dist: QuestionDistribution = {
+        code: q.question_code || `Q${q.sort_order + 1}`,
+        text: q.question_text,
+        "1": 0, "2": 0, "3": 0, "4": 0, "5": 0,
+        total: 0,
+      };
+      for (const sub of submissions) {
+        const ans = (sub.answers as Record<string, unknown>)?.[q.id];
+        const num = Number(ans);
+        if (num >= 1 && num <= 5) {
+          dist[String(num) as "1" | "2" | "3" | "4" | "5"] += 1;
+          dist.total += 1;
+        }
+      }
+      if (dist.total > 0) questionDistributions.push(dist);
+    }
+  }
+
+  // 3. 일별 응답 추이
+  const dailyResponses: DailyResponse[] = [];
+  if (submissions && submissionCount > 0) {
+    const dayMap = new Map<string, number>();
+    for (const sub of submissions) {
+      const day = sub.created_at.slice(0, 10);
+      dayMap.set(day, (dayMap.get(day) ?? 0) + 1);
+    }
+    for (const [date, count] of Array.from(dayMap).sort()) {
+      dailyResponses.push({ date, count });
+    }
+  }
+
   return {
     ...survey,
     submissionCount,
     avgScore: Math.round(avgScore * 10) / 10,
     submissions: submissions ?? [],
+    sectionScores,
+    questionDistributions,
+    dailyResponses,
   };
 }
 
@@ -63,8 +144,8 @@ async function getSurveyList() {
 
 const statusLabels: Record<string, { label: string; className: string }> = {
   active: { label: "진행중", className: "bg-emerald-100 text-emerald-800" },
-  closed: { label: "마감", className: "bg-stone-100 text-stone-800" },
-  draft: { label: "초안", className: "border border-stone-300 text-stone-700" },
+  closed: { label: "마감", className: "bg-rose-100 text-rose-800" },
+  draft: { label: "초안", className: "border border-stone-200 text-stone-700" },
 };
 
 export default async function ReportsPage({
@@ -115,10 +196,21 @@ export default async function ReportsPage({
             <ChevronLeft size={16} />
             목록으로 돌아가기
           </Link>
-          <h1 className="text-2xl font-bold text-stone-800">리포트</h1>
-          <p className="text-sm text-stone-500 mt-1">
-            교육 설문 결과를 분석하세요
-          </p>
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl font-bold text-stone-800">리포트</h1>
+              <p className="text-sm text-stone-500 mt-1">
+                교육 설문 결과를 분석하세요
+              </p>
+            </div>
+            <a
+              href={`/api/surveys/${report.id}/export`}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-stone-200 bg-white px-3.5 py-2 text-sm font-medium text-stone-700 hover:bg-stone-50 transition-colors shadow-sm"
+            >
+              <Download size={14} />
+              CSV 내보내기
+            </a>
+          </div>
         </div>
 
         <div className="rounded-xl border border-stone-200 bg-white shadow-sm mb-6">
@@ -176,6 +268,37 @@ export default async function ReportsPage({
             </div>
           </div>
         </div>
+
+        {/* 차트 영역 */}
+        {report.submissionCount > 0 && (
+          <div className="space-y-4 mb-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <ScoreBarChart data={report.sectionScores} />
+              <LikertDistribution data={report.questionDistributions.slice(0, 15)} />
+            </div>
+            <ResponseTrend data={report.dailyResponses} />
+          </div>
+        )}
+
+        {/* AI 리포트 코멘트 */}
+        <AIReportComment
+          reportData={{
+            courseName: report.title,
+            sessionName: "",
+            overallAvg: report.avgScore,
+            responseRate: 0,
+            totalResponses: report.submissionCount,
+            sectionScores: report.sectionScores.map((s) => ({ name: s.name, avg: s.avg })),
+            questionScores: report.questionDistributions.map((q) => ({
+              code: q.code,
+              text: q.text,
+              section: "",
+              avg: q.total > 0
+                ? (q["1"] * 1 + q["2"] * 2 + q["3"] * 3 + q["4"] * 4 + q["5"] * 5) / q.total
+                : 0,
+            })),
+          }}
+        />
 
         {report.submissions.length > 0 ? (
           <div className="rounded-xl border border-stone-200 bg-white shadow-sm">

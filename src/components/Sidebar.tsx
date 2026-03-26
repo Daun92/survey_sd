@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useRouter } from "next/navigation";
 import {
   LayoutDashboard,
   ClipboardList,
@@ -14,7 +15,9 @@ import {
   FileChartColumnIncreasing,
   Building2,
   Settings,
+  LogOut,
 } from "lucide-react";
+import { createClient } from "@/lib/supabase/client";
 
 const eduMenuItems = [
   { href: "/admin", label: "대시보드", icon: LayoutDashboard },
@@ -40,6 +43,13 @@ function isActive(pathname: string, href: string) {
 
 export function Sidebar() {
   const pathname = usePathname();
+  const router = useRouter();
+
+  async function handleLogout() {
+    const supabase = createClient();
+    await supabase.auth.signOut();
+    router.push("/login");
+  }
 
   return (
     <aside className="fixed left-0 top-0 z-40 h-screen w-60 overflow-y-auto bg-stone-900 text-white">
@@ -70,7 +80,7 @@ export function Sidebar() {
                   href={item.href}
                   className={`flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition-colors ${
                     active
-                      ? "bg-teal-500/15 text-teal-400 font-medium"
+                      ? "bg-teal-50/10 text-teal-300 font-medium"
                       : "text-stone-400 hover:bg-stone-800 hover:text-white"
                   }`}
                 >
@@ -97,7 +107,7 @@ export function Sidebar() {
                   href={item.href}
                   className={`flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition-colors ${
                     active
-                      ? "bg-teal-500/15 text-teal-400 font-medium"
+                      ? "bg-teal-50/10 text-teal-300 font-medium"
                       : "text-stone-400 hover:bg-stone-800 hover:text-white"
                   }`}
                 >
@@ -114,7 +124,7 @@ export function Sidebar() {
             href="/admin/settings"
             className={`flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition-colors ${
               isActive(pathname, "/admin/settings")
-                ? "bg-teal-500/15 text-teal-400 font-medium"
+                ? "bg-teal-50/10 text-teal-300 font-medium"
                 : "text-stone-400 hover:bg-stone-800 hover:text-white"
             }`}
           >
@@ -124,15 +134,23 @@ export function Sidebar() {
         </div>
       </nav>
 
-      <div className="absolute bottom-0 left-0 right-0 border-t border-stone-800 bg-stone-900 px-5 py-4">
-        <div className="flex items-center gap-2.5">
-          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-stone-700 text-xs font-semibold text-stone-300">
-            관
+      <div className="absolute bottom-0 left-0 right-0 border-t border-stone-800 bg-stone-900 px-5 py-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-stone-700 text-xs font-semibold text-stone-300">
+              관
+            </div>
+            <div className="flex flex-col">
+              <span className="text-[13px] font-medium text-stone-200">관리자</span>
+            </div>
           </div>
-          <div className="flex flex-col">
-            <span className="text-[13px] font-medium text-stone-200">관리자</span>
-            <span className="text-[11px] text-stone-500">admin@exc.co.kr</span>
-          </div>
+          <button
+            onClick={handleLogout}
+            className="rounded-md p-1.5 text-stone-500 hover:bg-stone-800 hover:text-stone-300 transition-colors"
+            title="로그아웃"
+          >
+            <LogOut size={16} />
+          </button>
         </div>
       </div>
     </aside>

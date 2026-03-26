@@ -15,7 +15,7 @@ async function getSurvey(token: string) {
 
   const { data: questions } = await supabase
     .from("edu_survey_questions")
-    .select("id, question_text, question_type, sort_order, is_required, options")
+    .select("id, question_text, question_type, section, sort_order, is_required, options")
     .eq("survey_id", survey.id)
     .order("sort_order", { ascending: true });
 
@@ -65,7 +65,7 @@ export default async function SurveyPage({
           )}
         </div>
 
-        <SurveyForm surveyId={survey.id} questions={survey.questions} />
+        <SurveyForm surveyId={survey.id} surveyTitle={survey.title} questions={survey.questions} />
       </div>
     </div>
   );
