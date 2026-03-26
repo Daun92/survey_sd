@@ -9,12 +9,11 @@ import {
   CheckCircle2,
   ExternalLink,
   Plus,
-  ChevronDown,
-  ChevronUp,
   FileText,
   Calendar,
   ListChecks,
   X,
+  Eye,
 } from "lucide-react";
 import {
   DIVISION_LABELS,
@@ -328,6 +327,19 @@ export function QuickCreateForm({ projects, customers, templates }: Props) {
 
                       {showProjectDropdown && (
                         <div className="absolute z-10 mt-1 w-full max-h-56 overflow-y-auto rounded-lg border border-stone-200 bg-white shadow-lg">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setProjectMode("create");
+                              setShowProjectDropdown(false);
+                            }}
+                            className="w-full text-left px-3 py-2.5 hover:bg-teal-50 transition-colors flex items-center gap-2 text-teal-600 border-b border-stone-200"
+                          >
+                            <Plus size={14} />
+                            <span className="text-sm font-medium">
+                              새 프로젝트 만들기
+                            </span>
+                          </button>
                           {filteredProjects.map((p) => (
                             <button
                               key={p.id}
@@ -349,19 +361,6 @@ export function QuickCreateForm({ projects, customers, templates }: Props) {
                               )}
                             </button>
                           ))}
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setProjectMode("create");
-                              setShowProjectDropdown(false);
-                            }}
-                            className="w-full text-left px-3 py-2.5 hover:bg-stone-50 transition-colors flex items-center gap-2 text-teal-600"
-                          >
-                            <Plus size={14} />
-                            <span className="text-sm font-medium">
-                              새 프로젝트 만들기
-                            </span>
-                          </button>
                         </div>
                       )}
                     </>
@@ -648,23 +647,14 @@ export function QuickCreateForm({ projects, customers, templates }: Props) {
                       type="button"
                       onClick={(e) => {
                         e.preventDefault();
-                        setPreviewTemplateId(isPreviewing ? null : t.id);
+                        setPreviewTemplateId(t.id);
                       }}
                       className="inline-flex items-center gap-1 text-xs text-stone-400 hover:text-teal-600 transition-colors px-2 py-1 rounded"
                     >
+                      <Eye size={13} />
                       미리보기
-                      {isPreviewing ? (
-                        <ChevronUp size={13} />
-                      ) : (
-                        <ChevronDown size={13} />
-                      )}
                     </button>
                   </label>
-
-                  {/* ── 템플릿 프리뷰 ── */}
-                  {isPreviewing && (
-                    <TemplatePreview questions={t.questions} />
-                  )}
                 </div>
               );
             })}
@@ -699,58 +689,172 @@ export function QuickCreateForm({ projects, customers, templates }: Props) {
           )}
         </button>
       </div>
+
+      {/* ── Template Preview Modal ── */}
+      {previewTemplateId && (
+        <TemplatePreviewModal
+          template={templates.find((t) => t.id === previewTemplateId)!}
+          onClose={() => setPreviewTemplateId(null)}
+        />
+      )}
     </form>
   );
 }
 
-// ── Template Preview Sub-component ──
+// ── Template Preview Modal ──
 
-function TemplatePreview({ questions }: { questions: TemplateQuestion[] }) {
-  // Group by page type
-  const pages: Record<string, TemplateQuestion[]> = {};
-  questions.forEach((q) => {
-    const page = q.pageType || "기타";
-    if (!pages[page]) pages[page] = [];
-    pages[page].push(q);
+const likertLabels: Record<number, string> = {
+  5: "매우 만족",
+  4: "만족",
+  3: "보통",
+  2: "불만족",
+  1: "매우 불만족",
+};
+
+function TemplatePreviewModal({
+  template,
+  onClose,
+}: {
+  template: Template;
+  onClose: () => void;
+}) {
+  if (!template) return null;
+
+  // Group questions into sections by sectionLabel
+  const sections: { name: string; questions: TemplateQuestion[] }[] = [];
+  const sectionMap = new Map<string, TemplateQuestion[]>();
+  template.questions.forEach((q) => {
+    const section = q.sectionLabel || "일반";
+    if (!sectionMap.has(section)) sectionMap.set(section, []);
+    sectionMap.get(section)!.push(q);
   });
+  for (const [name, questions] of sectionMap) {
+    sections.push({ name, questions });
+  }
 
   return (
-    <div className="mt-1 mb-2 rounded-lg border border-stone-200 bg-stone-50 overflow-hidden">
-      {Object.entries(pages).map(([pageName, pageQuestions]) => (
-        <div key={pageName}>
-          <div className="px-4 py-1.5 bg-stone-100 border-b border-stone-200">
-            <span className="text-[11px] font-semibold text-stone-500 uppercase tracking-wide">
-              {pageName}
-            </span>
-            <span className="text-[11px] text-stone-400 ml-1.5">
-              ({pageQuestions.length}문항)
-            </span>
-          </div>
-          {pageQuestions.map((q) => (
-            <div
-              key={q.id}
-              className="flex items-start gap-3 px-4 py-2 border-b border-stone-100 last:border-0"
-            >
-              <span className="text-[11px] font-mono text-stone-400 mt-0.5 shrink-0 w-10">
-                {q.questionNo}
-              </span>
-              <div className="flex-1 min-w-0">
-                <p className="text-xs text-stone-700 leading-relaxed">
-                  {q.questionText}
-                </p>
-                {q.responseOptions && (
-                  <p className="text-[11px] text-stone-400 mt-0.5 truncate">
-                    {q.responseOptions}
-                  </p>
-                )}
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+      onClick={onClose}
+    >
+      <div
+        className="relative w-full max-w-[420px] max-h-[90vh] rounded-3xl shadow-2xl border border-stone-300 overflow-hidden bg-stone-50 flex flex-col"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* ── Phone Frame Header ── */}
+        <div className="bg-white sticky top-0 z-10">
+          <div className="flex items-center justify-between px-6 py-3.5">
+            <div className="flex items-center gap-2">
+              <div className="flex h-6 w-6 items-center justify-center rounded-md bg-teal-600 text-[10px] font-bold text-white">
+                E
               </div>
-              <span className="inline-flex items-center rounded bg-stone-200 px-1.5 py-0.5 text-[10px] font-medium text-stone-600 shrink-0">
-                {questionTypeLabels[q.questionType] ?? q.questionType}
+              <span className="text-[15px] font-semibold text-stone-800 truncate">
+                {template.name}
               </span>
+            </div>
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex h-7 w-7 items-center justify-center rounded-full hover:bg-stone-100 transition-colors"
+            >
+              <X size={16} className="text-stone-500" />
+            </button>
+          </div>
+          <div className="h-[3px] bg-stone-100">
+            <div className="h-full bg-teal-500 w-full rounded-r-full" />
+          </div>
+        </div>
+
+        {/* ── Questions (respondent view) ── */}
+        <div className="flex-1 overflow-y-auto px-6 py-6 space-y-6">
+          {sections.map((section, sectionIdx) => (
+            <div key={sectionIdx} className="space-y-5">
+              {sections.length > 1 && (
+                <div className="flex items-center gap-2 pb-1">
+                  <span className="text-[13px] font-semibold text-teal-600">
+                    {sectionIdx + 1}/{sections.length}
+                  </span>
+                  <span className="text-[15px] font-semibold text-stone-800">
+                    {section.name}
+                  </span>
+                </div>
+              )}
+              {section.questions.map((q, qIdx) => (
+                <div key={q.id} className="space-y-3">
+                  <p className="text-[15px] text-stone-800 leading-relaxed">
+                    <span className="text-[13px] font-semibold text-teal-600 mr-2">
+                      {String(qIdx + 1).padStart(2, "0")}
+                    </span>
+                    {q.questionText}
+                    <span className="text-rose-400 ml-1">*</span>
+                  </p>
+
+                  {/* Likert Scale */}
+                  {(q.questionType === "likert_5" ||
+                    q.questionType === "likert_6") && (
+                    <div className="flex gap-1.5">
+                      {[5, 4, 3, 2, 1].map((value) => (
+                        <div
+                          key={value}
+                          className="flex-1 flex flex-col items-center gap-1.5 py-3 rounded-xl text-sm font-medium border-[1.5px] bg-white text-stone-500 border-stone-200"
+                        >
+                          <span className="text-[16px]">{value}</span>
+                          <span className="text-[9px] leading-tight text-stone-400">
+                            {likertLabels[value] ?? ""}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Single Choice */}
+                  {(q.questionType === "single_choice" ||
+                    q.questionType === "multiple_choice") &&
+                    q.responseOptions && (
+                      <div className="space-y-1.5">
+                        {q.responseOptions.split("/").map((opt, i) => (
+                          <div
+                            key={i}
+                            className="w-full min-h-[44px] flex items-center px-4 rounded-xl border-[1.5px] border-stone-200 bg-white text-sm text-stone-500"
+                          >
+                            {opt.trim()}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                  {/* Text */}
+                  {q.questionType === "text" && (
+                    <div className="w-full rounded-xl border border-stone-200 bg-white px-4 py-3 text-sm text-stone-400">
+                      의견을 입력해 주세요...
+                    </div>
+                  )}
+
+                  {qIdx < section.questions.length - 1 && (
+                    <div className="h-px bg-stone-100" />
+                  )}
+                </div>
+              ))}
             </div>
           ))}
         </div>
-      ))}
+
+        {/* ── Bottom Bar ── */}
+        <div className="bg-white border-t border-stone-100 sticky bottom-0">
+          <div className="flex items-center justify-between px-6 py-4">
+            <span className="text-xs text-stone-400">
+              {template.questionCount}문항 미리보기
+            </span>
+            <button
+              type="button"
+              onClick={onClose}
+              className="h-10 px-5 bg-teal-600 text-white font-semibold text-sm rounded-xl transition-colors hover:bg-teal-700"
+            >
+              닫기
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
