@@ -85,6 +85,7 @@ export default function SurveyForm({ survey, groupToken }: { survey: SurveyData;
   const [error, setError] = useState<string | null>(null)
   const startTimeRef = useRef<number>(0)
   const [elapsedTime, setElapsedTime] = useState('')
+  const [currentSectionIdx, setCurrentSectionIdx] = useState(0)
 
   const allQuestions = survey.sections.flatMap((s) => s.questions)
   const isLikertType = (t: string) => t === 'likert_5' || t === 'likert_6'
@@ -268,7 +269,6 @@ export default function SurveyForm({ survey, groupToken }: { survey: SurveyData;
     )
   }
 
-  const [currentSectionIdx, setCurrentSectionIdx] = useState(0)
   const totalSections = survey.sections.length
   const currentSection = survey.sections[Math.min(currentSectionIdx, totalSections - 1)]
 
