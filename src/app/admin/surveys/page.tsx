@@ -303,7 +303,7 @@ export default async function SurveysPage({
                           )}
                           {survey.submission_count > 0 && (
                             <Link
-                              href={`/admin/reports?survey=${survey.id}`}
+                              href={`/admin/responses?survey=${survey.id}`}
                               className="rounded p-1 text-stone-400 hover:text-teal-600 hover:bg-teal-50 transition-colors"
                               title="리포트"
                             >

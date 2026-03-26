@@ -90,7 +90,7 @@ export default async function ResponsesPage() {
   return (
     <div>
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-stone-800">응답 관리</h1>
+        <h1 className="text-2xl font-bold text-stone-800">응답 및 리포트</h1>
         <p className="text-sm text-stone-500 mt-1">
           수집된 설문 응답을 확인하고 분석하세요
         </p>

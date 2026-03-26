@@ -5,13 +5,9 @@ import { usePathname } from "next/navigation";
 import { useRouter } from "next/navigation";
 import {
   LayoutDashboard,
-  FolderOpen,
   ClipboardList,
   BookOpen,
-  MessageSquare,
   ChartColumn,
-  QrCode,
-  Zap,
   FileSearch,
   PenTool,
   Users,
@@ -25,13 +21,9 @@ import { createClient } from "@/lib/supabase/client";
 
 const eduMenuItems = [
   { href: "/admin", label: "대시보드", icon: LayoutDashboard },
-  { href: "/admin/quick-create", label: "간편 생성", icon: Zap },
-  { href: "/admin/projects", label: "프로젝트", icon: FolderOpen },
   { href: "/admin/surveys", label: "설문 관리", icon: ClipboardList },
-  { href: "/admin/cs-templates", label: "CS 문항 템플릿", icon: BookOpen },
-  { href: "/admin/responses", label: "응답 관리", icon: MessageSquare },
-  { href: "/admin/reports", label: "리포트", icon: ChartColumn },
-  { href: "/admin/distribute", label: "QR 배포", icon: QrCode },
+  { href: "/admin/cs-templates", label: "문항 템플릿", icon: BookOpen },
+  { href: "/admin/responses", label: "응답 및 리포트", icon: ChartColumn },
 ];
 
 const hrdMenuItems = [
