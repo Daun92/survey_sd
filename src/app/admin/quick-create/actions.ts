@@ -1,6 +1,7 @@
 "use server";
 
 import { supabase } from "@/lib/supabase";
+import { requireAuth } from "@/lib/auth";
 
 interface QuickCreateInput {
   surveyTitle: string;
@@ -154,6 +155,7 @@ export async function quickCreateSurvey(formData: FormData): Promise<QuickCreate
   }
 
   // ── Create survey ──
+  const user = await requireAuth();
   const surveyStatus = input.distributeDate && input.distributeDate > new Date().toISOString().slice(0, 10)
     ? "draft"
     : "active";
@@ -169,6 +171,7 @@ export async function quickCreateSurvey(formData: FormData): Promise<QuickCreate
       status: surveyStatus,
       starts_at: input.startDate,
       ends_at: input.endDate,
+      owner_id: user.id,
     })
     .select("id, url_token")
     .single();
