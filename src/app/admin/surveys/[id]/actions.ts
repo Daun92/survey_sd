@@ -78,19 +78,22 @@ export async function addQuestion(surveyId: string, data: AddQuestionInput) {
     throw new Error("입력값 오류: " + parsed.error.issues[0].message);
   }
 
+  const insertData: Record<string, unknown> = {
+    survey_id: surveyId,
+    question_text: parsed.data.question_text,
+    question_type: parsed.data.question_type,
+    question_code: parsed.data.question_code || null,
+    section: parsed.data.section || "일반",
+    is_required: parsed.data.is_required ?? true,
+    sort_order: parsed.data.sort_order ?? 0,
+    options: parsed.data.options ? JSON.stringify(parsed.data.options) : null,
+  };
+  const skipLogic = (data as Record<string, unknown>).skip_logic;
+  if (skipLogic) insertData.skip_logic = skipLogic;
+
   const { data: question, error } = await supabase
     .from("edu_questions")
-    .insert({
-      survey_id: surveyId,
-      question_text: parsed.data.question_text,
-      question_type: parsed.data.question_type,
-      question_code: parsed.data.question_code || null,
-      section: parsed.data.section || "일반",
-      is_required: parsed.data.is_required ?? true,
-      sort_order: parsed.data.sort_order ?? 0,
-      options: parsed.data.options ? JSON.stringify(parsed.data.options) : null,
-      skip_logic: (data as Record<string, unknown>).skip_logic ?? null,
-    })
+    .insert(insertData)
     .select("*")
     .single();
 
@@ -118,8 +121,9 @@ export async function updateQuestion(
   if (data.options !== undefined) {
     updateData.options = data.options ? JSON.stringify(data.options) : null;
   }
-  if ((data as Record<string, unknown>).skip_logic !== undefined) {
-    updateData.skip_logic = (data as Record<string, unknown>).skip_logic;
+  const skipLogicVal = (data as Record<string, unknown>).skip_logic;
+  if (skipLogicVal !== undefined && skipLogicVal !== null) {
+    updateData.skip_logic = skipLogicVal;
   }
 
   const { error } = await supabase
