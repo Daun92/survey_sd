@@ -43,15 +43,13 @@ export async function getUserProfile(): Promise<UserProfile> {
     redirect("/login");
   }
 
+  // RLS 우회: security definer 함수로 역할 조회
   const { data, error } = await supabase
-    .from("user_roles")
-    .select("role, department, display_name")
-    .eq("user_id", user.id)
-    .single();
+    .rpc("get_user_role", { p_user_id: user.id })
+    .single<{ role: string; department: string | null; display_name: string | null }>();
 
-  // RLS 또는 네트워크 문제로 조회 실패 시 로그
-  if (error && error.code !== "PGRST116") {
-    console.error("[auth] user_roles 조회 실패:", error.message, "user:", user.id);
+  if (error) {
+    console.error("[auth] get_user_role RPC 실패:", error.message, "user:", user.id);
   }
 
   return {
