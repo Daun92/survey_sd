@@ -104,6 +104,7 @@ export default function SurveyForm({ survey, groupToken }: { survey: SurveyData;
   const scrollContainerRef = useRef<HTMLDivElement>(null)
   const [elapsedTime, setElapsedTime] = useState('')
   const [currentSectionIdx, setCurrentSectionIdx] = useState(0)
+  const [toast, setToast] = useState<string | null>(null)
 
   const respondentFields: RespondentFieldConfig[] =
     survey.settings.respondent_fields?.filter((f) => f.enabled) ?? DEFAULT_RESPONDENT_FIELDS
@@ -369,8 +370,6 @@ export default function SurveyForm({ survey, groupToken }: { survey: SurveyData;
       }, 150)
     }
   }
-
-  const [toast, setToast] = useState<string | null>(null)
 
   const showToast = (msg: string) => {
     setToast(msg)
