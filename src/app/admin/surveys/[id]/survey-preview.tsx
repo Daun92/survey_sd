@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Image from "next/image";
 import { Eye, ChevronLeft, ChevronRight, CheckCircle2, Clock, FileText, Shield } from "lucide-react";
-import { type Question, type SurveySettings, type PreviewTab, likertLabels, parseOptions, groupQuestionsBySection } from "./components/types";
+import { type Question, type SurveySettings, type PreviewTab, type RespondentFieldConfig, RESPONDENT_FIELD_PRESETS, likertLabels, parseOptions, groupQuestionsBySection } from "./components/types";
 
 interface PreviewProps {
   surveyTitle: string;
@@ -69,61 +69,98 @@ export default function SurveyPreview({ surveyTitle, questions, settings, active
 
 function LandingPreview({ title, settings, questionCount }: { title: string; settings: SurveySettings; questionCount: number }) {
   const estimatedMin = Math.max(1, Math.ceil(questionCount * 0.4));
+  const fields: RespondentFieldConfig[] =
+    settings.respondent_fields?.filter((f) => f.enabled) ??
+    RESPONDENT_FIELD_PRESETS.filter((f) => f.enabled);
 
   return (
-    <div className="flex flex-col min-h-full">
+    <div className="flex flex-col min-h-full overflow-y-auto">
       {/* Top bar */}
-      <div className="flex items-center gap-2 px-5 py-3 bg-white border-b border-stone-100">
-        <Image src="/logo-expert.svg" alt="EXPERT" width={80} height={16} className="h-4 w-auto" />
-        <span className="text-[10px] text-stone-400 ml-auto">Satisfaction Survey</span>
+      <div className="flex items-center gap-2 px-5 py-2.5 bg-white border-b border-stone-100">
+        <Image src="/logo-expert.svg" alt="EXPERT" width={80} height={16} className="h-3.5 w-auto" />
+        <span className="text-[9px] text-stone-400 ml-auto">Satisfaction Survey</span>
       </div>
 
-      <div className="flex-1 px-5 py-6">
+      {/* Hero image */}
+      {settings.hero_image_url && (
+        <div className="w-full h-24 overflow-hidden">
+          <img src={settings.hero_image_url} alt="" className="w-full h-full object-cover" />
+        </div>
+      )}
+
+      {/* Welcome */}
+      <div className="px-5 pt-5 pb-1">
+        <p className="text-[11px] text-stone-500 leading-relaxed text-center whitespace-pre-line">
+          {settings.welcome_message || "안녕하세요, 고객님.\n귀하의 소중한 의견은 더 나은 교육 서비스를\n제공하는 데 큰 도움이 됩니다."}
+        </p>
+      </div>
+
+      <div className="flex-1 px-5 py-3 space-y-3">
         {/* Title */}
-        <h2 className="text-[18px] font-bold text-stone-800 text-center mb-6 leading-snug">
-          {title || "설문 제목"}
-        </h2>
+        <div className="text-center">
+          <div className="w-8 h-px bg-stone-200 mx-auto mb-3" />
+          <h2 className="text-[15px] font-bold text-stone-800 leading-snug">{title || "설문 제목"}</h2>
+        </div>
 
         {/* Meta cards */}
-        <div className="flex gap-3 mb-5">
-          <div className="flex-1 flex items-center gap-2 rounded-xl bg-white border border-stone-200 px-3 py-2.5">
-            <Clock size={14} className="text-teal-600 shrink-0" />
+        <div className="flex gap-2">
+          <div className="flex-1 flex items-center gap-1.5 rounded-lg bg-white border border-stone-200 px-2 py-2">
+            <Clock size={11} className="text-teal-600 shrink-0" />
             <div>
-              <p className="text-[10px] text-stone-400">예상 소요</p>
-              <p className="text-xs font-semibold text-stone-800">{estimatedMin}분</p>
+              <p className="text-[8px] text-stone-400">예상 소요</p>
+              <p className="text-[10px] font-semibold text-stone-800">{estimatedMin}분</p>
             </div>
           </div>
-          <div className="flex-1 flex items-center gap-2 rounded-xl bg-white border border-stone-200 px-3 py-2.5">
-            <FileText size={14} className="text-teal-600 shrink-0" />
+          <div className="flex-1 flex items-center gap-1.5 rounded-lg bg-white border border-stone-200 px-2 py-2">
+            <FileText size={11} className="text-teal-600 shrink-0" />
             <div>
-              <p className="text-[10px] text-stone-400">전체 문항</p>
-              <p className="text-xs font-semibold text-stone-800">{questionCount}문항</p>
+              <p className="text-[8px] text-stone-400">전체 문항</p>
+              <p className="text-[10px] font-semibold text-stone-800">{questionCount}문항</p>
             </div>
           </div>
         </div>
 
-        {/* Respondent info */}
-        {settings.collect_respondent_info !== false && (
-          <div className="mb-5 space-y-2">
-            <div className="rounded-xl border border-stone-200 bg-white px-3 py-2.5">
-              <span className="text-xs text-stone-400">이름 (선택)</span>
-            </div>
-            <div className="rounded-xl border border-stone-200 bg-white px-3 py-2.5">
-              <span className="text-xs text-stone-400">부서 (선택)</span>
+        {/* Respondent fields */}
+        {settings.collect_respondent_info !== false && fields.length > 0 && (
+          <div className="space-y-1.5">
+            <p className="text-[8px] font-semibold text-stone-400 uppercase tracking-widest">응답자 정보</p>
+            <div className="grid grid-cols-2 gap-1.5">
+              {fields.map((f) => (
+                <div key={f.id} className="rounded-lg border border-stone-200 bg-white px-2 py-2">
+                  <span className="text-[10px] text-stone-400">{f.label}{f.required ? ' *' : ''}</span>
+                </div>
+              ))}
             </div>
           </div>
         )}
 
+        {/* Consent card */}
+        {settings.privacy_consent_text && (
+          <div className="rounded-lg bg-white border border-stone-200 p-3">
+            <div className="flex items-start gap-1.5 mb-1">
+              <Shield size={10} className="text-teal-600 mt-0.5 shrink-0" />
+              <p className="text-[8px] font-semibold text-stone-600">개인정보 수집 안내</p>
+            </div>
+            <p className="text-[9px] text-stone-500 leading-relaxed">{settings.privacy_consent_text}</p>
+            {settings.require_consent && (
+              <div className="flex items-center gap-1.5 mt-2 pt-2 border-t border-stone-100">
+                <div className="w-3 h-3 rounded border border-stone-300" />
+                <span className="text-[9px] text-stone-600">위 내용에 동의합니다</span>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* CTA */}
-        <button className="w-full h-[44px] rounded-2xl bg-teal-600 text-white text-sm font-semibold flex items-center justify-center gap-1">
-          설문 시작하기 <ChevronRight size={16} />
+        <button className="w-full h-[36px] rounded-xl bg-teal-600 text-white text-[11px] font-semibold flex items-center justify-center gap-1">
+          설문 시작하기 <ChevronRight size={13} />
         </button>
       </div>
 
-      {/* Privacy */}
-      <div className="px-5 pb-4 flex items-center gap-1.5 justify-center">
-        <Shield size={11} className="text-stone-400" />
-        <span className="text-[10px] text-stone-400">
+      {/* Privacy notice */}
+      <div className="px-5 pb-3 flex items-center gap-1 justify-center">
+        <Shield size={9} className="text-stone-300" />
+        <span className="text-[8px] text-stone-400">
           {settings.landing_notice || "모든 응답은 익명으로 안전하게 처리됩니다"}
         </span>
       </div>
