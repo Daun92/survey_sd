@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   ClipboardList,
   Eye,
@@ -11,7 +12,12 @@ import {
   LayoutGrid,
   Calendar,
   MessageSquare,
+  Play,
+  Square,
+  RotateCcw,
+  Loader2,
 } from "lucide-react";
+import { toggleSurveyStatus } from "./actions";
 
 export function ViewToggle({
   view,
@@ -88,6 +94,42 @@ function DateRange({ starts_at, ends_at }: { starts_at: string | null; ends_at: 
       <span className="text-stone-300 mx-0.5">~</span>
       {formatDate(ends_at)}
     </span>
+  );
+}
+
+const statusActions: Record<string, { label: string; icon: typeof Play; next: "active" | "closed"; className: string }> = {
+  draft: { label: "오픈", icon: Play, next: "active", className: "text-emerald-600 hover:bg-emerald-50" },
+  active: { label: "마감", icon: Square, next: "closed", className: "text-rose-500 hover:bg-rose-50" },
+  closed: { label: "재오픈", icon: RotateCcw, next: "active", className: "text-blue-600 hover:bg-blue-50" },
+};
+
+function StatusToggleButton({ surveyId, status }: { surveyId: string; status: string }) {
+  const [isPending, startTransition] = useTransition();
+  const router = useRouter();
+  const action = statusActions[status];
+  if (!action) return null;
+
+  return (
+    <button
+      disabled={isPending}
+      onClick={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        startTransition(async () => {
+          await toggleSurveyStatus(surveyId, action.next);
+          router.refresh();
+        });
+      }}
+      className={`inline-flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-medium transition-colors ${action.className} disabled:opacity-50`}
+      title={action.label}
+    >
+      {isPending ? (
+        <Loader2 size={12} className="animate-spin" />
+      ) : (
+        <action.icon size={12} />
+      )}
+      {action.label}
+    </button>
   );
 }
 
@@ -182,11 +224,14 @@ function ListView({ surveys }: { surveys: SurveyItem[] }) {
                     )}
                   </td>
                   <td className="px-5 h-12">
-                    <span
-                      className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${status.className}`}
-                    >
-                      {status.label}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <span
+                        className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${status.className}`}
+                      >
+                        {status.label}
+                      </span>
+                      <StatusToggleButton surveyId={survey.id} status={survey.status} />
+                    </div>
                   </td>
                   <td className="px-5 h-12 whitespace-nowrap">
                     <DateRange starts_at={survey.starts_at} ends_at={survey.ends_at} />
@@ -241,20 +286,25 @@ function CardView({ surveys }: { surveys: SurveyItem[] }) {
       {surveys.map((survey) => {
         const status = statusLabels[survey.status] ?? statusLabels.draft;
         return (
-          <Link
+          <div
             key={survey.id}
-            href={`/admin/surveys/${survey.id}`}
             className="group rounded-xl border border-stone-200 bg-white shadow-sm hover:shadow-md hover:border-teal-200 transition-all p-5 flex flex-col"
           >
             <div className="flex items-start justify-between gap-3 mb-3">
-              <h3 className="text-sm font-semibold text-stone-800 group-hover:text-teal-700 transition-colors line-clamp-2 flex-1">
-                {survey.title}
-              </h3>
-              <span
-                className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium shrink-0 ${status.className}`}
+              <Link
+                href={`/admin/surveys/${survey.id}`}
+                className="text-sm font-semibold text-stone-800 group-hover:text-teal-700 transition-colors line-clamp-2 flex-1"
               >
-                {status.label}
-              </span>
+                {survey.title}
+              </Link>
+              <div className="flex items-center gap-1.5 shrink-0">
+                <span
+                  className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${status.className}`}
+                >
+                  {status.label}
+                </span>
+                <StatusToggleButton surveyId={survey.id} status={survey.status} />
+              </div>
             </div>
 
             {(survey.customer_name || survey.project_name) && (
@@ -277,7 +327,7 @@ function CardView({ surveys }: { surveys: SurveyItem[] }) {
                 <span>응답</span>
               </div>
             </div>
-          </Link>
+          </div>
         );
       })}
     </div>

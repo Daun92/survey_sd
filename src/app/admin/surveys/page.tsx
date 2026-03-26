@@ -33,6 +33,18 @@ async function getSurveys(statusFilter?: string, query?: string): Promise<Survey
 
   if (error || !surveys) return [];
 
+  // Track 1: 날짜 기반 자동 상태 전환
+  const now = new Date().toISOString();
+  for (const s of surveys as any[]) {
+    if (s.status === "draft" && s.starts_at && s.starts_at <= now) {
+      await supabase.from("edu_surveys").update({ status: "active", updated_at: now }).eq("id", s.id);
+      s.status = "active";
+    } else if (s.status === "active" && s.ends_at && s.ends_at <= now) {
+      await supabase.from("edu_surveys").update({ status: "closed", updated_at: now }).eq("id", s.id);
+      s.status = "closed";
+    }
+  }
+
   let result = surveys.map((s: any) => {
     const session = s.sessions;
     const course = session?.courses;
