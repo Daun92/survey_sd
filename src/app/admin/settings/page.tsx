@@ -8,6 +8,7 @@ import {
   Server,
   Layers,
 } from "lucide-react";
+import { GeminiSettings } from "./gemini-settings";
 
 export const revalidate = 300;
 
@@ -39,6 +40,8 @@ export default async function SettingsPage() {
       </div>
 
       <div className="space-y-6">
+        {/* Gemini AI 설정 */}
+        <GeminiSettings />
         {/* 기본 설정 */}
         <div className="rounded-xl border border-stone-200 bg-white shadow-sm">
           <div className="flex items-center gap-3 p-5 border-b border-stone-100">

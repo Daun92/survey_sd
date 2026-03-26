@@ -1,21 +1,12 @@
 import { supabase } from "@/lib/supabase";
 import Link from "next/link";
-import {
-  Eye,
-  ChartColumn,
-  Inbox,
-  ChevronLeft,
-  Users,
-  TrendingUp,
-  CalendarDays,
-} from "lucide-react";
+import { Eye, MessageSquare, Inbox } from "lucide-react";
 
 export const revalidate = 30;
 
 const statusLabels: Record<string, { label: string; className: string }> = {
   active: { label: "진행중", className: "bg-emerald-100 text-emerald-800" },
-  closed: { label: "마감", className: "bg-stone-100 text-stone-800" },
-  draft: { label: "초안", className: "border border-stone-300 text-stone-700" },
+  closed: { label: "마감", className: "bg-rose-100 text-rose-800" },
 };
 
 function formatDate(dateStr: string | null) {
@@ -23,8 +14,6 @@ function formatDate(dateStr: string | null) {
   const d = new Date(dateStr);
   return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, "0")}.${String(d.getDate()).padStart(2, "0")}`;
 }
-
-// ── 목록 뷰 데이터 ──
 
 interface SurveyWithResponses {
   id: string;
@@ -38,6 +27,7 @@ interface SurveyWithResponses {
 }
 
 async function getSurveysWithResponses(): Promise<SurveyWithResponses[]> {
+  // Fetch surveys with submission counts and session info in parallel
   const [{ data: surveys }, { data: submissions }] = await Promise.all([
     supabase
       .from("edu_surveys")
@@ -50,6 +40,7 @@ async function getSurveysWithResponses(): Promise<SurveyWithResponses[]> {
 
   if (!surveys || !submissions || submissions.length === 0) return [];
 
+  // Build submission stats per survey
   const statsMap: Record<
     string,
     { count: number; totalScore: number; scoreCount: number }
@@ -93,197 +84,7 @@ async function getSurveysWithResponses(): Promise<SurveyWithResponses[]> {
     });
 }
 
-// ── 리포트 상세 뷰 데이터 ──
-
-async function getSurveyReport(surveyId: string) {
-  const { data: survey } = await supabase
-    .from("edu_surveys")
-    .select("id, title, status, created_at")
-    .eq("id", surveyId)
-    .single();
-
-  if (!survey) return null;
-
-  const { data: submissions } = await supabase
-    .from("edu_submissions")
-    .select("id, total_score, created_at")
-    .eq("survey_id", surveyId);
-
-  const submissionCount = submissions?.length ?? 0;
-  const avgScore =
-    submissionCount > 0
-      ? (submissions!.reduce((sum, s) => sum + (s.total_score ?? 0), 0) /
-          submissionCount)
-      : 0;
-
-  return {
-    ...survey,
-    submissionCount,
-    avgScore: Math.round(avgScore * 10) / 10,
-    submissions: submissions ?? [],
-  };
-}
-
-// ── 페이지 컴포넌트 ──
-
-export default async function ResponsesPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ survey?: string }>;
-}) {
-  const params = await searchParams;
-  const surveyId = params.survey;
-
-  // ── 리포트 상세 뷰 ──
-  if (surveyId) {
-    const report = await getSurveyReport(surveyId);
-
-    if (!report) {
-      return (
-        <div>
-          <div className="mb-8">
-            <h1 className="text-2xl font-bold text-stone-800">응답 및 리포트</h1>
-            <p className="text-sm text-stone-500 mt-1">
-              설문 응답을 확인하고 분석하세요
-            </p>
-          </div>
-          <div className="rounded-xl border border-stone-200 bg-white shadow-sm p-12 text-center">
-            <p className="text-sm text-stone-500">
-              해당 설문을 찾을 수 없습니다.
-            </p>
-            <Link
-              href="/admin/responses"
-              className="inline-flex items-center gap-1 text-sm font-medium text-teal-600 hover:text-teal-700 mt-4"
-            >
-              <ChevronLeft size={16} />
-              목록으로 돌아가기
-            </Link>
-          </div>
-        </div>
-      );
-    }
-
-    const status = statusLabels[report.status] ?? statusLabels.draft;
-
-    return (
-      <div>
-        <div className="mb-8">
-          <Link
-            href="/admin/responses"
-            className="inline-flex items-center gap-1 text-sm font-medium text-teal-600 hover:text-teal-700 mb-4"
-          >
-            <ChevronLeft size={16} />
-            목록으로 돌아가기
-          </Link>
-          <h1 className="text-2xl font-bold text-stone-800">응답 및 리포트</h1>
-          <p className="text-sm text-stone-500 mt-1">
-            설문 응답을 확인하고 분석하세요
-          </p>
-        </div>
-
-        <div className="rounded-xl border border-stone-200 bg-white shadow-sm mb-6">
-          <div className="p-5 border-b border-stone-100">
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-base font-semibold text-stone-900">
-                  {report.title}
-                </h2>
-                <p className="text-sm text-stone-500 mt-0.5">
-                  {formatDate(report.created_at)}
-                </p>
-              </div>
-              <span
-                className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${status.className}`}
-              >
-                {status.label}
-              </span>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x divide-stone-100">
-            <div className="p-5 text-center">
-              <div className="flex justify-center mb-2">
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-teal-50 text-teal-600">
-                  <Users size={16} />
-                </div>
-              </div>
-              <p className="text-[28px] font-bold text-stone-800">
-                {report.submissionCount}
-              </p>
-              <p className="text-xs text-stone-500 mt-1">총 응답 수</p>
-            </div>
-            <div className="p-5 text-center">
-              <div className="flex justify-center mb-2">
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-teal-50 text-teal-600">
-                  <TrendingUp size={16} />
-                </div>
-              </div>
-              <p className="text-[28px] font-bold text-stone-800">
-                {report.avgScore}
-              </p>
-              <p className="text-xs text-stone-500 mt-1">평균 점수</p>
-            </div>
-            <div className="p-5 text-center">
-              <div className="flex justify-center mb-2">
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-teal-50 text-teal-600">
-                  <CalendarDays size={16} />
-                </div>
-              </div>
-              <p className="text-[28px] font-bold text-stone-800">
-                {formatDate(report.created_at)}
-              </p>
-              <p className="text-xs text-stone-500 mt-1">설문 생성일</p>
-            </div>
-          </div>
-        </div>
-
-        {report.submissions.length > 0 ? (
-          <div className="rounded-xl border border-stone-200 bg-white shadow-sm">
-            <div className="p-5 border-b border-stone-100">
-              <h3 className="text-base font-semibold text-stone-900">
-                응답 내역
-              </h3>
-            </div>
-            <div>
-              <div className="flex items-center px-5 h-9 bg-stone-50/80 border-b border-stone-100">
-                <div className="flex-1 text-xs font-medium text-stone-500">
-                  #
-                </div>
-                <div className="flex-[2] text-xs font-medium text-stone-500">
-                  응답일
-                </div>
-                <div className="flex-1 text-xs font-medium text-stone-500 text-right">
-                  점수
-                </div>
-              </div>
-              {report.submissions.map((sub, idx) => (
-                <div
-                  key={sub.id}
-                  className="flex items-center px-5 h-12 border-b border-stone-100 last:border-0"
-                >
-                  <div className="flex-1 text-sm text-stone-500">{idx + 1}</div>
-                  <div className="flex-[2] text-sm text-stone-700">
-                    {formatDate(sub.created_at)}
-                  </div>
-                  <div className="flex-1 text-sm font-medium text-stone-800 text-right">
-                    {sub.total_score ?? "-"}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        ) : (
-          <div className="rounded-xl border border-stone-200 bg-white shadow-sm p-12 text-center">
-            <p className="text-sm text-stone-500">
-              아직 응답 데이터가 없습니다.
-            </p>
-          </div>
-        )}
-      </div>
-    );
-  }
-
-  // ── 목록 뷰 ──
+export default async function ResponsesPage() {
   const surveys = await getSurveysWithResponses();
 
   return (
@@ -394,17 +195,17 @@ export default async function ResponsesPage({
                   {/* Action Buttons */}
                   <div className="flex items-center gap-2 pt-3 border-t border-stone-100">
                     <Link
-                      href={`/admin/surveys/${survey.id}`}
+                      href={`/admin/responses/${survey.id}`}
                       className="inline-flex items-center gap-1.5 rounded-lg border border-stone-200 bg-white px-3 py-2 text-[13px] font-medium text-stone-700 hover:bg-stone-50 transition-colors flex-1 justify-center"
                     >
                       <Eye size={14} />
-                      상세
+                      응답 보기
                     </Link>
                     <Link
-                      href={`/admin/responses?survey=${survey.id}`}
+                      href={`/admin/reports?survey=${survey.id}`}
                       className="inline-flex items-center gap-1.5 rounded-lg bg-teal-600 px-3 py-2 text-[13px] font-medium text-white hover:bg-teal-700 transition-colors flex-1 justify-center"
                     >
-                      <ChartColumn size={14} />
+                      <MessageSquare size={14} />
                       리포트
                     </Link>
                   </div>

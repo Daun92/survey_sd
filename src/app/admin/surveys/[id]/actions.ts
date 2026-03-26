@@ -2,25 +2,53 @@
 
 import { supabase } from "@/lib/supabase";
 import { revalidatePath } from "next/cache";
+import {
+  updateSurveySchema,
+  addQuestionSchema,
+  updateQuestionSchema,
+  reorderQuestionsSchema,
+  type UpdateSurveyInput,
+  type AddQuestionInput,
+  type UpdateQuestionInput,
+} from "@/lib/validations/survey";
 
 // ─── Survey actions ───
 
-export async function updateSurvey(
-  surveyId: string,
-  data: {
-    title?: string;
-    status?: string;
-    starts_at?: string | null;
-    ends_at?: string | null;
-    description?: string | null;
+export async function updateSurvey(surveyId: string, data: UpdateSurveyInput) {
+  const parsed = updateSurveySchema.safeParse(data);
+  if (!parsed.success) {
+    throw new Error("입력값 오류: " + parsed.error.issues[0].message);
   }
-) {
+
   const { error } = await supabase
     .from("edu_surveys")
-    .update({ ...data, updated_at: new Date().toISOString() })
+    .update({ ...parsed.data, updated_at: new Date().toISOString() })
     .eq("id", surveyId);
 
   if (error) throw new Error("설문 수정 실패: " + error.message);
+  revalidatePath(`/admin/surveys/${surveyId}`);
+}
+
+export async function updateSurveySettings(
+  surveyId: string,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  settings: Record<string, any>
+) {
+  // 기존 settings를 merge
+  const { data: current } = await supabase
+    .from("edu_surveys")
+    .select("settings")
+    .eq("id", surveyId)
+    .single();
+
+  const merged = { ...((current?.settings as Record<string, unknown>) ?? {}), ...settings };
+
+  const { error } = await supabase
+    .from("edu_surveys")
+    .update({ settings: merged, updated_at: new Date().toISOString() })
+    .eq("id", surveyId);
+
+  if (error) throw new Error("설정 저장 실패: " + error.message);
   revalidatePath(`/admin/surveys/${surveyId}`);
 }
 
@@ -44,29 +72,24 @@ export async function deleteSurvey(surveyId: string) {
 
 // ─── Question actions ───
 
-export async function addQuestion(
-  surveyId: string,
-  data: {
-    question_text: string;
-    question_type: string;
-    question_code?: string;
-    section?: string;
-    is_required?: boolean;
-    sort_order?: number;
-    options?: string[] | null;
+export async function addQuestion(surveyId: string, data: AddQuestionInput) {
+  const parsed = addQuestionSchema.safeParse(data);
+  if (!parsed.success) {
+    throw new Error("입력값 오류: " + parsed.error.issues[0].message);
   }
-) {
+
   const { data: question, error } = await supabase
     .from("edu_questions")
     .insert({
       survey_id: surveyId,
-      question_text: data.question_text,
-      question_type: data.question_type,
-      question_code: data.question_code || null,
-      section: data.section || "일반",
-      is_required: data.is_required ?? true,
-      sort_order: data.sort_order ?? 0,
-      options: data.options ? JSON.stringify(data.options) : null,
+      question_text: parsed.data.question_text,
+      question_type: parsed.data.question_type,
+      question_code: parsed.data.question_code || null,
+      section: parsed.data.section || "일반",
+      is_required: parsed.data.is_required ?? true,
+      sort_order: parsed.data.sort_order ?? 0,
+      options: parsed.data.options ? JSON.stringify(parsed.data.options) : null,
+      skip_logic: (data as Record<string, unknown>).skip_logic ?? null,
     })
     .select("*")
     .single();
@@ -79,16 +102,12 @@ export async function addQuestion(
 export async function updateQuestion(
   questionId: string,
   surveyId: string,
-  data: {
-    question_text?: string;
-    question_type?: string;
-    question_code?: string;
-    section?: string;
-    is_required?: boolean;
-    sort_order?: number;
-    options?: string[] | null;
-  }
+  data: UpdateQuestionInput
 ) {
+  const parsed = updateQuestionSchema.safeParse(data);
+  if (!parsed.success) {
+    throw new Error("입력값 오류: " + parsed.error.issues[0].message);
+  }
   const updateData: Record<string, unknown> = {};
   if (data.question_text !== undefined) updateData.question_text = data.question_text;
   if (data.question_type !== undefined) updateData.question_type = data.question_type;
@@ -98,6 +117,9 @@ export async function updateQuestion(
   if (data.sort_order !== undefined) updateData.sort_order = data.sort_order;
   if (data.options !== undefined) {
     updateData.options = data.options ? JSON.stringify(data.options) : null;
+  }
+  if ((data as Record<string, unknown>).skip_logic !== undefined) {
+    updateData.skip_logic = (data as Record<string, unknown>).skip_logic;
   }
 
   const { error } = await supabase
@@ -123,6 +145,10 @@ export async function reorderQuestions(
   surveyId: string,
   orderedIds: { id: string; sort_order: number }[]
 ) {
+  const parsed = reorderQuestionsSchema.safeParse(orderedIds);
+  if (!parsed.success) {
+    throw new Error("입력값 오류: " + parsed.error.issues[0].message);
+  }
   // Update each question's sort_order
   const promises = orderedIds.map(({ id, sort_order }) =>
     supabase
