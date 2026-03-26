@@ -53,6 +53,7 @@ interface SurveyData {
     privacy_consent_text?: string
     require_consent?: boolean
     hero_image_url?: string
+    show_meta_info?: boolean
     respondent_fields?: RespondentFieldConfig[]
   }
   sessionName: string
@@ -195,6 +196,9 @@ export default function SurveyForm({ survey, groupToken }: { survey: SurveyData;
           </div>
         )}
 
+        {/* Center-aligned content area */}
+        <div className="flex-1 flex flex-col justify-center">
+
         {/* Welcome Message */}
         <div className="px-6 pt-8 pb-2">
           {survey.settings.welcome_message ? (
@@ -222,7 +226,7 @@ export default function SurveyForm({ survey, groupToken }: { survey: SurveyData;
         </div>
 
         {/* Content */}
-        <div className="flex-1 px-6 space-y-4">
+        <div className="px-6 space-y-4">
           {/* Description */}
           {survey.description && (
             <div className="bg-white border border-stone-200 rounded-xl p-4">
@@ -232,18 +236,20 @@ export default function SurveyForm({ survey, groupToken }: { survey: SurveyData;
           )}
 
           {/* Meta Info */}
-          <div className="flex gap-3">
-            <div className="flex flex-col items-center gap-1 py-3 bg-white border border-stone-200 rounded-xl flex-1">
-              <Clock size={16} className="text-teal-600" />
-              <span className="text-base font-bold text-stone-800">{estimatedMinutes}분</span>
-              <span className="text-[10px] text-stone-400">예상 소요</span>
+          {survey.settings.show_meta_info !== false && (
+            <div className="flex gap-3">
+              <div className="flex flex-col items-center gap-1 py-3 bg-white border border-stone-200 rounded-xl flex-1">
+                <Clock size={16} className="text-teal-600" />
+                <span className="text-base font-bold text-stone-800">{estimatedMinutes}분</span>
+                <span className="text-[10px] text-stone-400">예상 소요</span>
+              </div>
+              <div className="flex flex-col items-center gap-1 py-3 bg-white border border-stone-200 rounded-xl flex-1">
+                <FileText size={16} className="text-teal-600" />
+                <span className="text-base font-bold text-stone-800">{allQuestions.length}문항</span>
+                <span className="text-[10px] text-stone-400">전체 문항</span>
+              </div>
             </div>
-            <div className="flex flex-col items-center gap-1 py-3 bg-white border border-stone-200 rounded-xl flex-1">
-              <FileText size={16} className="text-teal-600" />
-              <span className="text-base font-bold text-stone-800">{allQuestions.length}문항</span>
-              <span className="text-[10px] text-stone-400">전체 문항</span>
-            </div>
-          </div>
+          )}
 
           {/* Dynamic Respondent Fields */}
           {survey.settings.collect_respondent_info !== false && respondentFields.length > 0 && (
@@ -288,6 +294,8 @@ export default function SurveyForm({ survey, groupToken }: { survey: SurveyData;
             </div>
           )}
         </div>
+
+        </div>{/* end center-aligned content */}
 
         {/* CTA */}
         <div className="px-6 pb-6 pt-5">

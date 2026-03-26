@@ -88,6 +88,9 @@ function LandingPreview({ title, settings, questionCount }: { title: string; set
         </div>
       )}
 
+      {/* Center-aligned content */}
+      <div className="flex-1 flex flex-col justify-center">
+
       {/* Welcome */}
       <div className="px-5 pt-5 pb-1">
         <p className="text-[11px] text-stone-500 leading-relaxed text-center whitespace-pre-line">
@@ -95,7 +98,7 @@ function LandingPreview({ title, settings, questionCount }: { title: string; set
         </p>
       </div>
 
-      <div className="flex-1 px-5 py-3 space-y-3">
+      <div className="px-5 py-3 space-y-3">
         {/* Title */}
         <div className="text-center">
           <div className="w-8 h-px bg-stone-200 mx-auto mb-3" />
@@ -103,22 +106,24 @@ function LandingPreview({ title, settings, questionCount }: { title: string; set
         </div>
 
         {/* Meta cards */}
-        <div className="flex gap-2">
-          <div className="flex-1 flex items-center gap-1.5 rounded-lg bg-white border border-stone-200 px-2 py-2">
-            <Clock size={11} className="text-teal-600 shrink-0" />
-            <div>
-              <p className="text-[8px] text-stone-400">예상 소요</p>
-              <p className="text-[10px] font-semibold text-stone-800">{estimatedMin}분</p>
+        {settings.show_meta_info !== false && (
+          <div className="flex gap-2">
+            <div className="flex-1 flex items-center gap-1.5 rounded-lg bg-white border border-stone-200 px-2 py-2">
+              <Clock size={11} className="text-teal-600 shrink-0" />
+              <div>
+                <p className="text-[8px] text-stone-400">예상 소요</p>
+                <p className="text-[10px] font-semibold text-stone-800">{estimatedMin}분</p>
+              </div>
+            </div>
+            <div className="flex-1 flex items-center gap-1.5 rounded-lg bg-white border border-stone-200 px-2 py-2">
+              <FileText size={11} className="text-teal-600 shrink-0" />
+              <div>
+                <p className="text-[8px] text-stone-400">전체 문항</p>
+                <p className="text-[10px] font-semibold text-stone-800">{questionCount}문항</p>
+              </div>
             </div>
           </div>
-          <div className="flex-1 flex items-center gap-1.5 rounded-lg bg-white border border-stone-200 px-2 py-2">
-            <FileText size={11} className="text-teal-600 shrink-0" />
-            <div>
-              <p className="text-[8px] text-stone-400">전체 문항</p>
-              <p className="text-[10px] font-semibold text-stone-800">{questionCount}문항</p>
-            </div>
-          </div>
-        </div>
+        )}
 
         {/* Respondent fields */}
         {settings.collect_respondent_info !== false && fields.length > 0 && (
@@ -156,6 +161,8 @@ function LandingPreview({ title, settings, questionCount }: { title: string; set
           설문 시작하기 <ChevronRight size={13} />
         </button>
       </div>
+
+      </div>{/* end center-aligned content */}
 
       {/* Privacy notice */}
       <div className="px-5 pb-3 flex items-center gap-1 justify-center">

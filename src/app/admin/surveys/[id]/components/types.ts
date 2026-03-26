@@ -26,6 +26,7 @@ export interface SurveySettings {
   privacy_consent_text?: string;
   require_consent?: boolean;
   hero_image_url?: string;
+  show_meta_info?: boolean;
   respondent_fields?: RespondentFieldConfig[];
 }
 

@@ -78,7 +78,7 @@ export function SettingsPanel({ surveyId, initialSettings, onSettingsChange, onS
       {open && (
         <div className="px-5 pb-5 border-t border-stone-100 pt-4 space-y-5">
           {/* ── 기본 토글 ── */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <label className="flex items-center gap-2.5 rounded-lg border border-stone-200 px-3 py-2.5 cursor-pointer hover:bg-stone-50 transition-colors">
               <input type="checkbox" checked={settings.collect_respondent_info !== false} onChange={(e) => update({ collect_respondent_info: e.target.checked })} className="accent-teal-600" />
               <span className="text-sm text-stone-700">응답자 정보 수집</span>
@@ -90,6 +90,10 @@ export function SettingsPanel({ surveyId, initialSettings, onSettingsChange, onS
             <label className="flex items-center gap-2.5 rounded-lg border border-stone-200 px-3 py-2.5 cursor-pointer hover:bg-stone-50 transition-colors">
               <input type="checkbox" checked={settings.show_progress !== false} onChange={(e) => update({ show_progress: e.target.checked })} className="accent-teal-600" />
               <span className="text-sm text-stone-700">진행률 표시</span>
+            </label>
+            <label className="flex items-center gap-2.5 rounded-lg border border-stone-200 px-3 py-2.5 cursor-pointer hover:bg-stone-50 transition-colors">
+              <input type="checkbox" checked={settings.show_meta_info !== false} onChange={(e) => update({ show_meta_info: e.target.checked })} className="accent-teal-600" />
+              <span className="text-sm text-stone-700">예상 소요 · 문항 수</span>
             </label>
           </div>
 
