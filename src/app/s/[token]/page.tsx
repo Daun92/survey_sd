@@ -10,6 +10,7 @@ interface SurveySection {
     text: string
     type: string
     required: boolean
+    options?: string[] | null
     skip_logic?: { show_when: { question_id: string; operator: 'equals' | 'not_equals' | 'greater_than' | 'less_than'; value: string | number } } | null
   }[]
 }
@@ -47,12 +48,22 @@ async function getSurveyByToken(token: string) {
       if (!sectionMap.has(sectionName)) {
         sectionMap.set(sectionName, { name: sectionName, questions: [] })
       }
+      // Parse options safely
+      let parsedOptions: string[] | null = null
+      if (q.options) {
+        try {
+          const o = typeof q.options === 'string' ? JSON.parse(q.options) : q.options
+          parsedOptions = Array.isArray(o) ? o.map(String) : null
+        } catch { parsedOptions = null }
+      }
+
       sectionMap.get(sectionName)!.questions.push({
         id: q.id,
         code: q.question_code,
-        text: q.question_text,
-        type: q.question_type,
-        required: q.is_required,
+        text: String(q.question_text ?? ''),
+        type: String(q.question_type ?? 'text'),
+        required: q.is_required === true,
+        options: parsedOptions,
         skip_logic: (q as any).skip_logic ?? null,
       })
     }

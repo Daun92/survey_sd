@@ -20,6 +20,7 @@ interface SurveyQuestion {
   text: string
   type: string
   required: boolean
+  options?: string[] | null
   skip_logic?: SkipLogicCondition | null
 }
 
@@ -86,10 +87,11 @@ export default function SurveyForm({ survey, groupToken }: { survey: SurveyData;
   const [elapsedTime, setElapsedTime] = useState('')
 
   const allQuestions = survey.sections.flatMap((s) => s.questions)
-  const totalLikert = allQuestions.filter((q) => q.type === 'likert_5').length
+  const isLikertType = (t: string) => t === 'likert_5' || t === 'likert_6'
+  const totalLikert = allQuestions.filter((q) => isLikertType(q.type)).length
   const answeredLikert = Object.entries(answers).filter(([, v]) => typeof v === 'number').length
   const progress = totalLikert > 0 ? Math.round((answeredLikert / totalLikert) * 100) : 0
-  const requiredLikert = allQuestions.filter((q) => q.type === 'likert_5' && q.required)
+  const requiredLikert = allQuestions.filter((q) => isLikertType(q.type) && q.required)
   const allRequiredAnswered = requiredLikert.every((q) => answers[q.id] !== undefined)
   const estimatedMinutes = Math.max(1, Math.ceil(allQuestions.length * 0.4))
 
@@ -344,11 +346,11 @@ export default function SurveyForm({ survey, groupToken }: { survey: SurveyData;
               <span className="text-[13px] font-semibold text-teal-600 mr-2">
                 {String(qIdx + 1).padStart(2, '0')}
               </span>
-              {question.text}
-              {question.required && <span className="text-rose-400 ml-1">*</span>}
+              {String(question.text ?? '')}
+              {question.required === true && <span className="text-rose-400 ml-1">*</span>}
             </p>
 
-            {question.type === 'likert_5' && (
+            {(question.type === 'likert_5' || question.type === 'likert_6') && (
               <div className="flex gap-1.5">
                 {[5, 4, 3, 2, 1].map((value) => (
                   <button
@@ -367,6 +369,25 @@ export default function SurveyForm({ survey, groupToken }: { survey: SurveyData;
                     }`}>
                       {likertLabels[value]}
                     </span>
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {(question.type === 'single_choice' || question.type === 'multiple_choice') && question.options && (
+              <div className="space-y-1.5">
+                {question.options.map((opt, i) => (
+                  <button
+                    key={i}
+                    type="button"
+                    onClick={() => handleLikertChangeWithScroll(question.id, i + 1)}
+                    className={`w-full min-h-[44px] flex items-center px-4 rounded-xl border-[1.5px] text-sm text-left transition-all ${
+                      answers[question.id] === i + 1
+                        ? 'bg-teal-600 text-white border-teal-600 shadow-sm'
+                        : 'bg-white text-stone-600 border-stone-200 hover:border-teal-300 hover:bg-teal-50'
+                    }`}
+                  >
+                    {String(opt)}
                   </button>
                 ))}
               </div>
