@@ -151,7 +151,7 @@ export default function SurveyForm({ survey, groupToken }: { survey: SurveyData;
       <div className="flex-1 flex flex-col bg-stone-50">
         {/* Top Bar */}
         <div className="flex items-center justify-between px-6 py-4 bg-white border-b border-stone-100">
-          <Image src="/logo.png" alt="EXPERT" width={100} height={20} className="h-5 w-auto" />
+          <Image src="/logo-expert.svg" alt="EXPERT" width={100} height={20} className="h-5 w-auto" />
           <span className="text-[11px] text-stone-400 tracking-wide">Satisfaction Survey</span>
         </div>
 
@@ -258,7 +258,7 @@ export default function SurveyForm({ survey, groupToken }: { survey: SurveyData;
           </div>
         </div>
         <div className="absolute bottom-8 flex flex-col items-center gap-2">
-          <Image src="/logo.png" alt="EXPERT" width={80} height={16} className="h-4 w-auto opacity-30" />
+          <Image src="/logo-expert.svg" alt="EXPERT" width={80} height={16} className="h-4 w-auto opacity-30" />
           <span className="text-[11px] text-stone-300">Powered by EXC-Survey</span>
         </div>
       </div>
