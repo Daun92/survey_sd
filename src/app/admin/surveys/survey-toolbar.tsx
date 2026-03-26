@@ -210,18 +210,20 @@ export function SurveyToolbar({ surveys, query, tabs, statusFilter }: Props) {
       </div>
 
       {/* 그룹별 렌더링 */}
-      {grouped.map((group, idx) => (
-        <div key={group.label || idx}>
-          {group.label && (
-            <div className="flex items-center gap-2 mb-2 mt-4 first:mt-0">
-              <h3 className="text-sm font-semibold text-stone-700">{group.label}</h3>
-              <span className="text-xs text-stone-400">{group.items.length}건</span>
-              <div className="flex-1 h-px bg-stone-150" />
-            </div>
-          )}
-          <SurveyListClient surveys={group.items} query={query} view={view} />
-        </div>
-      ))}
+      <div className={groupKey !== "none" ? "space-y-8" : ""}>
+        {grouped.map((group, idx) => (
+          <div key={group.label || idx}>
+            {group.label && (
+              <div className="flex items-center gap-2 mb-3">
+                <h3 className="text-sm font-semibold text-stone-700">{group.label}</h3>
+                <span className="text-xs text-stone-400">{group.items.length}건</span>
+                <div className="flex-1 h-px bg-stone-200" />
+              </div>
+            )}
+            <SurveyListClient surveys={group.items} query={query} view={view} />
+          </div>
+        ))}
+      </div>
     </>
   );
 }
