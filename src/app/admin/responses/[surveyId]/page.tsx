@@ -119,7 +119,7 @@ export default async function ResponseDetailPage({
         </div>
       ) : (
         <div className="rounded-xl border border-stone-200 bg-white shadow-sm">
-          <div className="overflow-auto max-h-[calc(100vh-280px)] max-w-[calc(100vw-17rem)]">
+          <div className="overflow-auto max-h-[calc(100vh-280px)] max-w-[calc(100vw-21rem)]">
             <table className="text-sm border-collapse w-max">
               <thead className="sticky top-0 z-20">
                 <tr className="bg-stone-50 border-b border-stone-100">
