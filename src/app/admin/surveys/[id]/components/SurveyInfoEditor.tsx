@@ -61,8 +61,8 @@ export function SurveyInfoEditor({ survey, onUpdated }: { survey: Survey; onUpda
         <input type="text" value={title} onChange={(e) => setTitle(e.target.value)} className="w-full rounded-lg border border-stone-300 px-3 py-2 text-sm focus:border-teal-500 focus:ring-1 focus:ring-teal-500 outline-none" />
       </div>
       <div>
-        <label className="block text-[13px] font-medium text-stone-600 mb-1">설명</label>
-        <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={2} className="w-full rounded-lg border border-stone-300 px-3 py-2 text-sm focus:border-teal-500 focus:ring-1 focus:ring-teal-500 outline-none resize-none" />
+        <label className="block text-[13px] font-medium text-stone-600 mb-1">안내사항 <span className="text-stone-400 font-normal">— 랜딩 페이지에 표시</span></label>
+        <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={2} placeholder="설문 목적, 유의사항 등을 입력하세요" className="w-full rounded-lg border border-stone-300 px-3 py-2 text-sm focus:border-teal-500 focus:ring-1 focus:ring-teal-500 outline-none resize-none" />
       </div>
       <div className="grid grid-cols-3 gap-3">
         <div>

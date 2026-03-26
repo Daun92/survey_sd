@@ -7,13 +7,14 @@ import { type Question, type SurveySettings, type PreviewTab, type RespondentFie
 
 interface PreviewProps {
   surveyTitle: string;
+  surveyDescription: string;
   questions: Question[];
   settings: SurveySettings;
   activeTab: PreviewTab;
   onTabChange: (tab: PreviewTab) => void;
 }
 
-export default function SurveyPreview({ surveyTitle, questions, settings, activeTab, onTabChange }: PreviewProps) {
+export default function SurveyPreview({ surveyTitle, surveyDescription, questions, settings, activeTab, onTabChange }: PreviewProps) {
   const tabs: { key: PreviewTab; label: string }[] = [
     { key: "landing", label: "랜딩" },
     { key: "questions", label: "문항" },
@@ -50,7 +51,7 @@ export default function SurveyPreview({ surveyTitle, questions, settings, active
         </div>
 
         <div className="bg-stone-50 h-[580px] overflow-y-auto">
-          {activeTab === "landing" && <LandingPreview title={surveyTitle} settings={settings} questionCount={questions.length} />}
+          {activeTab === "landing" && <LandingPreview title={surveyTitle} description={surveyDescription} settings={settings} questionCount={questions.length} />}
           {activeTab === "questions" && <QuestionsPreview title={surveyTitle} questions={questions} />}
           {activeTab === "ending" && <EndingPreview settings={settings} />}
         </div>
@@ -67,7 +68,7 @@ export default function SurveyPreview({ surveyTitle, questions, settings, active
 
 // ─── Landing Preview ───
 
-function LandingPreview({ title, settings, questionCount }: { title: string; settings: SurveySettings; questionCount: number }) {
+function LandingPreview({ title, description, settings, questionCount }: { title: string; description: string; settings: SurveySettings; questionCount: number }) {
   const estimatedMin = Math.max(1, Math.ceil(questionCount * 0.4));
   const fields: RespondentFieldConfig[] =
     settings.respondent_fields?.filter((f) => f.enabled) ??
@@ -105,6 +106,14 @@ function LandingPreview({ title, settings, questionCount }: { title: string; set
       </div>
 
       <div className="px-5 py-3 space-y-3">
+
+        {/* Description / 안내사항 */}
+        {description && (
+          <div className="bg-white border border-stone-200 rounded-lg p-3">
+            <p className="text-[8px] font-semibold text-stone-600 mb-0.5">안내사항</p>
+            <p className="text-[9px] text-stone-500 leading-relaxed">{description}</p>
+          </div>
+        )}
 
         {/* Meta cards */}
         {settings.show_meta_info !== false && (
