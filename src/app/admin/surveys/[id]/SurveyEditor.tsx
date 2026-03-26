@@ -181,7 +181,7 @@ export default function SurveyEditor({ survey, questions, submissionCount }: Edi
       </div>
 
       {/* ── Right Panel ── */}
-      <div className="hidden lg:block w-[400px] shrink-0">
+      <div className="hidden lg:block w-[400px] shrink-0 self-stretch">
         <RightPanel
           panelMode={panelMode}
           previewTab={previewTab}

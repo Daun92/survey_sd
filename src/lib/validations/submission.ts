@@ -4,10 +4,11 @@ import { z } from "zod";
 
 export const submitSurveySchema = z.object({
   answers: z.record(z.string(), z.union([z.string(), z.number()])),
-  respondent_name: z.string().max(100).optional(),
-  respondent_department: z.string().max(100).optional(),
-  respondent_position: z.string().max(100).optional(),
-  class_group_id: z.string().optional(),
+  respondent_name: z.string().max(100).nullable().optional(),
+  respondent_department: z.string().max(100).nullable().optional(),
+  respondent_position: z.string().max(100).nullable().optional(),
+  respondent_info: z.record(z.string(), z.string()).optional(),
+  class_group_id: z.string().nullable().optional(),
 });
 
 export const submitHrdResponseSchema = z.object({

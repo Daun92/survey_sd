@@ -29,6 +29,13 @@ interface SurveySection {
   questions: SurveyQuestion[]
 }
 
+interface RespondentFieldConfig {
+  id: string
+  label: string
+  enabled: boolean
+  required: boolean
+}
+
 interface SurveyData {
   id: string
   title: string
@@ -42,10 +49,21 @@ interface SurveyData {
     thank_you_message?: string
     landing_notice?: string
     ending_title?: string
+    welcome_message?: string
+    privacy_consent_text?: string
+    require_consent?: boolean
+    hero_image_url?: string
+    show_meta_info?: boolean
+    respondent_fields?: RespondentFieldConfig[]
   }
   sessionName: string
   sections: SurveySection[]
 }
+
+const DEFAULT_RESPONDENT_FIELDS: RespondentFieldConfig[] = [
+  { id: 'name', label: '이름', enabled: true, required: false },
+  { id: 'department', label: '소속', enabled: true, required: false },
+]
 
 type Step = 'landing' | 'questions' | 'ending'
 
@@ -78,14 +96,22 @@ function MobileFrame({ children }: { children: React.ReactNode }) {
 export default function SurveyForm({ survey, groupToken }: { survey: SurveyData; groupToken: string | null }) {
   const [step, setStep] = useState<Step>('landing')
   const [answers, setAnswers] = useState<Record<string, number | string>>({})
-  const [respondentName, setRespondentName] = useState('')
-  const [respondentDept, setRespondentDept] = useState('')
-  const [respondentPosition, setRespondentPosition] = useState('')
+  const [respondentInfo, setRespondentInfo] = useState<Record<string, string>>({})
+  const [consentChecked, setConsentChecked] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const startTimeRef = useRef<number>(0)
+  const scrollContainerRef = useRef<HTMLDivElement>(null)
   const [elapsedTime, setElapsedTime] = useState('')
   const [currentSectionIdx, setCurrentSectionIdx] = useState(0)
+
+  const respondentFields: RespondentFieldConfig[] =
+    survey.settings.respondent_fields?.filter((f) => f.enabled) ?? DEFAULT_RESPONDENT_FIELDS
+
+  const scrollToTop = () => {
+    scrollContainerRef.current?.scrollTo({ top: 0, behavior: 'smooth' })
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
 
   const allQuestions = survey.sections.flatMap((s) => s.questions)
   const isLikertType = (t: string) => t === 'likert_5' || t === 'likert_6'
@@ -107,10 +133,11 @@ export default function SurveyForm({ survey, groupToken }: { survey: SurveyData;
   const handleStart = () => {
     startTimeRef.current = Date.now()
     setStep('questions')
-    window.scrollTo(0, 0)
+    scrollToTop()
   }
 
   const handleSubmit = async () => {
+    if (!validateCurrentSection()) return
     setIsSubmitting(true)
     setError(null)
 
@@ -120,9 +147,10 @@ export default function SurveyForm({ survey, groupToken }: { survey: SurveyData;
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           answers,
-          respondent_name: respondentName || null,
-          respondent_department: respondentDept || null,
-          respondent_position: respondentPosition || null,
+          respondent_name: respondentInfo.name || null,
+          respondent_department: respondentInfo.department || null,
+          respondent_position: respondentInfo.position || null,
+          respondent_info: respondentInfo,
           class_group_id: groupToken || null,
         }),
       })
@@ -139,7 +167,7 @@ export default function SurveyForm({ survey, groupToken }: { survey: SurveyData;
       const seconds = elapsed % 60
       setElapsedTime(minutes > 0 ? `${minutes}분 ${seconds}초` : `${seconds}초`)
       setStep('ending')
-      window.scrollTo(0, 0)
+      scrollToTop()
     } catch (err) {
       setError('네트워크 오류가 발생했습니다. 다시 시도해주세요.')
     } finally {
@@ -149,83 +177,140 @@ export default function SurveyForm({ survey, groupToken }: { survey: SurveyData;
 
   // ─── Landing Page ───
   if (step === 'landing') {
+    const hasConsent = !!survey.settings.privacy_consent_text
+    const needsConsent = hasConsent && survey.settings.require_consent
+    const canStart = !needsConsent || consentChecked
+
     return (
       <MobileFrame>
-      <div className="flex-1 flex flex-col bg-stone-50">
+      <div className="flex-1 flex flex-col bg-stone-50 overflow-y-auto">
         {/* Top Bar */}
-        <div className="flex items-center justify-between px-6 py-4 bg-white border-b border-stone-100">
+        <div className="flex items-center justify-between px-6 py-3.5 bg-white border-b border-stone-100">
           <Image src="/logo-expert.svg" alt="EXPERT" width={100} height={20} className="h-5 w-auto" />
           <span className="text-[11px] text-stone-400 tracking-wide">Satisfaction Survey</span>
         </div>
 
-        {/* Hero */}
-        <div className="flex flex-col items-center pt-12 pb-8 px-6">
-          <h1 className="text-[22px] font-bold text-stone-900 text-center leading-tight tracking-tight">
-            {survey.title}
+        {/* Hero Banner Image */}
+        {survey.settings.hero_image_url && (
+          <div className="w-full h-36 overflow-hidden">
+            <img src={survey.settings.hero_image_url} alt="" className="w-full h-full object-cover" />
+          </div>
+        )}
+
+        {/* Center-aligned content area */}
+        <div className="flex-1 flex flex-col justify-center">
+
+        {/* Welcome Message */}
+        <div className="px-6 pt-8 pb-2">
+          {survey.settings.welcome_message ? (
+            <p className="text-[14px] text-stone-600 leading-relaxed whitespace-pre-line text-center">
+              {survey.settings.welcome_message}
+            </p>
+          ) : (
+            <p className="text-[14px] text-stone-600 leading-relaxed text-center">
+              안녕하세요, 고객님.<br />
+              귀하의 소중한 의견은 더 나은 교육 서비스를<br />
+              제공하는 데 큰 도움이 됩니다.
+            </p>
+          )}
+        </div>
+
+        {/* Survey Title */}
+        <div className="flex flex-col items-center py-5 px-6">
+          <div className="w-10 h-px bg-stone-200 mb-5" />
+          <h1 className="text-[20px] font-bold text-stone-900 text-center leading-tight tracking-tight">
+            {String(survey.title ?? '')}
           </h1>
           {survey.sessionName && (
-            <p className="text-sm text-stone-500 mt-2">{survey.sessionName}</p>
+            <p className="text-[13px] text-stone-500 mt-1.5">{String(survey.sessionName ?? '')}</p>
           )}
         </div>
 
         {/* Content */}
-        <div className="flex-1 px-6 space-y-3">
+        <div className="px-6 space-y-4">
           {/* Description */}
           {survey.description && (
             <div className="bg-white border border-stone-200 rounded-xl p-4">
-              <p className="text-[13px] font-semibold text-stone-800 mb-1.5">안내사항</p>
-              <p className="text-[13px] text-stone-500 leading-relaxed">{survey.description}</p>
+              <p className="text-[12px] font-semibold text-stone-700 mb-1">안내사항</p>
+              <p className="text-[13px] text-stone-500 leading-relaxed">{String(survey.description ?? '')}</p>
             </div>
           )}
 
           {/* Meta Info */}
-          <div className="flex gap-3">
-            <div className="flex flex-col items-center gap-1.5 py-4 bg-white border border-stone-200 rounded-xl flex-1">
-              <Clock size={18} className="text-teal-600" />
-              <span className="text-lg font-bold text-stone-800">{estimatedMinutes}분</span>
-              <span className="text-[11px] text-stone-400">예상 소요 시간</span>
-            </div>
-            <div className="flex flex-col items-center gap-1.5 py-4 bg-white border border-stone-200 rounded-xl flex-1">
-              <FileText size={18} className="text-teal-600" />
-              <span className="text-lg font-bold text-stone-800">{allQuestions.length}문항</span>
-              <span className="text-[11px] text-stone-400">총 문항 수</span>
-            </div>
-          </div>
-
-          {/* Respondent Info */}
-          {survey.settings.collect_respondent_info !== false && (
-            <div className="space-y-2">
-              <p className="text-[11px] font-medium text-stone-400 uppercase tracking-widest">응답자 정보 (선택)</p>
-              <div className="flex gap-2">
-                <Input
-                  placeholder="이름"
-                  value={respondentName}
-                  onChange={(e) => setRespondentName(e.target.value)}
-                  className="h-10 rounded-xl"
-                />
-                <Input
-                  placeholder="소속"
-                  value={respondentDept}
-                  onChange={(e) => setRespondentDept(e.target.value)}
-                  className="h-10 rounded-xl"
-                />
+          {survey.settings.show_meta_info !== false && (
+            <div className="flex gap-3">
+              <div className="flex flex-col items-center gap-1 py-3 bg-white border border-stone-200 rounded-xl flex-1">
+                <Clock size={16} className="text-teal-600" />
+                <span className="text-base font-bold text-stone-800">{estimatedMinutes}분</span>
+                <span className="text-[10px] text-stone-400">예상 소요</span>
               </div>
+              <div className="flex flex-col items-center gap-1 py-3 bg-white border border-stone-200 rounded-xl flex-1">
+                <FileText size={16} className="text-teal-600" />
+                <span className="text-base font-bold text-stone-800">{allQuestions.length}문항</span>
+                <span className="text-[10px] text-stone-400">전체 문항</span>
+              </div>
+            </div>
+          )}
+
+          {/* Dynamic Respondent Fields */}
+          {survey.settings.collect_respondent_info !== false && respondentFields.length > 0 && (
+            <div className="space-y-2.5">
+              <p className="text-[11px] font-semibold text-stone-500 uppercase tracking-widest">응답자 정보</p>
+              <div className="grid grid-cols-2 gap-2">
+                {respondentFields.map((field) => (
+                  <Input
+                    key={field.id}
+                    placeholder={`${field.label}${field.required ? ' *' : ''}`}
+                    type={field.id === 'email' ? 'email' : field.id === 'phone' ? 'tel' : 'text'}
+                    value={respondentInfo[field.id] || ''}
+                    onChange={(e) => setRespondentInfo(prev => ({ ...prev, [field.id]: e.target.value }))}
+                    className="h-10 rounded-xl text-sm"
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Privacy Consent Card */}
+          {hasConsent && (
+            <div className="bg-white border border-stone-200 rounded-xl p-4">
+              <div className="flex items-start gap-2 mb-2">
+                <Shield size={14} className="text-teal-600 mt-0.5 shrink-0" />
+                <p className="text-[12px] font-semibold text-stone-700">개인정보 수집 안내</p>
+              </div>
+              <p className="text-[12px] text-stone-500 leading-relaxed whitespace-pre-line">
+                {survey.settings.privacy_consent_text}
+              </p>
+              {survey.settings.require_consent && (
+                <label className="flex items-center gap-2 mt-3 pt-3 border-t border-stone-100 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={consentChecked}
+                    onChange={(e) => setConsentChecked(e.target.checked)}
+                    className="accent-teal-600 w-4 h-4"
+                  />
+                  <span className="text-[12px] font-medium text-stone-700">위 내용에 동의합니다</span>
+                </label>
+              )}
             </div>
           )}
         </div>
 
+        </div>{/* end center-aligned content */}
+
         {/* CTA */}
-        <div className="px-6 pb-8 pt-6">
+        <div className="px-6 pb-6 pt-5">
           <button
             onClick={handleStart}
-            className="w-full h-[52px] bg-teal-600 hover:bg-teal-700 text-white font-semibold text-base rounded-2xl flex items-center justify-center gap-2 transition-colors shadow-sm"
+            disabled={!canStart}
+            className="w-full h-[52px] bg-teal-600 hover:bg-teal-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold text-base rounded-2xl flex items-center justify-center gap-2 transition-colors shadow-sm"
           >
             설문 시작하기
             <ChevronRight size={18} />
           </button>
           <div className="flex items-center justify-center gap-1.5 mt-3">
-            <Shield size={12} className="text-stone-400" />
-            <span className="text-[11px] text-stone-400">{survey.settings.landing_notice || '모든 응답은 익명으로 안전하게 처리됩니다'}</span>
+            <Shield size={11} className="text-stone-300" />
+            <span className="text-[10px] text-stone-400">{survey.settings.landing_notice || '모든 응답은 익명으로 안전하게 처리됩니다'}</span>
           </div>
         </div>
       </div>
@@ -285,17 +370,44 @@ export default function SurveyForm({ survey, groupToken }: { survey: SurveyData;
     }
   }
 
+  const [toast, setToast] = useState<string | null>(null)
+
+  const showToast = (msg: string) => {
+    setToast(msg)
+    setTimeout(() => setToast(null), 3000)
+  }
+
+  const validateCurrentSection = (): boolean => {
+    if (!currentSection) return true
+    const visibleQuestions = currentSection.questions.filter((q) => shouldShowQuestion(q, answers))
+    const unanswered = visibleQuestions.find((q) => q.required && answers[q.id] === undefined)
+    if (unanswered) {
+      showToast(`"${String(unanswered.text).slice(0, 30)}..." 문항에 응답해 주세요`)
+      setTimeout(() => {
+        const el = document.getElementById(`q-${unanswered.id}`)
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+          el.classList.add('ring-2', 'ring-rose-400', 'ring-offset-2', 'rounded-xl')
+          setTimeout(() => el.classList.remove('ring-2', 'ring-rose-400', 'ring-offset-2', 'rounded-xl'), 2000)
+        }
+      }, 100)
+      return false
+    }
+    return true
+  }
+
   const handleNextSection = () => {
+    if (!validateCurrentSection()) return
     if (currentSectionIdx < totalSections - 1) {
       setCurrentSectionIdx(currentSectionIdx + 1)
-      window.scrollTo({ top: 0, behavior: 'smooth' })
+      scrollToTop()
     }
   }
 
   const handlePrevSection = () => {
     if (currentSectionIdx > 0) {
       setCurrentSectionIdx(currentSectionIdx - 1)
-      window.scrollTo({ top: 0, behavior: 'smooth' })
+      scrollToTop()
     } else {
       setStep('landing')
     }
@@ -306,7 +418,7 @@ export default function SurveyForm({ survey, groupToken }: { survey: SurveyData;
   // ─── Questions Page ───
   return (
     <MobileFrame>
-    <div className="flex-1 flex flex-col bg-stone-50 overflow-y-auto">
+    <div ref={scrollContainerRef} className="flex-1 flex flex-col bg-stone-50 overflow-y-auto">
       {/* Header with progress */}
       <div className="bg-white sticky top-0 z-10">
         <div className="flex items-center justify-between px-6 py-3.5">
@@ -338,14 +450,17 @@ export default function SurveyForm({ survey, groupToken }: { survey: SurveyData;
 
       {/* Questions — current section only */}
       <div className="flex-1 max-w-2xl mx-auto w-full px-6 py-6 space-y-6">
-        {currentSection && currentSection.questions.map((question, qIdx) => {
-          if (!shouldShowQuestion(question, answers)) return null
-          return (
-          <div key={question.id} id={`q-${question.id}`} className="space-y-3">
-            <p className="text-[15px] text-stone-800 leading-relaxed">
-              <span className="text-[13px] font-semibold text-teal-600 mr-2">
-                {String(qIdx + 1).padStart(2, '0')}
-              </span>
+        {(() => {
+          let visibleIdx = 0
+          return currentSection && currentSection.questions.map((question) => {
+            if (!shouldShowQuestion(question, answers)) return null
+            visibleIdx++
+            return (
+            <div key={question.id} id={`q-${question.id}`} className="space-y-3">
+              <p className="text-[15px] text-stone-800 leading-relaxed">
+                <span className="text-[13px] font-semibold text-teal-600 mr-2">
+                  {String(visibleIdx).padStart(2, '0')}
+                </span>
               {String(question.text ?? '')}
               {question.required === true && <span className="text-rose-400 ml-1">*</span>}
             </p>
@@ -403,13 +518,39 @@ export default function SurveyForm({ survey, groupToken }: { survey: SurveyData;
               />
             )}
 
-            {qIdx < currentSection.questions.length - 1 && (
-              <div className="h-px bg-stone-100" />
+            {question.type === 'yes_no' && (
+              <div className="flex gap-2">
+                {[{ value: 1, label: '예' }, { value: 2, label: '아니오' }].map(({ value, label }) => (
+                  <button
+                    key={value}
+                    type="button"
+                    onClick={() => handleLikertChangeWithScroll(question.id, value)}
+                    className={`flex-1 h-12 rounded-xl text-sm font-medium border-[1.5px] transition-all ${
+                      answers[question.id] === value
+                        ? 'bg-teal-600 text-white border-teal-600 shadow-sm'
+                        : 'bg-white text-stone-500 border-stone-200 hover:border-teal-300 hover:bg-teal-50'
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
             )}
+
+            <div className="h-px bg-stone-100" />
           </div>
           )
-        })}
+        })
+        })()}
       </div>
+
+      {/* Toast */}
+      {toast && (
+        <div className="mx-6 mb-2 bg-amber-50 border border-amber-200 rounded-xl p-3 text-sm text-amber-800 flex items-center gap-2 animate-in fade-in slide-in-from-bottom-2">
+          <span className="text-amber-500 shrink-0">⚠</span>
+          {toast}
+        </div>
+      )}
 
       {/* Error */}
       {error && (
@@ -434,7 +575,7 @@ export default function SurveyForm({ survey, groupToken }: { survey: SurveyData;
           {isLastSection ? (
             <button
               onClick={handleSubmit}
-              disabled={isSubmitting || !allRequiredAnswered}
+              disabled={isSubmitting}
               className="flex items-center gap-1.5 h-10 px-5 bg-teal-600 hover:bg-teal-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold text-sm rounded-xl transition-colors"
             >
               {isSubmitting ? (

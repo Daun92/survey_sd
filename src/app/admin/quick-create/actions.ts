@@ -201,14 +201,33 @@ export async function quickCreateSurvey(formData: FormData): Promise<QuickCreate
         };
       });
 
-      const { error: questionsError } = await supabase
+      const { data: insertedQuestions, error: questionsError } = await supabase
         .from("edu_questions")
-        .insert(eduQuestions);
+        .insert(eduQuestions)
+        .select("id, question_code");
 
       if (questionsError) {
         throw new Error("문항 복사 실패: " + questionsError.message);
       }
-      questionCount = eduQuestions.length;
+      questionCount = insertedQuestions?.length ?? 0;
+
+      // ── Auto-set skip_logic for eco system questions ──
+      if (insertedQuestions) {
+        const ecoQ1 = insertedQuestions.find((q) => q.question_code === "에코Q1");
+        if (ecoQ1) {
+          const ecoFollowUps = insertedQuestions.filter((q) =>
+            q.question_code === "에코Q1-1" || q.question_code === "에코기타"
+          );
+          if (ecoFollowUps.length > 0) {
+            const skipLogic = { show_when: { question_id: ecoQ1.id, operator: "equals", value: 6 } };
+            await Promise.all(
+              ecoFollowUps.map((q) =>
+                supabase.from("edu_questions").update({ skip_logic: skipLogic }).eq("id", q.id)
+              )
+            );
+          }
+        }
+      }
     }
   }
 

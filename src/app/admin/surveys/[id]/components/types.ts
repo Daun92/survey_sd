@@ -1,5 +1,20 @@
 // ─── Shared Types & Constants for Survey Editor ───
 
+export interface RespondentFieldConfig {
+  id: string;
+  label: string;
+  enabled: boolean;
+  required: boolean;
+}
+
+export const RESPONDENT_FIELD_PRESETS: RespondentFieldConfig[] = [
+  { id: "name", label: "이름", enabled: true, required: false },
+  { id: "department", label: "소속", enabled: true, required: false },
+  { id: "position", label: "직책", enabled: false, required: false },
+  { id: "phone", label: "연락처", enabled: false, required: false },
+  { id: "email", label: "이메일", enabled: false, required: false },
+];
+
 export interface SurveySettings {
   collect_respondent_info?: boolean;
   anonymous?: boolean;
@@ -7,6 +22,12 @@ export interface SurveySettings {
   thank_you_message?: string;
   landing_notice?: string;
   ending_title?: string;
+  welcome_message?: string;
+  privacy_consent_text?: string;
+  require_consent?: boolean;
+  hero_image_url?: string;
+  show_meta_info?: boolean;
+  respondent_fields?: RespondentFieldConfig[];
 }
 
 export interface Survey {

@@ -152,7 +152,11 @@ export function QuestionForm({ surveyId, question, allQuestions, nextSortOrder, 
                 </div>
                 <div>
                   <label className="block text-[11px] text-stone-500 mb-0.5">값</label>
-                  <input type="text" value={skipValue} onChange={(e) => setSkipValue(e.target.value)} placeholder="6" className="w-full rounded border border-stone-300 px-2 py-1.5 text-xs focus:border-teal-500 outline-none" />
+                  <SkipValueSelector
+                    targetQuestion={otherQuestions.find((q) => q.id === skipQuestionId)}
+                    value={skipValue}
+                    onChange={setSkipValue}
+                  />
                 </div>
               </div>
               <p className="text-[11px] text-amber-700">
@@ -176,4 +180,81 @@ export function QuestionForm({ surveyId, question, allQuestions, nextSortOrder, 
       </div>
     </div>
   );
+}
+
+// ─── Skip Value Selector ───
+
+const likertOptions = [
+  { value: "5", label: "5 (매우 만족)" },
+  { value: "4", label: "4 (만족)" },
+  { value: "3", label: "3 (보통)" },
+  { value: "2", label: "2 (불만족)" },
+  { value: "1", label: "1 (매우 불만족)" },
+];
+
+const likert6Options = [
+  ...likertOptions,
+  { value: "6", label: "6 (사용하지않음)" },
+];
+
+const yesNoOptions = [
+  { value: "1", label: "1 (예)" },
+  { value: "2", label: "2 (아니오)" },
+];
+
+function SkipValueSelector({ targetQuestion, value, onChange }: {
+  targetQuestion?: Question;
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  if (!targetQuestion) {
+    return <input type="text" value={value} onChange={(e) => onChange(e.target.value)} placeholder="기준 문항을 선택하세요" disabled className="w-full rounded border border-stone-300 px-2 py-1.5 text-xs bg-stone-50 outline-none" />;
+  }
+
+  const type = targetQuestion.question_type;
+
+  // Likert scales
+  if (type === "likert_5" || type === "likert_7") {
+    return (
+      <select value={value} onChange={(e) => onChange(e.target.value)} className="w-full rounded border border-stone-300 px-2 py-1.5 text-xs focus:border-teal-500 outline-none">
+        <option value="">선택</option>
+        {likertOptions.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+      </select>
+    );
+  }
+
+  if (type === "likert_6") {
+    return (
+      <select value={value} onChange={(e) => onChange(e.target.value)} className="w-full rounded border border-stone-300 px-2 py-1.5 text-xs focus:border-teal-500 outline-none">
+        <option value="">선택</option>
+        {likert6Options.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+      </select>
+    );
+  }
+
+  // Yes/No
+  if (type === "yes_no") {
+    return (
+      <select value={value} onChange={(e) => onChange(e.target.value)} className="w-full rounded border border-stone-300 px-2 py-1.5 text-xs focus:border-teal-500 outline-none">
+        <option value="">선택</option>
+        {yesNoOptions.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+      </select>
+    );
+  }
+
+  // Choice types — show actual options
+  if (type === "single_choice" || type === "multiple_choice") {
+    const opts = parseOptions(targetQuestion.options);
+    if (opts.length > 0) {
+      return (
+        <select value={value} onChange={(e) => onChange(e.target.value)} className="w-full rounded border border-stone-300 px-2 py-1.5 text-xs focus:border-teal-500 outline-none">
+          <option value="">선택</option>
+          {opts.map((opt, i) => <option key={i} value={String(i + 1)}>{i + 1}. {opt}</option>)}
+        </select>
+      );
+    }
+  }
+
+  // Fallback: text input
+  return <input type="text" value={value} onChange={(e) => onChange(e.target.value)} placeholder="값 입력" className="w-full rounded border border-stone-300 px-2 py-1.5 text-xs focus:border-teal-500 outline-none" />;
 }
