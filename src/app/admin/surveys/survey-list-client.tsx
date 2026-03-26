@@ -16,6 +16,7 @@ import {
   Square,
   RotateCcw,
   Loader2,
+  ChevronDown,
 } from "lucide-react";
 import { toggleSurveyStatus } from "./actions";
 
@@ -97,39 +98,80 @@ function DateRange({ starts_at, ends_at }: { starts_at: string | null; ends_at: 
   );
 }
 
-const statusActions: Record<string, { label: string; icon: typeof Play; next: "active" | "closed"; className: string }> = {
-  draft: { label: "오픈", icon: Play, next: "active", className: "text-emerald-600 hover:bg-emerald-50" },
-  active: { label: "마감", icon: Square, next: "closed", className: "text-rose-500 hover:bg-rose-50" },
-  closed: { label: "재오픈", icon: RotateCcw, next: "active", className: "text-blue-600 hover:bg-blue-50" },
+const statusTransitions: Record<string, { label: string; icon: typeof Play; next: "active" | "closed"; className: string }[]> = {
+  draft: [
+    { label: "오픈으로 전환", icon: Play, next: "active", className: "text-emerald-700 hover:bg-emerald-50" },
+  ],
+  active: [
+    { label: "마감 처리", icon: Square, next: "closed", className: "text-rose-600 hover:bg-rose-50" },
+  ],
+  closed: [
+    { label: "재오픈", icon: RotateCcw, next: "active", className: "text-blue-600 hover:bg-blue-50" },
+  ],
 };
 
-function StatusToggleButton({ surveyId, status }: { surveyId: string; status: string }) {
+function StatusDropdown({ surveyId, status }: { surveyId: string; status: string }) {
+  const [open, setOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
+  const [flash, setFlash] = useState(false);
   const router = useRouter();
-  const action = statusActions[status];
-  if (!action) return null;
+
+  const badge = statusLabels[status] ?? statusLabels.draft;
+  const transitions = statusTransitions[status] ?? [];
+
+  function handleTransition(next: "active" | "closed") {
+    startTransition(async () => {
+      await toggleSurveyStatus(surveyId, next);
+      setOpen(false);
+      setFlash(true);
+      router.refresh();
+      setTimeout(() => setFlash(false), 600);
+    });
+  }
 
   return (
-    <button
-      disabled={isPending}
-      onClick={(e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        startTransition(async () => {
-          await toggleSurveyStatus(surveyId, action.next);
-          router.refresh();
-        });
-      }}
-      className={`inline-flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-medium transition-colors ${action.className} disabled:opacity-50`}
-      title={action.label}
-    >
-      {isPending ? (
-        <Loader2 size={12} className="animate-spin" />
-      ) : (
-        <action.icon size={12} />
+    <div className="relative">
+      <button
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          setOpen(!open);
+        }}
+        className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium cursor-pointer transition-all ${badge.className} ${
+          flash ? "ring-2 ring-teal-400 ring-offset-1 scale-105" : ""
+        } ${isPending ? "opacity-50" : "hover:ring-1 hover:ring-stone-300"}`}
+      >
+        {isPending ? (
+          <Loader2 size={11} className="animate-spin" />
+        ) : (
+          <ChevronDown size={11} className={`transition-transform ${open ? "rotate-180" : ""}`} />
+        )}
+        {badge.label}
+      </button>
+
+      {open && transitions.length > 0 && (
+        <>
+          <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
+          <div className="absolute left-0 top-full mt-1 z-20 min-w-[140px] rounded-lg border border-stone-200 bg-white shadow-lg py-1">
+            {transitions.map((t) => (
+              <button
+                key={t.next}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  handleTransition(t.next);
+                }}
+                disabled={isPending}
+                className={`flex items-center gap-2 w-full px-3 py-2 text-xs font-medium transition-colors ${t.className} disabled:opacity-50`}
+              >
+                <t.icon size={13} />
+                {t.label}
+              </button>
+            ))}
+          </div>
+        </>
       )}
-      {action.label}
-    </button>
+    </div>
   );
 }
 
@@ -224,14 +266,7 @@ function ListView({ surveys }: { surveys: SurveyItem[] }) {
                     )}
                   </td>
                   <td className="px-5 h-12">
-                    <div className="flex items-center gap-2">
-                      <span
-                        className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${status.className}`}
-                      >
-                        {status.label}
-                      </span>
-                      <StatusToggleButton surveyId={survey.id} status={survey.status} />
-                    </div>
+                    <StatusDropdown surveyId={survey.id} status={survey.status} />
                   </td>
                   <td className="px-5 h-12 whitespace-nowrap">
                     <DateRange starts_at={survey.starts_at} ends_at={survey.ends_at} />
@@ -297,13 +332,8 @@ function CardView({ surveys }: { surveys: SurveyItem[] }) {
               >
                 {survey.title}
               </Link>
-              <div className="flex items-center gap-1.5 shrink-0">
-                <span
-                  className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${status.className}`}
-                >
-                  {status.label}
-                </span>
-                <StatusToggleButton surveyId={survey.id} status={survey.status} />
+              <div className="shrink-0">
+                <StatusDropdown surveyId={survey.id} status={survey.status} />
               </div>
             </div>
 
