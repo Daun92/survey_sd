@@ -593,11 +593,15 @@ export function QuickCreateForm({ projects, customers, templates }: Props) {
                     type="date"
                     className="w-full rounded-lg border border-stone-300 px-3 py-2 text-sm focus:border-teal-500 focus:ring-1 focus:ring-teal-500 outline-none"
                   />
-                  <p className="text-xs text-stone-400 mt-1.5">
-                    배포일까지 초안 상태로 유지되며, 해당 날짜에 활성화됩니다
-                  </p>
                 </div>
               )}
+
+              <div className="mt-3 rounded-lg bg-teal-50 px-3 py-2.5 text-xs text-teal-700 space-y-1">
+                <p className="font-medium">자동 설문 관리</p>
+                <p>• 배포 시작일(또는 배포 예정일)이 되면 설문이 자동으로 오픈됩니다</p>
+                <p>• 종료일이 지나면 설문이 자동으로 마감됩니다</p>
+                <p className="text-teal-600/70">설문 관리 페이지에서 수동 오픈/마감도 가능합니다</p>
+              </div>
             </div>
           </div>
         </div>
