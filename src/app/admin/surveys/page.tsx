@@ -1,33 +1,11 @@
 import { supabase } from "@/lib/supabase";
 import Link from "next/link";
-import {
-  ClipboardList,
-  Plus,
-  ExternalLink,
-  Search,
-  Eye,
-  Send,
-  ChartColumn,
-} from "lucide-react";
+import { Plus, Search } from "lucide-react";
+import { SurveyListClient, type SurveyItem } from "./survey-list-client";
 
 export const revalidate = 60;
 
-const statusLabels: Record<string, { label: string; className: string }> = {
-  active: { label: "진행중", className: "bg-emerald-100 text-emerald-800" },
-  closed: { label: "마감", className: "bg-rose-100 text-rose-800" },
-  draft: {
-    label: "초안",
-    className: "border border-stone-200 text-stone-700 bg-white",
-  },
-};
-
-function formatDate(dateStr: string | null) {
-  if (!dateStr) return "-";
-  const d = new Date(dateStr);
-  return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, "0")}.${String(d.getDate()).padStart(2, "0")}`;
-}
-
-async function getSurveys(statusFilter?: string, query?: string) {
+async function getSurveys(statusFilter?: string, query?: string): Promise<SurveyItem[]> {
   let q = supabase
     .from("edu_surveys")
     .select(`
@@ -45,7 +23,7 @@ async function getSurveys(statusFilter?: string, query?: string) {
         )
       )
     `)
-    .order("created_at", { ascending: false });
+    .order("starts_at", { ascending: false, nullsFirst: false });
 
   if (statusFilter && statusFilter !== "all") {
     q = q.eq("status", statusFilter);
@@ -64,9 +42,10 @@ async function getSurveys(statusFilter?: string, query?: string) {
     return {
       id: s.id,
       title: s.title,
-      status: s.status,
-      survey_type: s.survey_type,
+      status: s.status as string,
       url_token: s.url_token,
+      starts_at: s.starts_at,
+      ends_at: s.ends_at,
       created_at: s.created_at,
       project_name: project?.name ?? null,
       customer_name: customer?.company_name ?? null,
@@ -189,137 +168,7 @@ export default async function SurveysPage({
         </form>
       </div>
 
-      {surveys.length === 0 ? (
-        <div className="rounded-xl border border-stone-200 bg-white shadow-sm p-12 text-center">
-          <div className="flex justify-center mb-4">
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-stone-100 text-stone-400">
-              <ClipboardList size={24} />
-            </div>
-          </div>
-          <h3 className="text-sm font-medium text-stone-800 mb-1">
-            {query ? "검색 결과가 없습니다" : "등록된 설문이 없습니다"}
-          </h3>
-          <p className="text-sm text-stone-500">
-            {query ? "다른 검색어를 시도해 보세요." : "새 설문을 만들어 보세요."}
-          </p>
-        </div>
-      ) : (
-        <div className="rounded-xl border border-stone-200 bg-white shadow-sm overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="bg-stone-50/80 border-b border-stone-100">
-                  <th className="text-left px-5 h-9 text-xs font-medium text-stone-500">
-                    설문명
-                  </th>
-                  <th className="text-left px-5 h-9 text-xs font-medium text-stone-500">
-                    유형
-                  </th>
-                  <th className="text-left px-5 h-9 text-xs font-medium text-stone-500">
-                    고객사 / 프로젝트
-                  </th>
-                  <th className="text-left px-5 h-9 text-xs font-medium text-stone-500">
-                    상태
-                  </th>
-                  <th className="text-left px-5 h-9 text-xs font-medium text-stone-500">
-                    응답
-                  </th>
-                  <th className="text-left px-5 h-9 text-xs font-medium text-stone-500">
-                    생성일
-                  </th>
-                  <th className="text-left px-5 h-9 text-xs font-medium text-stone-500">
-                    액션
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {surveys.map((survey) => {
-                  const status =
-                    statusLabels[survey.status] ?? statusLabels.draft;
-                  return (
-                    <tr
-                      key={survey.id}
-                      className="border-b border-stone-100 last:border-0 hover:bg-stone-50/50 transition-colors"
-                    >
-                      <td className="px-5 h-12">
-                        <Link
-                          href={`/admin/surveys/${survey.id}`}
-                          className="text-sm font-medium text-stone-800 hover:text-teal-600 transition-colors line-clamp-1"
-                        >
-                          {survey.title}
-                        </Link>
-                      </td>
-                      <td className="px-5 h-12">
-                        {survey.survey_type && (
-                          <span className="inline-flex items-center rounded-md bg-teal-50 px-2 py-0.5 text-[11px] font-medium text-teal-700">
-                            {survey.survey_type}
-                          </span>
-                        )}
-                      </td>
-                      <td className="px-5 h-12">
-                        <div className="text-sm text-stone-700 line-clamp-1">
-                          {survey.customer_name ?? "-"}
-                        </div>
-                        {survey.project_name && (
-                          <div className="text-[11px] text-stone-400 line-clamp-1">
-                            {survey.project_name}
-                          </div>
-                        )}
-                      </td>
-                      <td className="px-5 h-12">
-                        <span
-                          className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${status.className}`}
-                        >
-                          {status.label}
-                        </span>
-                      </td>
-                      <td className="px-5 h-12">
-                        <span className="text-sm font-medium text-stone-700">
-                          {survey.submission_count}
-                        </span>
-                      </td>
-                      <td className="px-5 h-12">
-                        <span className="text-[13px] text-stone-500">
-                          {formatDate(survey.created_at)}
-                        </span>
-                      </td>
-                      <td className="px-5 h-12">
-                        <div className="flex items-center gap-1">
-                          <Link
-                            href={`/admin/surveys/${survey.id}`}
-                            className="rounded p-1 text-stone-400 hover:text-teal-600 hover:bg-teal-50 transition-colors"
-                            title="상세 보기"
-                          >
-                            <Eye size={15} />
-                          </Link>
-                          {survey.status === "active" && (
-                            <Link
-                              href="/admin/distribute"
-                              className="rounded p-1 text-stone-400 hover:text-teal-600 hover:bg-teal-50 transition-colors"
-                              title="배포"
-                            >
-                              <Send size={15} />
-                            </Link>
-                          )}
-                          {survey.submission_count > 0 && (
-                            <Link
-                              href={`/admin/responses?survey=${survey.id}`}
-                              className="rounded p-1 text-stone-400 hover:text-teal-600 hover:bg-teal-50 transition-colors"
-                              title="리포트"
-                            >
-                              <ChartColumn size={15} />
-                            </Link>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
+      <SurveyListClient surveys={surveys} query={query} />
     </div>
   );
 }
