@@ -119,24 +119,24 @@ export default async function ResponseDetailPage({
         </div>
       ) : (
         <div className="rounded-xl border border-stone-200 bg-white shadow-sm overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+          <div className="overflow-auto max-h-[calc(100vh-280px)]">
+            <table className="text-sm border-collapse">
               <thead>
                 <tr className="bg-stone-50/80 border-b border-stone-100">
-                  <th className="text-left px-4 py-2.5 text-xs font-medium text-stone-500 w-10">#</th>
-                  <th className="text-left px-4 py-2.5 text-xs font-medium text-stone-500">응답일시</th>
-                  <th className="text-left px-4 py-2.5 text-xs font-medium text-stone-500">응답자</th>
-                  <th className="text-left px-4 py-2.5 text-xs font-medium text-stone-500">소속</th>
+                  <th className="sticky left-0 z-30 bg-stone-50 text-left px-4 py-2.5 text-xs font-medium text-stone-500 w-10 border-r border-stone-100">#</th>
+                  <th className="sticky left-10 z-30 bg-stone-50 text-left px-4 py-2.5 text-xs font-medium text-stone-500 whitespace-nowrap border-r border-stone-100">응답일시</th>
+                  <th className="sticky left-[170px] z-30 bg-stone-50 text-left px-4 py-2.5 text-xs font-medium text-stone-500 whitespace-nowrap border-r border-stone-100">응답자</th>
+                  <th className="sticky left-[250px] z-30 bg-stone-50 text-left px-4 py-2.5 text-xs font-medium text-stone-500 whitespace-nowrap border-r border-stone-200 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)]">소속</th>
                   {questions.map((q) => (
                     <th
                       key={q.id}
-                      className="text-center px-3 py-2.5 text-xs font-medium text-stone-500 min-w-[60px]"
+                      className="sticky top-0 z-20 bg-stone-50 text-center px-3 py-2.5 text-xs font-medium text-stone-500 min-w-[60px] whitespace-nowrap"
                       title={q.question_text}
                     >
                       {q.question_code || `Q${q.sort_order + 1}`}
                     </th>
                   ))}
-                  <th className="text-right px-4 py-2.5 text-xs font-medium text-stone-500">총점</th>
+                  <th className="sticky top-0 z-20 bg-stone-50 text-right px-4 py-2.5 text-xs font-medium text-stone-500 whitespace-nowrap">총점</th>
                 </tr>
               </thead>
               <tbody>
@@ -147,22 +147,22 @@ export default async function ResponseDetailPage({
                       key={sub.id}
                       className="border-b border-stone-100 last:border-0 hover:bg-stone-50/50"
                     >
-                      <td className="px-4 py-3 text-stone-400">{idx + 1}</td>
-                      <td className="px-4 py-3 text-stone-700 whitespace-nowrap">
+                      <td className="sticky left-0 z-10 bg-white px-4 py-3 text-stone-400 border-r border-stone-100">{idx + 1}</td>
+                      <td className="sticky left-10 z-10 bg-white px-4 py-3 text-stone-700 whitespace-nowrap border-r border-stone-100">
                         {sub.submitted_at ? formatDateTime(sub.submitted_at) : "-"}
                       </td>
-                      <td className="px-4 py-3 text-stone-800 font-medium">
+                      <td className="sticky left-[170px] z-10 bg-white px-4 py-3 text-stone-800 font-medium whitespace-nowrap border-r border-stone-100">
                         {sub.respondent_name || "익명"}
                       </td>
-                      <td className="px-4 py-3 text-stone-500">
+                      <td className="sticky left-[250px] z-10 bg-white px-4 py-3 text-stone-500 whitespace-nowrap border-r border-stone-200 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)]">
                         {sub.respondent_department || "-"}
                       </td>
                       {questions.map((q) => (
-                        <td key={q.id} className="text-center px-3 py-3 text-stone-700">
+                        <td key={q.id} className="text-center px-3 py-3 text-stone-700 whitespace-nowrap">
                           {answers[q.id] !== undefined ? String(answers[q.id]) : "-"}
                         </td>
                       ))}
-                      <td className="text-right px-4 py-3 font-medium text-stone-800">
+                      <td className="text-right px-4 py-3 font-medium text-stone-800 whitespace-nowrap">
                         {sub.total_score != null ? sub.total_score : "-"}
                       </td>
                     </tr>
