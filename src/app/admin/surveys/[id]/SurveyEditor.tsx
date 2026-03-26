@@ -170,9 +170,9 @@ export default function SurveyEditor({ survey, questions, submissionCount }: Edi
             </h3>
             <div className="flex items-center gap-2 rounded-lg bg-stone-50 border border-stone-200 px-3 py-2">
               <Link2 size={14} className="text-stone-400 shrink-0" />
-              <span className="text-sm text-stone-600 truncate font-mono flex-1">/survey/{survey.url_token}</span>
+              <span className="text-sm text-stone-600 truncate font-mono flex-1">/s/{survey.url_token}</span>
               <CopyUrlButton urlToken={survey.url_token} />
-              <a href={`/survey/${survey.url_token}`} target="_blank" rel="noopener noreferrer" className="shrink-0 inline-flex items-center gap-1 rounded-md bg-white border border-stone-200 px-2.5 py-1 text-xs font-medium text-stone-600 hover:bg-stone-50 transition-colors" title="새 탭에서 열기">
+              <a href={`/s/${survey.url_token}`} target="_blank" rel="noopener noreferrer" className="shrink-0 inline-flex items-center gap-1 rounded-md bg-white border border-stone-200 px-2.5 py-1 text-xs font-medium text-stone-600 hover:bg-stone-50 transition-colors" title="새 탭에서 열기">
                 <ExternalLink size={12} />
               </a>
             </div>
