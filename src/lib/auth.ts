@@ -34,8 +34,14 @@ export async function requireAuth() {
  * user_roles 레코드가 없으면 viewer/부서없음 기본값.
  */
 export async function getUserProfile(): Promise<UserProfile> {
-  const user = await requireAuth();
   const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    redirect("/login");
+  }
 
   const { data } = await supabase
     .from("user_roles")
