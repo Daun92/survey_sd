@@ -1,11 +1,77 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import Link from "next/link";
-import { Search } from "lucide-react";
+import { Search, ArrowUpDown, Group } from "lucide-react";
 import { SurveyListClient, ViewToggle, type SurveyItem } from "./survey-list-client";
 
 export type { SurveyItem };
+
+type SortKey = "starts_at" | "title" | "submission_count" | "customer_name";
+type GroupKey = "none" | "customer_name" | "status" | "month";
+
+const sortOptions: { key: SortKey; label: string }[] = [
+  { key: "starts_at", label: "배포일" },
+  { key: "title", label: "설문명" },
+  { key: "submission_count", label: "응답수" },
+  { key: "customer_name", label: "고객사" },
+];
+
+const groupOptions: { key: GroupKey; label: string }[] = [
+  { key: "none", label: "그룹 없음" },
+  { key: "customer_name", label: "고객사" },
+  { key: "status", label: "상태" },
+  { key: "month", label: "배포월" },
+];
+
+const statusLabels: Record<string, string> = {
+  active: "진행중",
+  closed: "마감",
+  draft: "초안",
+};
+
+function sortSurveys(surveys: SurveyItem[], key: SortKey, asc: boolean): SurveyItem[] {
+  return [...surveys].sort((a, b) => {
+    let cmp = 0;
+    if (key === "starts_at") {
+      cmp = (a.starts_at ?? "").localeCompare(b.starts_at ?? "");
+    } else if (key === "title") {
+      cmp = a.title.localeCompare(b.title, "ko");
+    } else if (key === "submission_count") {
+      cmp = a.submission_count - b.submission_count;
+    } else if (key === "customer_name") {
+      cmp = (a.customer_name ?? "").localeCompare(b.customer_name ?? "", "ko");
+    }
+    return asc ? cmp : -cmp;
+  });
+}
+
+function groupSurveys(surveys: SurveyItem[], key: GroupKey): { label: string; items: SurveyItem[] }[] {
+  if (key === "none") return [{ label: "", items: surveys }];
+
+  const groups = new Map<string, SurveyItem[]>();
+
+  for (const s of surveys) {
+    let groupLabel: string;
+    if (key === "customer_name") {
+      groupLabel = s.customer_name || "고객사 미지정";
+    } else if (key === "status") {
+      groupLabel = statusLabels[s.status] || s.status;
+    } else {
+      // month
+      if (s.starts_at) {
+        const d = new Date(s.starts_at);
+        groupLabel = `${d.getFullYear()}년 ${d.getMonth() + 1}월`;
+      } else {
+        groupLabel = "날짜 미정";
+      }
+    }
+    if (!groups.has(groupLabel)) groups.set(groupLabel, []);
+    groups.get(groupLabel)!.push(s);
+  }
+
+  return Array.from(groups.entries()).map(([label, items]) => ({ label, items }));
+}
 
 interface Tab {
   key: string;
@@ -22,11 +88,26 @@ interface Props {
 
 export function SurveyToolbar({ surveys, query, tabs, statusFilter }: Props) {
   const [view, setView] = useState<"list" | "card">("list");
+  const [sortKey, setSortKey] = useState<SortKey>("starts_at");
+  const [sortAsc, setSortAsc] = useState(false);
+  const [groupKey, setGroupKey] = useState<GroupKey>("none");
+
+  const sorted = useMemo(() => sortSurveys(surveys, sortKey, sortAsc), [surveys, sortKey, sortAsc]);
+  const grouped = useMemo(() => groupSurveys(sorted, groupKey), [sorted, groupKey]);
+
+  function handleSortChange(key: SortKey) {
+    if (sortKey === key) {
+      setSortAsc(!sortAsc);
+    } else {
+      setSortKey(key);
+      setSortAsc(false);
+    }
+  }
 
   return (
     <>
-      {/* 필터 탭 + 검색 + 뷰 토글 — 한 줄 */}
-      <div className="flex items-center justify-between mb-4 gap-4">
+      {/* 상태 필터 탭 */}
+      <div className="flex items-center justify-between mb-3 gap-4">
         <div className="flex items-center gap-1">
           {tabs.map((tab) => {
             const isActive = statusFilter === tab.key;
@@ -74,7 +155,67 @@ export function SurveyToolbar({ surveys, query, tabs, statusFilter }: Props) {
         </div>
       </div>
 
-      <SurveyListClient surveys={surveys} query={query} view={view} />
+      {/* 정렬 + 그룹화 컨트롤 */}
+      <div className="flex items-center gap-3 mb-4">
+        <div className="flex items-center gap-1.5 text-xs text-stone-500">
+          <ArrowUpDown size={13} />
+          <span>정렬</span>
+        </div>
+        <div className="flex items-center gap-1">
+          {sortOptions.map((opt) => (
+            <button
+              key={opt.key}
+              onClick={() => handleSortChange(opt.key)}
+              className={`rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors ${
+                sortKey === opt.key
+                  ? "bg-stone-800 text-white"
+                  : "text-stone-500 hover:bg-stone-100"
+              }`}
+            >
+              {opt.label}
+              {sortKey === opt.key && (
+                <span className="ml-0.5">{sortAsc ? "↑" : "↓"}</span>
+              )}
+            </button>
+          ))}
+        </div>
+
+        <div className="w-px h-4 bg-stone-200 mx-1" />
+
+        <div className="flex items-center gap-1.5 text-xs text-stone-500">
+          <Group size={13} />
+          <span>그룹</span>
+        </div>
+        <div className="flex items-center gap-1">
+          {groupOptions.map((opt) => (
+            <button
+              key={opt.key}
+              onClick={() => setGroupKey(opt.key)}
+              className={`rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors ${
+                groupKey === opt.key
+                  ? "bg-stone-800 text-white"
+                  : "text-stone-500 hover:bg-stone-100"
+              }`}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* 그룹별 렌더링 */}
+      {grouped.map((group, idx) => (
+        <div key={group.label || idx}>
+          {group.label && (
+            <div className="flex items-center gap-2 mb-2 mt-4 first:mt-0">
+              <h3 className="text-sm font-semibold text-stone-700">{group.label}</h3>
+              <span className="text-xs text-stone-400">{group.items.length}건</span>
+              <div className="flex-1 h-px bg-stone-150" />
+            </div>
+          )}
+          <SurveyListClient surveys={group.items} query={query} view={view} />
+        </div>
+      ))}
     </>
   );
 }
