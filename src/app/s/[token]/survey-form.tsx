@@ -200,8 +200,18 @@ export default function SurveyForm({ survey, groupToken }: { survey: SurveyData;
         {/* Center-aligned content area */}
         <div className="flex-1 flex flex-col justify-center">
 
+        {/* Survey Title */}
+        <div className="flex flex-col items-center pt-8 pb-2 px-6">
+          <h1 className="text-[20px] font-bold text-stone-900 text-center leading-tight tracking-tight">
+            {String(survey.title ?? '')}
+          </h1>
+          {survey.sessionName && (
+            <p className="text-[13px] text-stone-500 mt-1.5">{String(survey.sessionName ?? '')}</p>
+          )}
+        </div>
+
         {/* Welcome Message */}
-        <div className="px-6 pt-8 pb-2">
+        <div className="px-6 pb-2">
           {survey.settings.welcome_message ? (
             <p className="text-[14px] text-stone-600 leading-relaxed whitespace-pre-line text-center">
               {survey.settings.welcome_message}
@@ -213,17 +223,7 @@ export default function SurveyForm({ survey, groupToken }: { survey: SurveyData;
               제공하는 데 큰 도움이 됩니다.
             </p>
           )}
-        </div>
-
-        {/* Survey Title */}
-        <div className="flex flex-col items-center py-5 px-6">
-          <div className="w-10 h-px bg-stone-200 mb-5" />
-          <h1 className="text-[20px] font-bold text-stone-900 text-center leading-tight tracking-tight">
-            {String(survey.title ?? '')}
-          </h1>
-          {survey.sessionName && (
-            <p className="text-[13px] text-stone-500 mt-1.5">{String(survey.sessionName ?? '')}</p>
-          )}
+          <div className="w-10 h-px bg-stone-200 mx-auto mt-5" />
         </div>
 
         {/* Content */}

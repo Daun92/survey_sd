@@ -91,19 +91,20 @@ function LandingPreview({ title, settings, questionCount }: { title: string; set
       {/* Center-aligned content */}
       <div className="flex-1 flex flex-col justify-center">
 
+      {/* Title */}
+      <div className="px-5 pt-5 text-center">
+        <h2 className="text-[15px] font-bold text-stone-800 leading-snug">{title || "설문 제목"}</h2>
+      </div>
+
       {/* Welcome */}
-      <div className="px-5 pt-5 pb-1">
+      <div className="px-5 pt-2 pb-1">
         <p className="text-[11px] text-stone-500 leading-relaxed text-center whitespace-pre-line">
           {settings.welcome_message || "안녕하세요, 고객님.\n귀하의 소중한 의견은 더 나은 교육 서비스를\n제공하는 데 큰 도움이 됩니다."}
         </p>
+        <div className="w-8 h-px bg-stone-200 mx-auto mt-3" />
       </div>
 
       <div className="px-5 py-3 space-y-3">
-        {/* Title */}
-        <div className="text-center">
-          <div className="w-8 h-px bg-stone-200 mx-auto mb-3" />
-          <h2 className="text-[15px] font-bold text-stone-800 leading-snug">{title || "설문 제목"}</h2>
-        </div>
 
         {/* Meta cards */}
         {settings.show_meta_info !== false && (
