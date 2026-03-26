@@ -89,6 +89,7 @@ export async function addQuestion(surveyId: string, data: AddQuestionInput) {
       is_required: parsed.data.is_required ?? true,
       sort_order: parsed.data.sort_order ?? 0,
       options: parsed.data.options ? JSON.stringify(parsed.data.options) : null,
+      skip_logic: (data as Record<string, unknown>).skip_logic ?? null,
     })
     .select("*")
     .single();
@@ -116,6 +117,9 @@ export async function updateQuestion(
   if (data.sort_order !== undefined) updateData.sort_order = data.sort_order;
   if (data.options !== undefined) {
     updateData.options = data.options ? JSON.stringify(data.options) : null;
+  }
+  if ((data as Record<string, unknown>).skip_logic !== undefined) {
+    updateData.skip_logic = (data as Record<string, unknown>).skip_logic;
   }
 
   const { error } = await supabase

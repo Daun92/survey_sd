@@ -6,12 +6,21 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { CheckCircle2, Loader2, ChevronRight, ChevronLeft, Clock, FileText, Shield } from 'lucide-react'
 
+interface SkipLogicCondition {
+  show_when: {
+    question_id: string
+    operator: 'equals' | 'not_equals' | 'greater_than' | 'less_than'
+    value: string | number
+  }
+}
+
 interface SurveyQuestion {
   id: string
   code: string
   text: string
   type: string
   required: boolean
+  skip_logic?: SkipLogicCondition | null
 }
 
 interface SurveySection {
@@ -40,6 +49,20 @@ interface SurveyData {
 type Step = 'landing' | 'questions' | 'ending'
 
 const likertLabels: Record<number, string> = { 5: '매우 만족', 4: '만족', 3: '보통', 2: '불만족', 1: '매우 불만족' }
+
+function shouldShowQuestion(q: SurveyQuestion, answers: Record<string, number | string>): boolean {
+  if (!q.skip_logic?.show_when) return true
+  const { question_id, operator, value } = q.skip_logic.show_when
+  const answer = answers[question_id]
+  if (answer === undefined) return false
+  switch (operator) {
+    case 'equals': return String(answer) === String(value)
+    case 'not_equals': return String(answer) !== String(value)
+    case 'greater_than': return Number(answer) > Number(value)
+    case 'less_than': return Number(answer) < Number(value)
+    default: return true
+  }
+}
 
 function MobileFrame({ children }: { children: React.ReactNode }) {
   return (
@@ -313,7 +336,9 @@ export default function SurveyForm({ survey, groupToken }: { survey: SurveyData;
 
       {/* Questions — current section only */}
       <div className="flex-1 max-w-2xl mx-auto w-full px-6 py-6 space-y-6">
-        {currentSection && currentSection.questions.map((question, qIdx) => (
+        {currentSection && currentSection.questions.map((question, qIdx) => {
+          if (!shouldShowQuestion(question, answers)) return null
+          return (
           <div key={question.id} id={`q-${question.id}`} className="space-y-3">
             <p className="text-[15px] text-stone-800 leading-relaxed">
               <span className="text-[13px] font-semibold text-teal-600 mr-2">
@@ -361,7 +386,8 @@ export default function SurveyForm({ survey, groupToken }: { survey: SurveyData;
               <div className="h-px bg-stone-100" />
             )}
           </div>
-        ))}
+          )
+        })}
       </div>
 
       {/* Error */}

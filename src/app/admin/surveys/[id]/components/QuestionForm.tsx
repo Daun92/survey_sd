@@ -3,18 +3,19 @@
 import { useState } from "react";
 import { Check, X, Plus, Loader2, Trash2 } from "lucide-react";
 import { addQuestion, updateQuestion, deleteQuestion } from "../actions";
-import { type Question, questionTypeOptions, needsOptions, parseOptions } from "./types";
+import { type Question, type SkipLogic, questionTypeOptions, needsOptions, parseOptions } from "./types";
 
 interface Props {
   surveyId: string;
   question?: Question;
+  allQuestions?: Question[];
   nextSortOrder: number;
   onDone: () => void;
   onCancel: () => void;
   onDeleted?: () => void;
 }
 
-export function QuestionForm({ surveyId, question, nextSortOrder, onDone, onCancel, onDeleted }: Props) {
+export function QuestionForm({ surveyId, question, allQuestions, nextSortOrder, onDone, onCancel, onDeleted }: Props) {
   const isEdit = !!question;
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -25,10 +26,20 @@ export function QuestionForm({ surveyId, question, nextSortOrder, onDone, onCanc
   const [isRequired, setIsRequired] = useState(question?.is_required ?? true);
   const [options, setOptions] = useState<string[]>(question ? parseOptions(question.options) : ["옵션 1", "옵션 2"]);
 
+  // Skip logic
+  const [hasSkipLogic, setHasSkipLogic] = useState(!!question?.skip_logic);
+  const [skipQuestionId, setSkipQuestionId] = useState(question?.skip_logic?.show_when?.question_id || "");
+  const [skipOperator, setSkipOperator] = useState<string>(question?.skip_logic?.show_when?.operator || "equals");
+  const [skipValue, setSkipValue] = useState(String(question?.skip_logic?.show_when?.value ?? ""));
+  const otherQuestions = (allQuestions || []).filter((q) => q.id !== question?.id);
+
   const handleSave = async () => {
     if (!questionText.trim()) return;
     setSaving(true);
     try {
+      const skipLogic: SkipLogic | null = hasSkipLogic && skipQuestionId && skipValue
+        ? { show_when: { question_id: skipQuestionId, operator: skipOperator as SkipLogic["show_when"]["operator"], value: isNaN(Number(skipValue)) ? skipValue : Number(skipValue) } }
+        : null;
       const payload = {
         question_text: questionText.trim(),
         question_type: questionType,
@@ -37,6 +48,7 @@ export function QuestionForm({ surveyId, question, nextSortOrder, onDone, onCanc
         is_required: isRequired,
         sort_order: question?.sort_order ?? nextSortOrder,
         options: needsOptions(questionType) ? options.filter((o) => o.trim()) : null,
+        skip_logic: skipLogic,
       };
       if (isEdit && question) {
         await updateQuestion(question.id, surveyId, payload);
@@ -109,6 +121,48 @@ export function QuestionForm({ surveyId, question, nextSortOrder, onDone, onCanc
           </div>
         </div>
       )}
+      {/* Skip Logic */}
+      {otherQuestions.length > 0 && (
+        <div className="border-t border-stone-100 pt-3">
+          <label className="flex items-center gap-2 text-[13px] text-stone-600 cursor-pointer mb-2">
+            <input type="checkbox" checked={hasSkipLogic} onChange={(e) => setHasSkipLogic(e.target.checked)} className="accent-teal-600" />
+            <span className="font-medium">조건부 표시</span>
+            <span className="text-stone-400 font-normal">— 특정 답변일 때만 이 문항을 표시</span>
+          </label>
+          {hasSkipLogic && (
+            <div className="rounded-lg bg-amber-50 border border-amber-200 p-3 space-y-2">
+              <div className="grid grid-cols-3 gap-2">
+                <div>
+                  <label className="block text-[11px] text-stone-500 mb-0.5">기준 문항</label>
+                  <select value={skipQuestionId} onChange={(e) => setSkipQuestionId(e.target.value)} className="w-full rounded border border-stone-300 px-2 py-1.5 text-xs focus:border-teal-500 outline-none">
+                    <option value="">선택</option>
+                    {otherQuestions.map((q) => (
+                      <option key={q.id} value={q.id}>{q.question_code || q.question_text.slice(0, 20)}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-[11px] text-stone-500 mb-0.5">조건</label>
+                  <select value={skipOperator} onChange={(e) => setSkipOperator(e.target.value)} className="w-full rounded border border-stone-300 px-2 py-1.5 text-xs focus:border-teal-500 outline-none">
+                    <option value="equals">같을 때</option>
+                    <option value="not_equals">다를 때</option>
+                    <option value="greater_than">초과</option>
+                    <option value="less_than">미만</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-[11px] text-stone-500 mb-0.5">값</label>
+                  <input type="text" value={skipValue} onChange={(e) => setSkipValue(e.target.value)} placeholder="6" className="w-full rounded border border-stone-300 px-2 py-1.5 text-xs focus:border-teal-500 outline-none" />
+                </div>
+              </div>
+              <p className="text-[11px] text-amber-700">
+                기준 문항의 답변이 조건을 만족할 때만 이 문항이 표시됩니다
+              </p>
+            </div>
+          )}
+        </div>
+      )}
+
       <div className="flex items-center gap-2 pt-1">
         {isEdit && onDeleted && (
           <button onClick={handleDelete} disabled={deleting} className="inline-flex items-center gap-1.5 rounded-lg border border-red-200 px-3 py-2 text-xs font-medium text-red-600 hover:bg-red-50 transition-colors disabled:opacity-50 mr-auto">

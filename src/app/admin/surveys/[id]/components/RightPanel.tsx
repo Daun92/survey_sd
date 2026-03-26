@@ -61,6 +61,7 @@ export function RightPanel({
             key={panelMode === "edit" ? editingQuestion?.id : "__add__"}
             surveyId={surveyId}
             question={panelMode === "edit" ? (editingQuestion ?? undefined) : undefined}
+            allQuestions={questions}
             nextSortOrder={nextSortOrder}
             onDone={onSaved}
             onCancel={onCancel}

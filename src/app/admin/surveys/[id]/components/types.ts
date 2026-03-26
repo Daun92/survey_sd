@@ -22,6 +22,14 @@ export interface Survey {
   settings?: SurveySettings | null;
 }
 
+export interface SkipLogic {
+  show_when: {
+    question_id: string;
+    operator: "equals" | "not_equals" | "greater_than" | "less_than";
+    value: string | number;
+  };
+}
+
 export interface Question {
   id: string;
   survey_id: string;
@@ -32,6 +40,7 @@ export interface Question {
   is_required: boolean;
   sort_order: number;
   options: string[] | string | null;
+  skip_logic?: SkipLogic | null;
 }
 
 export interface EditorProps {
@@ -105,6 +114,23 @@ export function parseOptions(raw: string[] | string | null): string[] {
 
 export const needsOptions = (type: string) =>
   type === "multiple_choice" || type === "single_choice";
+
+export function evaluateSkipLogic(
+  skipLogic: SkipLogic | null | undefined,
+  answers: Record<string, number | string>
+): boolean {
+  if (!skipLogic?.show_when) return true;
+  const { question_id, operator, value } = skipLogic.show_when;
+  const answer = answers[question_id];
+  if (answer === undefined) return false;
+  switch (operator) {
+    case "equals": return String(answer) === String(value);
+    case "not_equals": return String(answer) !== String(value);
+    case "greater_than": return Number(answer) > Number(value);
+    case "less_than": return Number(answer) < Number(value);
+    default: return true;
+  }
+}
 
 export function groupQuestionsBySection(questions: Question[]) {
   const sections: Record<string, Question[]> = {};

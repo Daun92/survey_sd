@@ -1,6 +1,6 @@
 "use client";
 
-import { GripVertical } from "lucide-react";
+import { GripVertical, GitBranch } from "lucide-react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { type Question, questionTypeLabels, parseOptions } from "./types";
@@ -36,6 +36,11 @@ export function SortableQuestionRow({ question, index, isSelected, onSelect }: P
 
       <div className="flex-1 min-w-0">
         <p className="text-sm text-stone-800 leading-relaxed">
+          {question.skip_logic && (
+            <span className="inline-flex items-center gap-0.5 text-amber-500 mr-1" title="조건부 문항">
+              <GitBranch size={12} />
+            </span>
+          )}
           {question.question_text}
           {question.is_required && <span className="text-red-400 ml-0.5">*</span>}
         </p>

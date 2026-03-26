@@ -10,6 +10,7 @@ interface SurveySection {
     text: string
     type: string
     required: boolean
+    skip_logic?: { show_when: { question_id: string; operator: 'equals' | 'not_equals' | 'greater_than' | 'less_than'; value: string | number } } | null
   }[]
 }
 
@@ -35,7 +36,7 @@ async function getSurveyByToken(token: string) {
     // 설문 문항
     const { data: questions } = await supabase
       .from('edu_questions')
-      .select('id, section, question_code, question_text, question_type, is_required, sort_order, options, metadata')
+      .select('id, section, question_code, question_text, question_type, is_required, sort_order, options, metadata, skip_logic')
       .eq('survey_id', survey.id)
       .order('sort_order', { ascending: true })
 
@@ -52,6 +53,7 @@ async function getSurveyByToken(token: string) {
         text: q.question_text,
         type: q.question_type,
         required: q.is_required,
+        skip_logic: q.skip_logic as SurveySection['questions'][0]['skip_logic'],
       })
     }
 
