@@ -157,49 +157,55 @@ export function SurveyToolbar({ surveys, query, tabs, statusFilter }: Props) {
 
       {/* 정렬 + 그룹화 컨트롤 */}
       <div className="flex items-center gap-3 mb-4">
-        <div className="flex items-center gap-1.5 text-xs text-stone-500">
-          <ArrowUpDown size={13} />
-          <span>정렬</span>
-        </div>
-        <div className="flex items-center gap-1">
-          {sortOptions.map((opt) => (
-            <button
-              key={opt.key}
-              onClick={() => handleSortChange(opt.key)}
-              className={`rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors ${
-                sortKey === opt.key
-                  ? "bg-stone-800 text-white"
-                  : "text-stone-500 hover:bg-stone-100"
-              }`}
-            >
-              {opt.label}
-              {sortKey === opt.key && (
-                <span className="ml-0.5">{sortAsc ? "↑" : "↓"}</span>
-              )}
-            </button>
-          ))}
+        {/* 정렬 섹션 */}
+        <div className="flex items-center gap-2 rounded-lg border border-stone-200 bg-white px-3 py-1.5">
+          <span className="text-[10px] font-semibold uppercase tracking-wider text-stone-400 flex items-center gap-1">
+            <ArrowUpDown size={11} />
+            정렬
+          </span>
+          <div className="w-px h-4 bg-stone-200" />
+          <div className="flex items-center gap-0.5">
+            {sortOptions.map((opt) => (
+              <button
+                key={opt.key}
+                onClick={() => handleSortChange(opt.key)}
+                className={`rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
+                  sortKey === opt.key
+                    ? "bg-teal-50 text-teal-700 border border-teal-200"
+                    : "text-stone-500 hover:bg-stone-50"
+                }`}
+              >
+                {opt.label}
+                {sortKey === opt.key && (
+                  <span className="ml-0.5 text-teal-400">{sortAsc ? "↑" : "↓"}</span>
+                )}
+              </button>
+            ))}
+          </div>
         </div>
 
-        <div className="w-px h-4 bg-stone-200 mx-1" />
-
-        <div className="flex items-center gap-1.5 text-xs text-stone-500">
-          <Group size={13} />
-          <span>그룹</span>
-        </div>
-        <div className="flex items-center gap-1">
-          {groupOptions.map((opt) => (
-            <button
-              key={opt.key}
-              onClick={() => setGroupKey(opt.key)}
-              className={`rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors ${
-                groupKey === opt.key
-                  ? "bg-stone-800 text-white"
-                  : "text-stone-500 hover:bg-stone-100"
-              }`}
-            >
-              {opt.label}
-            </button>
-          ))}
+        {/* 그룹 섹션 */}
+        <div className="flex items-center gap-2 rounded-lg border border-stone-200 bg-white px-3 py-1.5">
+          <span className="text-[10px] font-semibold uppercase tracking-wider text-stone-400 flex items-center gap-1">
+            <Group size={11} />
+            그룹
+          </span>
+          <div className="w-px h-4 bg-stone-200" />
+          <div className="flex items-center gap-0.5">
+            {groupOptions.map((opt) => (
+              <button
+                key={opt.key}
+                onClick={() => setGroupKey(opt.key)}
+                className={`rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
+                  groupKey === opt.key
+                    ? "bg-teal-50 text-teal-700 border border-teal-200"
+                    : "text-stone-500 hover:bg-stone-50"
+                }`}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
