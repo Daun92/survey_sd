@@ -21,7 +21,7 @@ export default function SurveyPreview({ surveyTitle, questions, settings, active
   ];
 
   return (
-    <div className="sticky top-8">
+    <div>
       {/* 탭 + 헤더 */}
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
