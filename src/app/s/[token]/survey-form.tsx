@@ -330,7 +330,7 @@ export default function SurveyForm({ survey, groupToken }: { survey: SurveyData;
           <div className="px-6 py-2.5 border-b border-stone-100 bg-white">
             <div className="flex items-center gap-2">
               <span className="text-[13px] font-semibold text-teal-600">{currentSectionIdx + 1}/{totalSections}</span>
-              <span className="text-[15px] font-semibold text-stone-800">{currentSection.name}</span>
+              <span className="text-[15px] font-semibold text-stone-800">{String(currentSection.name ?? '')}</span>
             </div>
           </div>
         )}
