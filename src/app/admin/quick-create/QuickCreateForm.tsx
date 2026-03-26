@@ -96,6 +96,9 @@ export function QuickCreateForm({ projects, customers, templates }: Props) {
   const [showCustomerDropdown, setShowCustomerDropdown] = useState(false);
   const customerDropdownRef = useRef<HTMLDivElement>(null);
 
+  // Schedule
+  const [separateDistributeDate, setSeparateDistributeDate] = useState(false);
+
   // Template preview
   const [previewTemplateId, setPreviewTemplateId] = useState<string | null>(
     null
@@ -235,6 +238,7 @@ export function QuickCreateForm({ projects, customers, templates }: Props) {
               setEducationType("");
               setCustomerSearch("");
               setSelectedCustomerName("");
+              setSeparateDistributeDate(false);
             }}
             className="flex items-center justify-center gap-2 rounded-lg border border-stone-300 px-4 py-2.5 text-sm font-medium text-stone-700 hover:bg-stone-50 transition-colors"
           >
@@ -528,38 +532,72 @@ export function QuickCreateForm({ projects, customers, templates }: Props) {
           </div>
 
           <div className="space-y-4">
+            {/* 교육 기간 */}
             <div>
-              <label className="block text-[13px] font-medium text-stone-600 mb-1">
-                설문 예정일 <span className="text-red-400">*</span>
+              <label className="block text-[13px] font-medium text-stone-600 mb-0.5">
+                교육 기간 <span className="text-red-400">*</span>
               </label>
+              <p className="text-xs text-stone-400 mb-2">
+                교육이 진행되는 시작일과 종료일
+              </p>
               <div className="grid grid-cols-2 gap-3">
-                <input
-                  name="startDate"
-                  type="date"
-                  required
-                  className="w-full rounded-lg border border-stone-300 px-3 py-2 text-sm focus:border-teal-500 focus:ring-1 focus:ring-teal-500 outline-none"
-                />
-                <input
-                  name="endDate"
-                  type="date"
-                  required
-                  className="w-full rounded-lg border border-stone-300 px-3 py-2 text-sm focus:border-teal-500 focus:ring-1 focus:ring-teal-500 outline-none"
-                />
+                <div>
+                  <label className="block text-[11px] text-stone-400 mb-1">시작일</label>
+                  <input
+                    name="startDate"
+                    type="date"
+                    required
+                    className="w-full rounded-lg border border-stone-300 px-3 py-2 text-sm focus:border-teal-500 focus:ring-1 focus:ring-teal-500 outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] text-stone-400 mb-1">종료일</label>
+                  <input
+                    name="endDate"
+                    type="date"
+                    required
+                    className="w-full rounded-lg border border-stone-300 px-3 py-2 text-sm focus:border-teal-500 focus:ring-1 focus:ring-teal-500 outline-none"
+                  />
+                </div>
               </div>
             </div>
+
+            <div className="h-px bg-stone-100" />
+
+            {/* 설문 배포 */}
             <div>
-              <label className="block text-[13px] font-medium text-stone-600 mb-1">
-                배포 예정일
+              <label className="block text-[13px] font-medium text-stone-600 mb-0.5">
+                설문 배포
               </label>
-              <input
-                name="distributeDate"
-                type="date"
-                className="w-full rounded-lg border border-stone-300 px-3 py-2 text-sm focus:border-teal-500 focus:ring-1 focus:ring-teal-500 outline-none"
-              />
-              <p className="text-xs text-stone-400 mt-1">
-                배포일 이전에는 초안 상태로 유지됩니다. 비워두면 바로
-                활성화됩니다.
+              <p className="text-xs text-stone-400 mb-2">
+                기본적으로 교육 종료일에 설문이 자동 활성화됩니다
               </p>
+
+              <label className="inline-flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={separateDistributeDate}
+                  onChange={(e) => setSeparateDistributeDate(e.target.checked)}
+                  className="accent-teal-600 rounded"
+                />
+                <span className="text-[13px] text-stone-600">
+                  배포일을 별도로 지정
+                </span>
+              </label>
+
+              {separateDistributeDate && (
+                <div className="mt-2">
+                  <label className="block text-[11px] text-stone-400 mb-1">배포 예정일</label>
+                  <input
+                    name="distributeDate"
+                    type="date"
+                    className="w-full rounded-lg border border-stone-300 px-3 py-2 text-sm focus:border-teal-500 focus:ring-1 focus:ring-teal-500 outline-none"
+                  />
+                  <p className="text-xs text-stone-400 mt-1.5">
+                    배포일까지 초안 상태로 유지되며, 해당 날짜에 활성화됩니다
+                  </p>
+                </div>
+              )}
             </div>
           </div>
         </div>
