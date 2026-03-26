@@ -43,11 +43,16 @@ export async function getUserProfile(): Promise<UserProfile> {
     redirect("/login");
   }
 
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("user_roles")
     .select("role, department, display_name")
     .eq("user_id", user.id)
     .single();
+
+  // RLS 또는 네트워크 문제로 조회 실패 시 로그
+  if (error && error.code !== "PGRST116") {
+    console.error("[auth] user_roles 조회 실패:", error.message, "user:", user.id);
+  }
 
   return {
     id: user.id,
