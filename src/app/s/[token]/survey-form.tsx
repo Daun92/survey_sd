@@ -100,11 +100,17 @@ export default function SurveyForm({ survey, groupToken }: { survey: SurveyData;
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const startTimeRef = useRef<number>(0)
+  const scrollContainerRef = useRef<HTMLDivElement>(null)
   const [elapsedTime, setElapsedTime] = useState('')
   const [currentSectionIdx, setCurrentSectionIdx] = useState(0)
 
   const respondentFields: RespondentFieldConfig[] =
     survey.settings.respondent_fields?.filter((f) => f.enabled) ?? DEFAULT_RESPONDENT_FIELDS
+
+  const scrollToTop = () => {
+    scrollContainerRef.current?.scrollTo({ top: 0, behavior: 'smooth' })
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
 
   const allQuestions = survey.sections.flatMap((s) => s.questions)
   const isLikertType = (t: string) => t === 'likert_5' || t === 'likert_6'
@@ -126,7 +132,7 @@ export default function SurveyForm({ survey, groupToken }: { survey: SurveyData;
   const handleStart = () => {
     startTimeRef.current = Date.now()
     setStep('questions')
-    window.scrollTo(0, 0)
+    scrollToTop()
   }
 
   const handleSubmit = async () => {
@@ -159,7 +165,7 @@ export default function SurveyForm({ survey, groupToken }: { survey: SurveyData;
       const seconds = elapsed % 60
       setElapsedTime(minutes > 0 ? `${minutes}분 ${seconds}초` : `${seconds}초`)
       setStep('ending')
-      window.scrollTo(0, 0)
+      scrollToTop()
     } catch (err) {
       setError('네트워크 오류가 발생했습니다. 다시 시도해주세요.')
     } finally {
@@ -358,14 +364,14 @@ export default function SurveyForm({ survey, groupToken }: { survey: SurveyData;
   const handleNextSection = () => {
     if (currentSectionIdx < totalSections - 1) {
       setCurrentSectionIdx(currentSectionIdx + 1)
-      window.scrollTo({ top: 0, behavior: 'smooth' })
+      scrollToTop()
     }
   }
 
   const handlePrevSection = () => {
     if (currentSectionIdx > 0) {
       setCurrentSectionIdx(currentSectionIdx - 1)
-      window.scrollTo({ top: 0, behavior: 'smooth' })
+      scrollToTop()
     } else {
       setStep('landing')
     }
@@ -376,7 +382,7 @@ export default function SurveyForm({ survey, groupToken }: { survey: SurveyData;
   // ─── Questions Page ───
   return (
     <MobileFrame>
-    <div className="flex-1 flex flex-col bg-stone-50 overflow-y-auto">
+    <div ref={scrollContainerRef} className="flex-1 flex flex-col bg-stone-50 overflow-y-auto">
       {/* Header with progress */}
       <div className="bg-white sticky top-0 z-10">
         <div className="flex items-center justify-between px-6 py-3.5">
