@@ -543,9 +543,9 @@ export default function SurveyForm({ survey, groupToken }: { survey: SurveyData;
         })()}
       </div>
 
-      {/* Toast */}
+      {/* Toast — fixed top, highest z-index */}
       {toast && (
-        <div className="mx-6 mb-2 bg-amber-50 border border-amber-200 rounded-xl p-3 text-sm text-amber-800 flex items-center gap-2 animate-in fade-in slide-in-from-bottom-2">
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[9999] w-[calc(100%-2rem)] max-w-sm bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-sm text-amber-800 flex items-center gap-2 shadow-lg">
           <span className="text-amber-500 shrink-0">⚠</span>
           {toast}
         </div>
