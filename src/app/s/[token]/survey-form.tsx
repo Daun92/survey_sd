@@ -450,14 +450,17 @@ export default function SurveyForm({ survey, groupToken }: { survey: SurveyData;
 
       {/* Questions — current section only */}
       <div className="flex-1 max-w-2xl mx-auto w-full px-6 py-6 space-y-6">
-        {currentSection && currentSection.questions.map((question, qIdx) => {
-          if (!shouldShowQuestion(question, answers)) return null
-          return (
-          <div key={question.id} id={`q-${question.id}`} className="space-y-3">
-            <p className="text-[15px] text-stone-800 leading-relaxed">
-              <span className="text-[13px] font-semibold text-teal-600 mr-2">
-                {String(qIdx + 1).padStart(2, '0')}
-              </span>
+        {(() => {
+          let visibleIdx = 0
+          return currentSection && currentSection.questions.map((question) => {
+            if (!shouldShowQuestion(question, answers)) return null
+            visibleIdx++
+            return (
+            <div key={question.id} id={`q-${question.id}`} className="space-y-3">
+              <p className="text-[15px] text-stone-800 leading-relaxed">
+                <span className="text-[13px] font-semibold text-teal-600 mr-2">
+                  {String(visibleIdx).padStart(2, '0')}
+                </span>
               {String(question.text ?? '')}
               {question.required === true && <span className="text-rose-400 ml-1">*</span>}
             </p>
@@ -534,12 +537,11 @@ export default function SurveyForm({ survey, groupToken }: { survey: SurveyData;
               </div>
             )}
 
-            {qIdx < currentSection.questions.length - 1 && (
-              <div className="h-px bg-stone-100" />
-            )}
+            <div className="h-px bg-stone-100" />
           </div>
           )
-        })}
+        })
+        })()}
       </div>
 
       {/* Toast */}
