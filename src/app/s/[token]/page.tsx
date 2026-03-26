@@ -37,7 +37,7 @@ async function getSurveyByToken(token: string) {
     // 설문 문항
     const { data: questions } = await supabase
       .from('edu_questions')
-      .select('id, section, question_code, question_text, question_type, is_required, sort_order, options, metadata')
+      .select('id, section, question_code, question_text, question_type, is_required, sort_order, options, metadata, skip_logic')
       .eq('survey_id', survey.id)
       .order('sort_order', { ascending: true })
 

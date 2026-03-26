@@ -487,6 +487,25 @@ export default function SurveyForm({ survey, groupToken }: { survey: SurveyData;
               />
             )}
 
+            {question.type === 'yes_no' && (
+              <div className="flex gap-2">
+                {[{ value: 1, label: '예' }, { value: 2, label: '아니오' }].map(({ value, label }) => (
+                  <button
+                    key={value}
+                    type="button"
+                    onClick={() => handleLikertChangeWithScroll(question.id, value)}
+                    className={`flex-1 h-12 rounded-xl text-sm font-medium border-[1.5px] transition-all ${
+                      answers[question.id] === value
+                        ? 'bg-teal-600 text-white border-teal-600 shadow-sm'
+                        : 'bg-white text-stone-500 border-stone-200 hover:border-teal-300 hover:bg-teal-50'
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            )}
+
             {qIdx < currentSection.questions.length - 1 && (
               <div className="h-px bg-stone-100" />
             )}
