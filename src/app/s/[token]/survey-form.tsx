@@ -457,7 +457,7 @@ export default function SurveyForm({ survey, groupToken }: { survey: SurveyData;
             <ChevronLeft size={18} />
             <span className="text-[15px] font-semibold text-stone-800">{survey.title}</span>
           </button>
-          <span className="text-[13px] font-medium text-teal-600">{answeredLikert}/{totalLikert}</span>
+          <span className="text-[13px] font-medium text-teal-600">{currentSectionIdx + 1}/{totalSections}</span>
         </div>
         <div className="h-[3px] bg-stone-100">
           <div
