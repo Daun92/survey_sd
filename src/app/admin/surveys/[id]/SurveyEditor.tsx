@@ -237,15 +237,23 @@ export default function SurveyEditor({ survey, questions, submissionCount }: Edi
                         {/* Section Questions — Collapsible */}
                         {!isCollapsed && (
                           <>
-                            {sectionQuestions.map((question) => (
-                              <SortableQuestionRow
-                                key={question.id}
-                                question={question}
-                                index={question._globalIndex}
-                                isSelected={editingQuestionId === question.id && panelMode === "edit"}
-                                onSelect={handleSelectQuestion}
-                              />
-                            ))}
+                            {(() => {
+                              let displayNum = 0;
+                              return sectionQuestions.map((question) => {
+                                const isInfo = question.question_type === "info_block";
+                                if (!isInfo) displayNum++;
+                                return (
+                                  <SortableQuestionRow
+                                    key={question.id}
+                                    question={question}
+                                    index={question._globalIndex}
+                                    displayOrder={isInfo ? null : displayNum}
+                                    isSelected={editingQuestionId === question.id && panelMode === "edit"}
+                                    onSelect={handleSelectQuestion}
+                                  />
+                                );
+                              });
+                            })()}
                             {/* 섹션 내 문항 추가 버튼 */}
                             <div className="px-4 py-2 border-b border-stone-100">
                               <button

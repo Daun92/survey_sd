@@ -105,7 +105,15 @@ export function QuestionForm({ surveyId, question, allQuestions, sectionNames, d
           </select>
         </div>
         <div>
-          <label className="block text-[13px] font-medium text-stone-600 mb-1">문항 코드</label>
+          <label className="block text-[13px] font-medium text-stone-600 mb-1 flex items-center gap-1">
+            문항 코드
+            <span className="relative group">
+              <span className="inline-flex items-center justify-center h-3.5 w-3.5 rounded-full bg-stone-200 text-[9px] font-bold text-stone-500 cursor-help">i</span>
+              <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 hidden group-hover:block w-52 rounded-lg bg-stone-800 px-3 py-2 text-[11px] text-stone-200 leading-relaxed shadow-lg z-20">
+                분석/내보내기 시 문항을 식별하는 코드입니다. 표시 순서(#N)와는 별개로, 드래그로 순서를 바꿔도 코드는 유지됩니다.
+              </span>
+            </span>
+          </label>
           <input type="text" value={questionCode} onChange={(e) => setQuestionCode(e.target.value)} placeholder="Q1" className="w-full rounded-lg border border-stone-300 px-3 py-2 text-sm focus:border-teal-500 focus:ring-1 focus:ring-teal-500 outline-none" />
         </div>
       </div>
