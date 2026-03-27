@@ -498,7 +498,7 @@ export default function SurveyForm({ survey, groupToken }: { survey: SurveyData;
                 <img
                   src={intro.image_url}
                   alt=""
-                  style={{ width: '100%', height: '80px', objectFit: 'cover', display: 'block' }}
+                  style={{ width: '100%', height: 'auto', maxHeight: '200px', objectFit: 'contain', display: 'block' }}
                 />
               </div>
             )}
