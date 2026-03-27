@@ -248,12 +248,7 @@ export default function SurveyForm({ survey, groupToken, distributionToken, resp
 
         {/* Welcome Message */}
         <div className="px-6 pb-2">
-          {respondentName ? (
-            <p className="text-[14px] text-stone-600 leading-relaxed text-center">
-              <strong>{respondentName}</strong>님, 안녕하세요.<br />
-              {survey.settings.welcome_message || '귀하의 소중한 의견은 더 나은 교육 서비스를\n제공하는 데 큰 도움이 됩니다.'}
-            </p>
-          ) : survey.settings.welcome_message ? (
+          {survey.settings.welcome_message ? (
             <p className="text-[14px] text-stone-600 leading-relaxed whitespace-pre-line text-center">
               {survey.settings.welcome_message}
             </p>
