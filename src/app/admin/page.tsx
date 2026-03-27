@@ -9,11 +9,14 @@ import {
   Eye,
   Send,
   FileBarChart,
+  CalendarCheck,
+  MessageSquare,
 } from "lucide-react";
+import { getUserProfile, type UserProfile } from "@/lib/auth";
 
 export const revalidate = 60;
 
-async function getDashboardData() {
+async function getAdminDashboardData() {
   const [
     { count: customerCount },
     { count: projectCount },
@@ -40,13 +43,59 @@ async function getDashboardData() {
   ]);
 
   return {
-    customerCount: customerCount ?? 0,
-    projectCount: projectCount ?? 0,
-    surveyCount: surveyCount ?? 0,
-    submissionCount: submissionCount ?? 0,
+    statCards: [
+      { label: "고객사", value: customerCount ?? 0, icon: Users },
+      { label: "프로젝트", value: projectCount ?? 0, icon: FolderOpen },
+      { label: "교육 설문", value: surveyCount ?? 0, icon: ClipboardList },
+      { label: "총 응답 수", value: submissionCount ?? 0, icon: ChartColumn },
+    ],
     recentSurveys: recentSurveys ?? [],
-    templateCount: templateCount ?? 0,
-    activeSurveyCount: activeSurveyCount ?? 0,
+    systemStats: {
+      templateCount: templateCount ?? 0,
+      activeSurveyCount: activeSurveyCount ?? 0,
+      submissionCount: submissionCount ?? 0,
+    },
+  };
+}
+
+async function getUserDashboardData(userId: string) {
+  const [
+    { count: mySurveyCount },
+    { count: myActiveCount },
+    { data: recentSurveys },
+    { data: mySurveyIds },
+  ] = await Promise.all([
+    supabase.from("edu_surveys").select("*", { count: "exact", head: true }).eq("owner_id", userId),
+    supabase.from("edu_surveys").select("*", { count: "exact", head: true }).eq("owner_id", userId).eq("status", "active"),
+    supabase
+      .from("edu_surveys")
+      .select("id, title, status, created_at")
+      .eq("owner_id", userId)
+      .order("created_at", { ascending: false })
+      .limit(5),
+    supabase.from("edu_surveys").select("id").eq("owner_id", userId),
+  ]);
+
+  // 내 설문에 대한 응답 수 계산
+  let mySubmissionCount = 0;
+  const ids = (mySurveyIds ?? []).map((s) => s.id);
+  if (ids.length > 0) {
+    const { count } = await supabase
+      .from("edu_submissions")
+      .select("*", { count: "exact", head: true })
+      .in("survey_id", ids);
+    mySubmissionCount = count ?? 0;
+  }
+
+  return {
+    statCards: [
+      { label: "내 설문", value: mySurveyCount ?? 0, icon: ClipboardList },
+      { label: "진행중", value: myActiveCount ?? 0, icon: CalendarCheck },
+      { label: "총 응답", value: mySubmissionCount, icon: MessageSquare },
+      { label: "마감 설문", value: (mySurveyCount ?? 0) - (myActiveCount ?? 0), icon: ChartColumn },
+    ],
+    recentSurveys: recentSurveys ?? [],
+    systemStats: null,
   };
 }
 
@@ -62,22 +111,21 @@ function formatDate(dateStr: string) {
 }
 
 export default async function DashboardPage() {
-  const data = await getDashboardData();
-
-  const statCards = [
-    { label: "고객사", value: data.customerCount, icon: Users },
-    { label: "프로젝트", value: data.projectCount, icon: FolderOpen },
-    { label: "교육 설문", value: data.surveyCount, icon: ClipboardList },
-    { label: "총 응답 수", value: data.submissionCount, icon: ChartColumn },
-  ];
+  const profile = await getUserProfile();
+  const isAdmin = profile.role === "admin";
+  const data = isAdmin
+    ? await getAdminDashboardData()
+    : await getUserDashboardData(profile.id);
 
   return (
     <div>
       <div className="mb-8 flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-stone-800">대시보드</h1>
+          <h1 className="text-2xl font-bold text-stone-800">
+            {isAdmin ? "대시보드" : `${profile.displayName}님, 안녕하세요`}
+          </h1>
           <p className="text-sm text-stone-500 mt-1">
-            교육 설문 현황을 한눈에 확인하세요
+            {isAdmin ? "교육 설문 현황을 한눈에 확인하세요" : "나의 설문 현황입니다"}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -99,7 +147,7 @@ export default async function DashboardPage() {
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        {statCards.map((card) => (
+        {data.statCards.map((card) => (
           <div
             key={card.label}
             className="rounded-xl border border-stone-200 bg-white shadow-sm"
@@ -121,8 +169,8 @@ export default async function DashboardPage() {
         ))}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <div className="rounded-xl border border-stone-200 bg-white shadow-sm lg:col-span-2">
+      <div className={`grid grid-cols-1 ${data.systemStats ? "lg:grid-cols-3" : ""} gap-4`}>
+        <div className={`rounded-xl border border-stone-200 bg-white shadow-sm ${data.systemStats ? "lg:col-span-2" : ""}`}>
           <div className="flex flex-col space-y-1.5 p-5 flex flex-row items-center justify-between">
             <div>
               <h3 className="text-base font-semibold leading-none tracking-tight text-stone-900">
@@ -193,43 +241,45 @@ export default async function DashboardPage() {
           </div>
         </div>
 
-        <div className="rounded-xl border border-stone-200 bg-white shadow-sm">
-          <div className="flex flex-col space-y-1.5 p-5">
-            <h3 className="text-base font-semibold leading-none tracking-tight text-stone-900">
-              시스템 현황
-            </h3>
-            <p className="text-sm text-stone-500">서비스 상태 요약</p>
-          </div>
-          <div className="px-5 pb-5">
-            <div className="space-y-0">
-              <div className="flex items-center justify-between py-3 border-b border-stone-100">
-                <span className="text-sm text-stone-600">데이터베이스</span>
-                <span className="inline-flex items-center gap-1.5 text-[13px] font-medium text-emerald-600">
-                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                  정상
-                </span>
-              </div>
-              <div className="flex items-center justify-between py-3 border-b border-stone-100">
-                <span className="text-sm text-stone-600">설문 템플릿</span>
-                <span className="text-sm font-medium text-stone-800">
-                  {data.templateCount}종
-                </span>
-              </div>
-              <div className="flex items-center justify-between py-3 border-b border-stone-100">
-                <span className="text-sm text-stone-600">활성 설문</span>
-                <span className="text-sm font-medium text-teal-600">
-                  {data.activeSurveyCount}개
-                </span>
-              </div>
-              <div className="flex items-center justify-between py-3">
-                <span className="text-sm text-stone-600">총 응답</span>
-                <span className="text-sm font-medium text-stone-800">
-                  {data.submissionCount}건
-                </span>
+        {data.systemStats && (
+          <div className="rounded-xl border border-stone-200 bg-white shadow-sm">
+            <div className="flex flex-col space-y-1.5 p-5">
+              <h3 className="text-base font-semibold leading-none tracking-tight text-stone-900">
+                시스템 현황
+              </h3>
+              <p className="text-sm text-stone-500">서비스 상태 요약</p>
+            </div>
+            <div className="px-5 pb-5">
+              <div className="space-y-0">
+                <div className="flex items-center justify-between py-3 border-b border-stone-100">
+                  <span className="text-sm text-stone-600">데이터베이스</span>
+                  <span className="inline-flex items-center gap-1.5 text-[13px] font-medium text-emerald-600">
+                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                    정상
+                  </span>
+                </div>
+                <div className="flex items-center justify-between py-3 border-b border-stone-100">
+                  <span className="text-sm text-stone-600">설문 템플릿</span>
+                  <span className="text-sm font-medium text-stone-800">
+                    {data.systemStats.templateCount}종
+                  </span>
+                </div>
+                <div className="flex items-center justify-between py-3 border-b border-stone-100">
+                  <span className="text-sm text-stone-600">활성 설문</span>
+                  <span className="text-sm font-medium text-teal-600">
+                    {data.systemStats.activeSurveyCount}개
+                  </span>
+                </div>
+                <div className="flex items-center justify-between py-3">
+                  <span className="text-sm text-stone-600">총 응답</span>
+                  <span className="text-sm font-medium text-stone-800">
+                    {data.systemStats.submissionCount}건
+                  </span>
+                </div>
               </div>
             </div>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );

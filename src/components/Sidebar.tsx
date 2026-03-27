@@ -18,6 +18,7 @@ import {
   Building2,
   Settings,
   LogOut,
+  UserCog,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import type { UserProfile } from "@/lib/auth";
@@ -27,8 +28,11 @@ const eduMenuItems = [
   { href: "/admin/surveys", label: "설문 관리", icon: ClipboardList },
   { href: "/admin/cs-templates", label: "문항 템플릿", icon: BookOpen },
   { href: "/admin/responses", label: "응답 및 리포트", icon: ChartColumn },
-  { href: "/admin/respondents", label: "응답자 관리", icon: UserCheck },
   { href: "/admin/distribute", label: "배부 관리", icon: Send },
+];
+
+const adminOnlyEduItems = [
+  { href: "/admin/respondents", label: "응답자 관리", icon: UserCheck },
 ];
 
 const hrdMenuItems = [
@@ -119,6 +123,24 @@ export function Sidebar({ userProfile }: SidebarProps) {
                 </Link>
               );
             })}
+            {userProfile.role === "admin" &&
+              adminOnlyEduItems.map((item) => {
+                const active = isActive(pathname, item.href);
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className={`flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition-colors ${
+                      active
+                        ? "bg-teal-50/10 text-teal-300 font-medium"
+                        : "text-stone-400 hover:bg-stone-800 hover:text-white"
+                    }`}
+                  >
+                    <item.icon size={18} aria-hidden="true" />
+                    {item.label}
+                  </Link>
+                );
+              })}
           </div>
         </div>
 
@@ -193,13 +215,22 @@ export function Sidebar({ userProfile }: SidebarProps) {
               </div>
             </div>
           </div>
-          <button
-            onClick={handleLogout}
-            className="rounded-md p-1.5 text-stone-500 hover:bg-stone-800 hover:text-stone-300 transition-colors"
-            title="로그아웃"
-          >
-            <LogOut size={16} />
-          </button>
+          <div className="flex items-center gap-0.5">
+            <Link
+              href="/admin/account"
+              className="rounded-md p-1.5 text-stone-500 hover:bg-stone-800 hover:text-stone-300 transition-colors"
+              title="계정 설정"
+            >
+              <UserCog size={16} />
+            </Link>
+            <button
+              onClick={handleLogout}
+              className="rounded-md p-1.5 text-stone-500 hover:bg-stone-800 hover:text-stone-300 transition-colors"
+              title="로그아웃"
+            >
+              <LogOut size={16} />
+            </button>
+          </div>
         </div>
       </div>
     </aside>
