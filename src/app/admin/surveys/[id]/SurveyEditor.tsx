@@ -110,6 +110,7 @@ export default function SurveyEditor({ survey, questions, submissionCount }: Edi
         <SettingsPanel
           surveyId={survey.id}
           initialSettings={liveSettings}
+          sectionNames={Object.keys(sections)}
           onSettingsChange={setLiveSettings}
           onSaved={refresh}
         />

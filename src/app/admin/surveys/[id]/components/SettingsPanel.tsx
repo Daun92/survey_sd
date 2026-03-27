@@ -3,16 +3,25 @@
 import { useState, useRef } from "react";
 import { Settings2, ChevronDown, ChevronUp, Save, Loader2, Upload, X, ImageIcon } from "lucide-react";
 import { updateSurveySettings } from "../actions";
-import { type SurveySettings, type RespondentFieldConfig, RESPONDENT_FIELD_PRESETS } from "./types";
+import { type SurveySettings, type SectionIntro, type RespondentFieldConfig, RESPONDENT_FIELD_PRESETS } from "./types";
 
 interface Props {
   surveyId: string;
   initialSettings: SurveySettings;
+  sectionNames?: string[];
   onSettingsChange: (settings: SurveySettings) => void;
   onSaved: () => void;
 }
 
-export function SettingsPanel({ surveyId, initialSettings, onSettingsChange, onSaved }: Props) {
+const INTRO_COLORS = [
+  { value: "teal", label: "청록", className: "bg-teal-500" },
+  { value: "blue", label: "파랑", className: "bg-blue-500" },
+  { value: "amber", label: "노랑", className: "bg-amber-500" },
+  { value: "rose", label: "빨강", className: "bg-rose-500" },
+  { value: "violet", label: "보라", className: "bg-violet-500" },
+] as const;
+
+export function SettingsPanel({ surveyId, initialSettings, sectionNames = [], onSettingsChange, onSaved }: Props) {
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -223,6 +232,57 @@ export function SettingsPanel({ surveyId, initialSettings, onSettingsChange, onS
               <input type="text" value={settings.thank_you_message ?? ""} onChange={(e) => update({ thank_you_message: e.target.value })} placeholder="소중한 의견에 감사드립니다." className="w-full rounded-lg border border-stone-200 px-3 py-2 text-sm focus:border-teal-500 focus:ring-1 focus:ring-teal-500 outline-none" />
             </div>
           </div>
+
+          {/* ── 섹션 인터스티셜 ── */}
+          {sectionNames.length > 0 && (
+            <div>
+              <label className="block text-[13px] font-semibold text-stone-700 mb-2">섹션 안내 페이지</label>
+              <p className="text-[11px] text-stone-400 mb-3">섹션 전환 시 안내 화면을 표시합니다. 비워두면 바로 질문으로 넘어갑니다.</p>
+              <div className="space-y-3">
+                {sectionNames.map((name) => {
+                  const intro: SectionIntro = settings.section_intros?.[name] ?? {};
+                  const updateIntro = (patch: Partial<SectionIntro>) => {
+                    const intros = { ...(settings.section_intros ?? {}) };
+                    intros[name] = { ...intro, ...patch };
+                    update({ section_intros: intros });
+                  };
+                  return (
+                    <div key={name} className="rounded-lg border border-stone-200 p-3 space-y-2">
+                      <span className="text-xs font-semibold text-teal-600">{name}</span>
+                      <input
+                        type="text"
+                        value={intro.title ?? ""}
+                        onChange={(e) => updateIntro({ title: e.target.value })}
+                        placeholder="안내 제목 (예: 강사 평가)"
+                        className="w-full rounded-lg border border-stone-200 px-3 py-1.5 text-sm focus:border-teal-500 focus:ring-1 focus:ring-teal-500 outline-none"
+                      />
+                      <textarea
+                        value={intro.description ?? ""}
+                        onChange={(e) => updateIntro({ description: e.target.value })}
+                        placeholder="안내 설명 (선택)"
+                        rows={2}
+                        className="w-full rounded-lg border border-stone-200 px-3 py-1.5 text-sm focus:border-teal-500 focus:ring-1 focus:ring-teal-500 outline-none resize-none"
+                      />
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-[11px] text-stone-500 mr-1">색상</span>
+                        {INTRO_COLORS.map((c) => (
+                          <button
+                            key={c.value}
+                            type="button"
+                            onClick={() => updateIntro({ color: c.value })}
+                            className={`h-5 w-5 rounded-full ${c.className} transition-all ${
+                              (intro.color || "teal") === c.value ? "ring-2 ring-offset-1 ring-stone-400 scale-110" : "opacity-50 hover:opacity-80"
+                            }`}
+                            title={c.label}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
           <button onClick={handleSave} disabled={saving} className="inline-flex items-center gap-1.5 rounded-lg bg-teal-600 px-4 py-2 text-xs font-semibold text-white hover:bg-teal-700 transition-colors disabled:opacity-50">
             {saving ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />} 설정 저장
