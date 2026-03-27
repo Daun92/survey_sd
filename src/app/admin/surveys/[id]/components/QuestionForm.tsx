@@ -117,8 +117,8 @@ export function QuestionForm({ surveyId, question, allQuestions, sectionNames, d
           <input type="text" value={questionCode} onChange={(e) => setQuestionCode(e.target.value)} placeholder="Q1" className="w-full rounded-lg border border-stone-300 px-3 py-2 text-sm focus:border-teal-500 focus:ring-1 focus:ring-teal-500 outline-none" />
         </div>
       </div>
-      <div className="grid grid-cols-2 gap-3">
-        <div>
+      <div className="flex gap-3 items-end">
+        <div className="flex-1 min-w-0">
           <label className="block text-[13px] font-medium text-stone-600 mb-1">섹션</label>
           {sectionNames && sectionNames.length > 0 && !customSection ? (
             <select
@@ -148,8 +148,8 @@ export function QuestionForm({ surveyId, question, allQuestions, sectionNames, d
           )}
         </div>
         {!isInfoBlock && (
-          <div className="flex items-end pb-1">
-            <label className="flex items-center gap-2 text-sm text-stone-600 cursor-pointer">
+          <div className="shrink-0 pb-2">
+            <label className="flex items-center gap-2 text-sm text-stone-600 cursor-pointer whitespace-nowrap">
               <input type="checkbox" checked={isRequired} onChange={(e) => setIsRequired(e.target.checked)} className="accent-teal-600" /> 필수
             </label>
           </div>
