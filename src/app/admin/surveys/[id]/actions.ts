@@ -90,6 +90,8 @@ export async function addQuestion(surveyId: string, data: AddQuestionInput) {
   };
   const skipLogic = (data as Record<string, unknown>).skip_logic;
   if (skipLogic) insertData.skip_logic = skipLogic;
+  const metadata = (data as Record<string, unknown>).metadata;
+  if (metadata) insertData.metadata = metadata;
 
   const { data: question, error } = await supabase
     .from("edu_questions")
@@ -124,6 +126,10 @@ export async function updateQuestion(
   const skipLogicVal = (data as Record<string, unknown>).skip_logic;
   if (skipLogicVal !== undefined && skipLogicVal !== null) {
     updateData.skip_logic = skipLogicVal;
+  }
+  const metadataVal = (data as Record<string, unknown>).metadata;
+  if (metadataVal !== undefined) {
+    updateData.metadata = metadataVal;
   }
 
   const { error } = await supabase

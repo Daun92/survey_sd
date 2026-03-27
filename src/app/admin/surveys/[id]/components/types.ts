@@ -15,6 +15,12 @@ export const RESPONDENT_FIELD_PRESETS: RespondentFieldConfig[] = [
   { id: "email", label: "이메일", enabled: false, required: false },
 ];
 
+export interface SectionIntro {
+  title?: string;
+  description?: string;
+  color?: "teal" | "blue" | "amber" | "rose" | "violet";
+}
+
 export interface SurveySettings {
   collect_respondent_info?: boolean;
   anonymous?: boolean;
@@ -28,6 +34,7 @@ export interface SurveySettings {
   hero_image_url?: string;
   show_meta_info?: boolean;
   respondent_fields?: RespondentFieldConfig[];
+  section_intros?: Record<string, SectionIntro>;
 }
 
 export interface Survey {
@@ -95,6 +102,7 @@ export const questionTypeOptions = [
   { value: "text", label: "주관식" },
   { value: "rating", label: "평점" },
   { value: "yes_no", label: "예/아니오" },
+  { value: "info_block", label: "안내 블록" },
 ];
 
 export const questionTypeLabels: Record<string, string> = {
@@ -105,6 +113,7 @@ export const questionTypeLabels: Record<string, string> = {
   single_choice: "객관식 (단일)",
   rating: "평점",
   yes_no: "예/아니오",
+  info_block: "안내 블록",
 };
 
 export const likertLabels: Record<number, string> = {

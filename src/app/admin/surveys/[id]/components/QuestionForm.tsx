@@ -26,6 +26,12 @@ export function QuestionForm({ surveyId, question, allQuestions, nextSortOrder, 
   const [isRequired, setIsRequired] = useState(question?.is_required ?? true);
   const [options, setOptions] = useState<string[]>(question ? parseOptions(question.options) : ["옵션 1", "옵션 2"]);
 
+  // Info block metadata
+  const existingMeta = (question as any)?.metadata as Record<string, unknown> | undefined;
+  const [blockStyle, setBlockStyle] = useState<string>((existingMeta?.block_style as string) || "info");
+
+  const isInfoBlock = questionType === "info_block";
+
   // Skip logic
   const [hasSkipLogic, setHasSkipLogic] = useState(!!question?.skip_logic);
   const [skipQuestionId, setSkipQuestionId] = useState(question?.skip_logic?.show_when?.question_id || "");
@@ -40,16 +46,19 @@ export function QuestionForm({ surveyId, question, allQuestions, nextSortOrder, 
       const skipLogic: SkipLogic | null = hasSkipLogic && skipQuestionId && skipValue
         ? { show_when: { question_id: skipQuestionId, operator: skipOperator as SkipLogic["show_when"]["operator"], value: isNaN(Number(skipValue)) ? skipValue : Number(skipValue) } }
         : null;
-      const payload = {
+      const base = {
         question_text: questionText.trim(),
         question_type: questionType,
         question_code: questionCode.trim() || undefined,
         section: section.trim() || "일반",
-        is_required: isRequired,
+        is_required: isInfoBlock ? false : isRequired,
         sort_order: question?.sort_order ?? nextSortOrder,
         options: needsOptions(questionType) ? options.filter((o) => o.trim()) : null,
         skip_logic: skipLogic,
       };
+      const payload = isInfoBlock
+        ? { ...base, metadata: { block_style: blockStyle } }
+        : base;
       if (isEdit && question) {
         await updateQuestion(question.id, surveyId, payload);
       } else {
@@ -100,12 +109,38 @@ export function QuestionForm({ surveyId, question, allQuestions, nextSortOrder, 
           <label className="block text-[13px] font-medium text-stone-600 mb-1">섹션</label>
           <input type="text" value={section} onChange={(e) => setSection(e.target.value)} placeholder="일반" className="w-full rounded-lg border border-stone-300 px-3 py-2 text-sm focus:border-teal-500 focus:ring-1 focus:ring-teal-500 outline-none" />
         </div>
-        <div className="flex items-end pb-1">
-          <label className="flex items-center gap-2 text-sm text-stone-600 cursor-pointer">
-            <input type="checkbox" checked={isRequired} onChange={(e) => setIsRequired(e.target.checked)} className="accent-teal-600" /> 필수
-          </label>
-        </div>
+        {!isInfoBlock && (
+          <div className="flex items-end pb-1">
+            <label className="flex items-center gap-2 text-sm text-stone-600 cursor-pointer">
+              <input type="checkbox" checked={isRequired} onChange={(e) => setIsRequired(e.target.checked)} className="accent-teal-600" /> 필수
+            </label>
+          </div>
+        )}
       </div>
+      {/* 안내 블록 스타일 선택 */}
+      {isInfoBlock && (
+        <div>
+          <label className="block text-[13px] font-medium text-stone-600 mb-1.5">블록 스타일</label>
+          <div className="flex gap-2">
+            {[
+              { value: "info", label: "정보", className: "border-blue-300 bg-blue-50 text-blue-700" },
+              { value: "warning", label: "주의", className: "border-amber-300 bg-amber-50 text-amber-700" },
+              { value: "divider", label: "구분선", className: "border-stone-300 bg-stone-50 text-stone-600" },
+            ].map((s) => (
+              <button
+                key={s.value}
+                type="button"
+                onClick={() => setBlockStyle(s.value)}
+                className={`flex-1 rounded-lg border-[1.5px] px-3 py-2 text-xs font-medium transition-all ${
+                  blockStyle === s.value ? s.className : "border-stone-200 bg-white text-stone-400"
+                }`}
+              >
+                {s.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
       {needsOptions(questionType) && (
         <div>
           <label className="block text-[13px] font-medium text-stone-600 mb-1.5">선택지</label>
@@ -121,8 +156,8 @@ export function QuestionForm({ surveyId, question, allQuestions, nextSortOrder, 
           </div>
         </div>
       )}
-      {/* Skip Logic */}
-      {otherQuestions.length > 0 && (
+      {/* Skip Logic (안내 블록에는 불필요) */}
+      {!isInfoBlock && otherQuestions.length > 0 && (
         <div className="border-t border-stone-100 pt-3">
           <label className="flex items-center gap-2 text-[13px] text-stone-600 cursor-pointer mb-2">
             <input type="checkbox" checked={hasSkipLogic} onChange={(e) => setHasSkipLogic(e.target.checked)} className="accent-teal-600" />
