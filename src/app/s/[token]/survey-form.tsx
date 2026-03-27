@@ -494,11 +494,11 @@ export default function SurveyForm({ survey, groupToken }: { survey: SurveyData;
             }}
           >
             {intro.image_url && (
-              <div style={{ borderRadius: '12px 12px 0 0', overflow: 'hidden', backgroundColor: colors.bg }}>
+              <div style={{ borderRadius: '12px 12px 0 0', overflow: 'hidden' }}>
                 <img
                   src={intro.image_url}
                   alt=""
-                  style={{ width: '100%', maxHeight: '160px', objectFit: 'contain', display: 'block' }}
+                  style={{ width: '100%', height: '80px', objectFit: 'cover', display: 'block' }}
                 />
               </div>
             )}
