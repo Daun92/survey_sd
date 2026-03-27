@@ -136,7 +136,7 @@ export default async function IndividualSurveyPage({
           </div>
           <h2 className="text-xl font-bold text-stone-800 mb-2">이미 응답을 완료하셨습니다</h2>
           <p className="text-sm text-stone-500">
-            {distribution.recipientName}님의 응답이 정상적으로 기록되었습니다.<br />
+            응답이 정상적으로 기록되었습니다.<br />
             감사합니다.
           </p>
         </div>
