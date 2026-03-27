@@ -486,20 +486,21 @@ export default function SurveyForm({ survey, groupToken }: { survey: SurveyData;
         return (
           <div
             data-testid="section-banner"
-            className="mx-6 mt-4 mb-2 rounded-xl overflow-hidden shadow-sm"
+            className="mx-6 mt-4 mb-2 shadow-sm"
             style={{
               backgroundColor: colors.bg,
               border: `1.5px solid ${colors.border}`,
-              minHeight: '48px',
+              borderRadius: '12px',
             }}
           >
             {intro.image_url && (
-              <img
-                src={intro.image_url}
-                alt=""
-                className="w-full object-cover"
-                style={{ height: '120px' }}
-              />
+              <div style={{ borderRadius: '12px 12px 0 0', overflow: 'hidden', backgroundColor: colors.bg }}>
+                <img
+                  src={intro.image_url}
+                  alt=""
+                  style={{ width: '100%', maxHeight: '160px', objectFit: 'contain', display: 'block' }}
+                />
+              </div>
             )}
             <div style={{ padding: '12px 16px' }}>
               {intro.title && (
