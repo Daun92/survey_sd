@@ -74,12 +74,12 @@ const DEFAULT_RESPONDENT_FIELDS: RespondentFieldConfig[] = [
 
 type Step = 'landing' | 'questions' | 'ending'
 
-const INTRO_COLOR_MAP: Record<string, { bg: string; icon: string; border: string }> = {
-  teal: { bg: 'bg-teal-50', icon: 'text-teal-600', border: 'border-teal-200' },
-  blue: { bg: 'bg-blue-50', icon: 'text-blue-600', border: 'border-blue-200' },
-  amber: { bg: 'bg-amber-50', icon: 'text-amber-600', border: 'border-amber-200' },
-  rose: { bg: 'bg-rose-50', icon: 'text-rose-600', border: 'border-rose-200' },
-  violet: { bg: 'bg-violet-50', icon: 'text-violet-600', border: 'border-violet-200' },
+const INTRO_STYLE_MAP: Record<string, { bg: string; border: string; color: string }> = {
+  teal: { bg: '#f0fdfa', border: '#99f6e4', color: '#0d9488' },
+  blue: { bg: '#eff6ff', border: '#bfdbfe', color: '#2563eb' },
+  amber: { bg: '#fffbeb', border: '#fde68a', color: '#d97706' },
+  rose: { bg: '#fff1f2', border: '#fecdd3', color: '#e11d48' },
+  violet: { bg: '#f5f3ff', border: '#ddd6fe', color: '#7c3aed' },
 }
 
 const likertLabels: Record<number, string> = { 5: '매우 만족', 4: '만족', 3: '보통', 2: '불만족', 1: '매우 불만족' }
@@ -474,15 +474,18 @@ export default function SurveyForm({ survey, groupToken }: { survey: SurveyData;
       {(() => {
         const intro = getSectionIntro(currentSectionIdx)
         if (!intro) return null
-        const colors = INTRO_COLOR_MAP[intro.color || 'teal'] || INTRO_COLOR_MAP.teal
+        const style = INTRO_STYLE_MAP[intro.color || 'teal'] || INTRO_STYLE_MAP.teal
         return (
-          <div className={`mx-6 mt-5 rounded-xl border ${colors.border} ${colors.bg} overflow-hidden`}>
+          <div
+            className="mx-6 mt-5 rounded-xl overflow-hidden"
+            style={{ backgroundColor: style.bg, border: `1px solid ${style.border}` }}
+          >
             {intro.image_url && (
               <img src={intro.image_url} alt="" className="w-full h-28 object-cover" />
             )}
             <div className="px-4 py-3">
               {intro.title && (
-                <p className={`text-[15px] font-bold ${colors.icon}`}>{intro.title}</p>
+                <p className="text-[15px] font-bold" style={{ color: style.color }}>{intro.title}</p>
               )}
               {intro.description && (
                 <p className="text-[13px] text-stone-600 mt-1 leading-relaxed whitespace-pre-line">{intro.description}</p>
