@@ -40,11 +40,15 @@ export async function createDistributionBatch(input: CreateBatchInput) {
   }
 
   // 개별 배부 레코드 생성
-  const distributionRows = recipients.map((r: { name: string; email?: string | null; department?: string | null; position?: string | null }) => ({
+  const distributionRows = recipients.map((r) => ({
     batch_id: batch.id,
     survey_id,
     recipient_name: r.name,
     recipient_email: r.email || null,
+    recipient_company: r.company || null,
+    recipient_department: r.department || null,
+    recipient_position: r.position || null,
+    recipient_phone: r.phone || null,
     channel: 'link',
     status: 'pending',
   }))
@@ -89,7 +93,7 @@ export async function getDistributionBatches() {
 export async function getDistributions(batchId: string) {
   const { data: distributions } = await supabase
     .from('distributions')
-    .select('id, recipient_name, recipient_email, unique_token, status, sent_at, opened_at, started_at, completed_at, created_at')
+    .select('id, recipient_name, recipient_email, recipient_company, recipient_department, recipient_position, recipient_phone, unique_token, status, sent_at, opened_at, started_at, completed_at, created_at')
     .eq('batch_id', batchId)
     .order('created_at', { ascending: true })
 

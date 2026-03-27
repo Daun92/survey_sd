@@ -5,8 +5,10 @@ import { z } from "zod";
 export const recipientSchema = z.object({
   name: z.string().min(1, "이름은 필수입니다").max(100),
   email: z.string().email().max(255).nullable().optional(),
+  company: z.string().max(100).nullable().optional(),
   department: z.string().max(100).nullable().optional(),
   position: z.string().max(100).nullable().optional(),
+  phone: z.string().max(30).nullable().optional(),
 });
 
 export const createBatchSchema = z.object({

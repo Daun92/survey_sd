@@ -33,6 +33,10 @@ interface DistributionItem {
   id: string
   recipient_name: string | null
   recipient_email: string | null
+  recipient_company: string | null
+  recipient_department: string | null
+  recipient_position: string | null
+  recipient_phone: string | null
   unique_token: string
   status: string
   opened_at: string | null
@@ -41,10 +45,12 @@ interface DistributionItem {
 }
 
 interface RecipientRow {
+  company: string
   name: string
-  email: string
-  department: string
   position: string
+  department: string
+  phone: string
+  email: string
 }
 
 const BASE_URL = typeof window !== 'undefined'
@@ -69,7 +75,7 @@ export default function IndividualLinksClient({
   const [batches, setBatches] = useState<BatchItem[]>(initialBatches)
   const [selectedSurveyId, setSelectedSurveyId] = useState(surveys[0]?.id ?? '')
   const [recipients, setRecipients] = useState<RecipientRow[]>([
-    { name: '', email: '', department: '', position: '' },
+    { company: '', name: '', position: '', department: '', phone: '', email: '' },
   ])
   const [bulkMode, setBulkMode] = useState(false)
   const [bulkText, setBulkText] = useState('')
@@ -85,11 +91,11 @@ export default function IndividualLinksClient({
   // ─── CSV 샘플 다운로드 ───
   const downloadCsvSample = () => {
     const bom = '\uFEFF'
-    const header = '이름,이메일,부서,직급'
+    const header = '회사,이름,직책,소속,연락처,이메일'
     const rows = [
-      '홍길동,hong@example.com,경영지원팀,과장',
-      '김영희,kim@example.com,인사팀,대리',
-      '이철수,,마케팅팀,',
+      'ABC주식회사,홍길동,과장,경영지원팀,010-1234-5678,hong@example.com',
+      'ABC주식회사,김영희,대리,인사팀,010-2345-6789,kim@example.com',
+      'XYZ코퍼레이션,이철수,부장,마케팅팀,,',
     ]
     const csv = bom + [header, ...rows].join('\n')
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
@@ -121,13 +127,16 @@ export default function IndividualLinksClient({
       const parsed: RecipientRow[] = []
       for (let i = 1; i < lines.length; i++) {
         const cols = parseCsvLine(lines[i])
-        const name = cols[0]?.trim() || ''
+        // 컬럼 순서: 회사, 이름, 직책, 소속, 연락처, 이메일
+        const name = cols[1]?.trim() || ''
         if (!name) continue
         parsed.push({
+          company: cols[0]?.trim() || '',
           name,
-          email: cols[1]?.trim() || '',
-          department: cols[2]?.trim() || '',
-          position: cols[3]?.trim() || '',
+          position: cols[2]?.trim() || '',
+          department: cols[3]?.trim() || '',
+          phone: cols[4]?.trim() || '',
+          email: cols[5]?.trim() || '',
         })
       }
 
@@ -185,7 +194,7 @@ export default function IndividualLinksClient({
 
   // ─── 수신자 입력 ───
   const addRecipientRow = () => {
-    setRecipients([...recipients, { name: '', email: '', department: '', position: '' }])
+    setRecipients([...recipients, { company: '', name: '', position: '', department: '', phone: '', email: '' }])
   }
 
   const updateRecipient = (index: number, field: keyof RecipientRow, value: string) => {
@@ -200,7 +209,7 @@ export default function IndividualLinksClient({
   const applyBulkText = () => {
     const names = bulkText.split('\n').map(n => n.trim()).filter(Boolean)
     if (names.length === 0) return
-    setRecipients(names.map(name => ({ name, email: '', department: '', position: '' })))
+    setRecipients(names.map(name => ({ company: '', name, position: '', department: '', phone: '', email: '' })))
     setBulkMode(false)
     setBulkText('')
   }
@@ -218,10 +227,12 @@ export default function IndividualLinksClient({
       const result = await createDistributionBatch({
         survey_id: selectedSurveyId,
         recipients: validRecipients.map(r => ({
+          company: r.company.trim() || null,
           name: r.name.trim(),
-          email: r.email.trim() || null,
-          department: r.department.trim() || null,
           position: r.position.trim() || null,
+          department: r.department.trim() || null,
+          phone: r.phone.trim() || null,
+          email: r.email.trim() || null,
         })),
       })
 
@@ -244,7 +255,7 @@ export default function IndividualLinksClient({
       }, ...prev])
 
       // 입력 초기화
-      setRecipients([{ name: '', email: '', department: '', position: '' }])
+      setRecipients([{ company: '', name: '', position: '', department: '', phone: '', email: '' }])
       setSuccessMsg(`${validRecipients.length}개의 개별 링크가 생성되었습니다`)
       setTimeout(() => setSuccessMsg(null), 3000)
 
@@ -374,17 +385,25 @@ export default function IndividualLinksClient({
               </Button>
             </div>
           ) : (
-            <div className="space-y-2">
+            <div className="space-y-2 overflow-x-auto">
               {/* 헤더 */}
-              <div className="grid grid-cols-[1fr_1fr_1fr_1fr_36px] gap-2 text-xs text-stone-500 font-medium px-1">
+              <div className="grid grid-cols-[120px_100px_80px_100px_120px_160px_36px] gap-1.5 text-xs text-stone-500 font-medium px-1 min-w-[740px]">
+                <span>회사</span>
                 <span>이름 *</span>
+                <span>직책</span>
+                <span>소속</span>
+                <span>연락처</span>
                 <span>이메일</span>
-                <span>부서</span>
-                <span>직급</span>
                 <span></span>
               </div>
               {recipients.map((r, i) => (
-                <div key={i} className="grid grid-cols-[1fr_1fr_1fr_1fr_36px] gap-2">
+                <div key={i} className="grid grid-cols-[120px_100px_80px_100px_120px_160px_36px] gap-1.5 min-w-[740px]">
+                  <Input
+                    placeholder="회사"
+                    value={r.company}
+                    onChange={(e) => updateRecipient(i, 'company', e.target.value)}
+                    className="h-9 text-sm"
+                  />
                   <Input
                     placeholder="이름"
                     value={r.name}
@@ -392,21 +411,27 @@ export default function IndividualLinksClient({
                     className="h-9 text-sm"
                   />
                   <Input
-                    placeholder="이메일"
-                    value={r.email}
-                    onChange={(e) => updateRecipient(i, 'email', e.target.value)}
+                    placeholder="직책"
+                    value={r.position}
+                    onChange={(e) => updateRecipient(i, 'position', e.target.value)}
                     className="h-9 text-sm"
                   />
                   <Input
-                    placeholder="부서"
+                    placeholder="소속"
                     value={r.department}
                     onChange={(e) => updateRecipient(i, 'department', e.target.value)}
                     className="h-9 text-sm"
                   />
                   <Input
-                    placeholder="직급"
-                    value={r.position}
-                    onChange={(e) => updateRecipient(i, 'position', e.target.value)}
+                    placeholder="연락처"
+                    value={r.phone}
+                    onChange={(e) => updateRecipient(i, 'phone', e.target.value)}
+                    className="h-9 text-sm"
+                  />
+                  <Input
+                    placeholder="이메일"
+                    value={r.email}
+                    onChange={(e) => updateRecipient(i, 'email', e.target.value)}
                     className="h-9 text-sm"
                   />
                   <button
@@ -533,13 +558,17 @@ export default function IndividualLinksClient({
                             </div>
 
                             {/* 개별 목록 */}
-                            <div className="bg-white border border-stone-200 rounded-lg overflow-hidden">
-                              <table className="w-full text-sm">
+                            <div className="bg-white border border-stone-200 rounded-lg overflow-x-auto">
+                              <table className="w-full text-sm min-w-[800px]">
                                 <thead>
                                   <tr className="bg-stone-50 border-b border-stone-100">
+                                    <th className="text-left px-3 py-2 text-xs font-semibold text-stone-500">회사</th>
                                     <th className="text-left px-3 py-2 text-xs font-semibold text-stone-500">이름</th>
-                                    <th className="text-left px-3 py-2 text-xs font-semibold text-stone-500">상태</th>
-                                    <th className="text-left px-3 py-2 text-xs font-semibold text-stone-500">응답일시</th>
+                                    <th className="text-left px-3 py-2 text-xs font-semibold text-stone-500">직책</th>
+                                    <th className="text-left px-3 py-2 text-xs font-semibold text-stone-500">소속</th>
+                                    <th className="text-left px-3 py-2 text-xs font-semibold text-stone-500">연락처</th>
+                                    <th className="text-left px-3 py-2 text-xs font-semibold text-stone-500">이메일</th>
+                                    <th className="text-center px-3 py-2 text-xs font-semibold text-stone-500">응답</th>
                                     <th className="text-center px-3 py-2 text-xs font-semibold text-stone-500">링크</th>
                                   </tr>
                                 </thead>
@@ -549,14 +578,26 @@ export default function IndividualLinksClient({
                                     const st = statusConfig[d.status] ?? { label: d.status, variant: 'outline' as const }
                                     return (
                                       <tr key={d.id} className="border-b border-stone-50 last:border-0 hover:bg-stone-50/50">
-                                        <td className="px-3 py-2.5 font-medium text-stone-800">
+                                        <td className="px-3 py-2.5 text-stone-600 text-xs">
+                                          {d.recipient_company || '-'}
+                                        </td>
+                                        <td className="px-3 py-2.5 font-medium text-stone-800 whitespace-nowrap">
                                           {d.recipient_name || '-'}
                                         </td>
-                                        <td className="px-3 py-2.5">
-                                          <Badge variant={st.variant}>{st.label}</Badge>
+                                        <td className="px-3 py-2.5 text-stone-600 text-xs">
+                                          {d.recipient_position || '-'}
                                         </td>
-                                        <td className="px-3 py-2.5 text-stone-500 text-xs">
-                                          {formatDate(d.completed_at)}
+                                        <td className="px-3 py-2.5 text-stone-600 text-xs">
+                                          {d.recipient_department || '-'}
+                                        </td>
+                                        <td className="px-3 py-2.5 text-stone-600 text-xs whitespace-nowrap">
+                                          {d.recipient_phone || '-'}
+                                        </td>
+                                        <td className="px-3 py-2.5 text-stone-600 text-xs">
+                                          {d.recipient_email || '-'}
+                                        </td>
+                                        <td className="px-3 py-2.5 text-center">
+                                          <Badge variant={st.variant}>{st.label}</Badge>
                                         </td>
                                         <td className="px-3 py-2.5">
                                           <div className="flex items-center justify-center gap-1">
