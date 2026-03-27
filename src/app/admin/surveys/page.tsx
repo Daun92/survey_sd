@@ -1,15 +1,23 @@
 import { supabase } from "@/lib/supabase";
 import Link from "next/link";
-import { ClipboardList, Plus, ExternalLink, Building2 } from "lucide-react";
+import {
+  ClipboardList,
+  Plus,
+  ExternalLink,
+  Search,
+  Eye,
+  Send,
+  ChartColumn,
+} from "lucide-react";
 
 export const revalidate = 60;
 
 const statusLabels: Record<string, { label: string; className: string }> = {
   active: { label: "진행중", className: "bg-emerald-100 text-emerald-800" },
-  closed: { label: "마감", className: "bg-stone-100 text-stone-800" },
+  closed: { label: "마감", className: "bg-rose-100 text-rose-800" },
   draft: {
     label: "초안",
-    className: "border border-stone-300 text-stone-700 bg-white",
+    className: "border border-stone-200 text-stone-700 bg-white",
   },
 };
 
@@ -19,57 +27,109 @@ function formatDate(dateStr: string | null) {
   return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, "0")}.${String(d.getDate()).padStart(2, "0")}`;
 }
 
-async function getSurveys() {
-  const { data: surveys, error } = await supabase
+async function getSurveys(statusFilter?: string, query?: string) {
+  let q = supabase
     .from("edu_surveys")
-    .select("id, title, status, survey_type, education_type, url_token, starts_at, ends_at, created_at, project_id, projects(id, name, customers(company_name)), edu_submissions(count)")
+    .select(`
+      id, title, status, survey_type, education_type, url_token,
+      starts_at, ends_at, created_at,
+      edu_submissions(count),
+      sessions (
+        name,
+        courses (
+          name,
+          projects (
+            name,
+            customers ( company_name )
+          )
+        )
+      )
+    `)
     .order("created_at", { ascending: false });
+
+  if (statusFilter && statusFilter !== "all") {
+    q = q.eq("status", statusFilter);
+  }
+
+  const { data: surveys, error } = await q;
 
   if (error || !surveys) return [];
 
-  return surveys.map((s) => {
-    const project = Array.isArray(s.projects) ? s.projects[0] : s.projects;
-    const customer = project?.customers
-      ? Array.isArray(project.customers)
-        ? project.customers[0]
-        : project.customers
-      : null;
+  let result = surveys.map((s: any) => {
+    const session = s.sessions;
+    const course = session?.courses;
+    const project = course?.projects;
+    const customer = project?.customers;
+
     return {
-      ...s,
-      submission_count: (s.edu_submissions as unknown as { count: number }[])?.[0]?.count ?? 0,
-      project_name: (project as { name?: string } | null)?.name ?? null,
-      customer_name: (customer as { company_name?: string } | null)?.company_name ?? null,
+      id: s.id,
+      title: s.title,
+      status: s.status,
+      survey_type: s.survey_type,
+      url_token: s.url_token,
+      created_at: s.created_at,
+      project_name: project?.name ?? null,
+      customer_name: customer?.company_name ?? null,
+      session_name: session?.name ?? null,
+      submission_count:
+        (s.edu_submissions as unknown as { count: number }[])?.[0]?.count ?? 0,
     };
   });
+
+  if (query) {
+    const lower = query.toLowerCase();
+    result = result.filter(
+      (s) =>
+        s.title.toLowerCase().includes(lower) ||
+        (s.project_name && s.project_name.toLowerCase().includes(lower)) ||
+        (s.customer_name && s.customer_name.toLowerCase().includes(lower))
+    );
+  }
+
+  return result;
 }
 
-async function getProjects() {
+async function getStatusCounts() {
   const { data } = await supabase
-    .from("projects")
-    .select("id, name")
-    .order("name");
-  return data ?? [];
+    .from("edu_surveys")
+    .select("status");
+
+  const counts: Record<string, number> = { all: 0, active: 0, closed: 0, draft: 0 };
+  (data ?? []).forEach((s: { status: string }) => {
+    counts.all += 1;
+    if (counts[s.status] !== undefined) counts[s.status] += 1;
+  });
+  return counts;
 }
 
 export default async function SurveysPage({
   searchParams,
 }: {
-  searchParams: Promise<{ project?: string }>;
+  searchParams: Promise<{ status?: string; q?: string }>;
 }) {
   const params = await searchParams;
-  const projectFilter = params.project;
-  const [allSurveys, projects] = await Promise.all([getSurveys(), getProjects()]);
-  const surveys = projectFilter
-    ? allSurveys.filter((s) => s.project_id === projectFilter)
-    : allSurveys;
+  const statusFilter = params.status || "all";
+  const query = params.q || "";
+
+  const [surveys, counts] = await Promise.all([
+    getSurveys(statusFilter, query),
+    getStatusCounts(),
+  ]);
+
+  const tabs = [
+    { key: "all", label: "전체", count: counts.all },
+    { key: "active", label: "진행중", count: counts.active },
+    { key: "closed", label: "마감", count: counts.closed },
+    { key: "draft", label: "초안", count: counts.draft },
+  ];
 
   return (
     <div>
-      <div className="mb-8 flex items-center justify-between">
+      <div className="mb-6 flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-stone-800">설문 관리</h1>
           <p className="text-sm text-stone-500 mt-1">
-            설문을 생성하고 관리하세요
+            설문을 생성, 관리하고 배포하세요
           </p>
         </div>
         <Link
@@ -77,41 +137,57 @@ export default async function SurveysPage({
           className="inline-flex items-center gap-2 rounded-lg bg-teal-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-teal-700 transition-colors"
         >
           <Plus size={16} />
-          새 설문 만들기
+          새 설문
         </Link>
       </div>
 
-      {/* 프로젝트 필터 */}
-      {projects.length > 0 && (
-        <div className="mb-4 flex items-center gap-2">
-          <Building2 size={16} className="text-stone-400" />
-          <div className="flex items-center gap-1.5 flex-wrap">
-            <Link
-              href="/admin/surveys"
-              className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-medium transition-colors ${
-                !projectFilter
-                  ? "bg-teal-600 text-white"
-                  : "bg-stone-100 text-stone-600 hover:bg-stone-200"
-              }`}
-            >
-              전체
-            </Link>
-            {projects.map((p) => (
+      {/* 상태 필터 탭 + 검색 */}
+      <div className="flex items-center justify-between mb-4 gap-4">
+        <div className="flex items-center gap-1">
+          {tabs.map((tab) => {
+            const isActive = statusFilter === tab.key;
+            const href =
+              tab.key === "all"
+                ? `/admin/surveys${query ? `?q=${query}` : ""}`
+                : `/admin/surveys?status=${tab.key}${query ? `&q=${query}` : ""}`;
+            return (
               <Link
-                key={p.id}
-                href={`/admin/surveys?project=${p.id}`}
-                className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-medium transition-colors ${
-                  projectFilter === p.id
-                    ? "bg-teal-600 text-white"
-                    : "bg-stone-100 text-stone-600 hover:bg-stone-200"
+                key={tab.key}
+                href={href}
+                className={`inline-flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-sm font-medium transition-colors ${
+                  isActive
+                    ? "bg-stone-900 text-white"
+                    : "text-stone-500 hover:bg-stone-100 hover:text-stone-700"
                 }`}
               >
-                {p.name}
+                {tab.label}
+                <span
+                  className={`text-xs ${isActive ? "text-stone-400" : "text-stone-400"}`}
+                >
+                  {tab.count}
+                </span>
               </Link>
-            ))}
-          </div>
+            );
+          })}
         </div>
-      )}
+
+        <form action="/admin/surveys" method="get" className="relative">
+          {statusFilter !== "all" && (
+            <input type="hidden" name="status" value={statusFilter} />
+          )}
+          <Search
+            size={14}
+            className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-400"
+          />
+          <input
+            type="text"
+            name="q"
+            defaultValue={query}
+            placeholder="설문 검색..."
+            className="w-56 rounded-lg border border-stone-200 bg-white pl-9 pr-3 py-2 text-sm text-stone-700 placeholder-stone-400 focus:border-teal-500 focus:ring-1 focus:ring-teal-500 outline-none"
+          />
+        </form>
+      </div>
 
       {surveys.length === 0 ? (
         <div className="rounded-xl border border-stone-200 bg-white shadow-sm p-12 text-center">
@@ -121,10 +197,10 @@ export default async function SurveysPage({
             </div>
           </div>
           <h3 className="text-sm font-medium text-stone-800 mb-1">
-            등록된 설문이 없습니다
+            {query ? "검색 결과가 없습니다" : "등록된 설문이 없습니다"}
           </h3>
           <p className="text-sm text-stone-500">
-            새 설문을 만들어 보세요.
+            {query ? "다른 검색어를 시도해 보세요." : "새 설문을 만들어 보세요."}
           </p>
         </div>
       ) : (
@@ -137,19 +213,22 @@ export default async function SurveysPage({
                     설문명
                   </th>
                   <th className="text-left px-5 h-9 text-xs font-medium text-stone-500">
-                    프로젝트
+                    유형
+                  </th>
+                  <th className="text-left px-5 h-9 text-xs font-medium text-stone-500">
+                    고객사 / 프로젝트
                   </th>
                   <th className="text-left px-5 h-9 text-xs font-medium text-stone-500">
                     상태
                   </th>
                   <th className="text-left px-5 h-9 text-xs font-medium text-stone-500">
-                    응답 수
+                    응답
                   </th>
                   <th className="text-left px-5 h-9 text-xs font-medium text-stone-500">
                     생성일
                   </th>
                   <th className="text-left px-5 h-9 text-xs font-medium text-stone-500">
-                    관리
+                    액션
                   </th>
                 </tr>
               </thead>
@@ -163,17 +242,28 @@ export default async function SurveysPage({
                       className="border-b border-stone-100 last:border-0 hover:bg-stone-50/50 transition-colors"
                     >
                       <td className="px-5 h-12">
-                        <span className="text-sm font-medium text-stone-800 line-clamp-1">
+                        <Link
+                          href={`/admin/surveys/${survey.id}`}
+                          className="text-sm font-medium text-stone-800 hover:text-teal-600 transition-colors line-clamp-1"
+                        >
                           {survey.title}
-                        </span>
+                        </Link>
                       </td>
                       <td className="px-5 h-12">
-                        {survey.project_name ? (
-                          <span className="text-[13px] text-stone-600 line-clamp-1">
-                            {survey.project_name}
+                        {survey.survey_type && (
+                          <span className="inline-flex items-center rounded-md bg-teal-50 px-2 py-0.5 text-[11px] font-medium text-teal-700">
+                            {survey.survey_type}
                           </span>
-                        ) : (
-                          <span className="text-[13px] text-stone-400">-</span>
+                        )}
+                      </td>
+                      <td className="px-5 h-12">
+                        <div className="text-sm text-stone-700 line-clamp-1">
+                          {survey.customer_name ?? "-"}
+                        </div>
+                        {survey.project_name && (
+                          <div className="text-[11px] text-stone-400 line-clamp-1">
+                            {survey.project_name}
+                          </div>
                         )}
                       </td>
                       <td className="px-5 h-12">
@@ -187,9 +277,6 @@ export default async function SurveysPage({
                         <span className="text-sm font-medium text-stone-700">
                           {survey.submission_count}
                         </span>
-                        <span className="text-[13px] text-stone-400 ml-0.5">
-                          건
-                        </span>
                       </td>
                       <td className="px-5 h-12">
                         <span className="text-[13px] text-stone-500">
@@ -197,13 +284,33 @@ export default async function SurveysPage({
                         </span>
                       </td>
                       <td className="px-5 h-12">
-                        <Link
-                          href={`/admin/surveys/${survey.id}`}
-                          className="inline-flex items-center gap-1 text-[13px] font-medium text-teal-600 hover:text-teal-700"
-                        >
-                          상세
-                          <ExternalLink size={13} />
-                        </Link>
+                        <div className="flex items-center gap-1">
+                          <Link
+                            href={`/admin/surveys/${survey.id}`}
+                            className="rounded p-1 text-stone-400 hover:text-teal-600 hover:bg-teal-50 transition-colors"
+                            title="상세 보기"
+                          >
+                            <Eye size={15} />
+                          </Link>
+                          {survey.status === "active" && (
+                            <Link
+                              href="/admin/distribute"
+                              className="rounded p-1 text-stone-400 hover:text-teal-600 hover:bg-teal-50 transition-colors"
+                              title="배포"
+                            >
+                              <Send size={15} />
+                            </Link>
+                          )}
+                          {survey.submission_count > 0 && (
+                            <Link
+                              href={`/admin/responses?survey=${survey.id}`}
+                              className="rounded p-1 text-stone-400 hover:text-teal-600 hover:bg-teal-50 transition-colors"
+                              title="리포트"
+                            >
+                              <ChartColumn size={15} />
+                            </Link>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   );

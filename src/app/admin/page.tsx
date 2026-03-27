@@ -5,6 +5,10 @@ import {
   FolderOpen,
   ClipboardList,
   ChartColumn,
+  Zap,
+  Eye,
+  Send,
+  FileBarChart,
 } from "lucide-react";
 
 export const revalidate = 60;
@@ -48,8 +52,8 @@ async function getDashboardData() {
 
 const statusLabels: Record<string, { label: string; className: string }> = {
   active: { label: "진행중", className: "bg-emerald-100 text-emerald-800" },
-  closed: { label: "마감", className: "bg-stone-100 text-stone-800" },
-  draft: { label: "초안", className: "border border-stone-300 text-stone-700" },
+  closed: { label: "마감", className: "bg-rose-100 text-rose-800" },
+  draft: { label: "초안", className: "border border-stone-200 text-stone-700" },
 };
 
 function formatDate(dateStr: string) {
@@ -69,11 +73,29 @@ export default async function DashboardPage() {
 
   return (
     <div>
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-stone-800">대시보드</h1>
-        <p className="text-sm text-stone-500 mt-1">
-          교육 설문 현황을 한눈에 확인하세요
-        </p>
+      <div className="mb-8 flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-stone-800">대시보드</h1>
+          <p className="text-sm text-stone-500 mt-1">
+            교육 설문 현황을 한눈에 확인하세요
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Link
+            href="/admin/quick-create"
+            className="inline-flex items-center gap-1.5 rounded-lg bg-teal-600 px-4 py-2 text-sm font-semibold text-white hover:bg-teal-700 transition-colors"
+          >
+            <Zap size={14} />
+            간편 생성
+          </Link>
+          <Link
+            href="/admin/projects"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-stone-200 bg-white px-4 py-2 text-sm font-medium text-stone-700 hover:bg-stone-50 transition-colors"
+          >
+            <FolderOpen size={14} />
+            프로젝트
+          </Link>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
@@ -127,16 +149,21 @@ export default async function DashboardPage() {
                 <div className="flex-1 text-xs font-medium text-stone-500">
                   생성일
                 </div>
+                <div className="w-20 text-xs font-medium text-stone-500 text-right">
+                  액션
+                </div>
               </div>
               {data.recentSurveys.map((survey) => {
                 const status = statusLabels[survey.status] ?? statusLabels.draft;
                 return (
                   <div
                     key={survey.id}
-                    className="flex items-center px-5 h-12 border-b border-stone-100 last:border-0"
+                    className="flex items-center px-5 h-12 border-b border-stone-100 last:border-0 hover:bg-stone-50/50 transition-colors"
                   >
                     <div className="flex-[3] text-sm font-medium text-stone-800 truncate pr-4">
-                      {survey.title}
+                      <Link href={`/admin/surveys/${survey.id}`} className="hover:text-teal-600 transition-colors">
+                        {survey.title}
+                      </Link>
                     </div>
                     <div className="flex-1">
                       <span
@@ -147,6 +174,17 @@ export default async function DashboardPage() {
                     </div>
                     <div className="flex-1 text-[13px] text-stone-500">
                       {formatDate(survey.created_at)}
+                    </div>
+                    <div className="w-20 flex items-center justify-end gap-0.5">
+                      <Link href={`/admin/surveys/${survey.id}`} className="rounded p-1 text-stone-400 hover:text-teal-600 hover:bg-teal-50 transition-colors" title="보기">
+                        <Eye size={14} />
+                      </Link>
+                      <Link href="/admin/distribute" className="rounded p-1 text-stone-400 hover:text-teal-600 hover:bg-teal-50 transition-colors" title="배포">
+                        <Send size={14} />
+                      </Link>
+                      <Link href={`/admin/reports?survey=${survey.id}`} className="rounded p-1 text-stone-400 hover:text-teal-600 hover:bg-teal-50 transition-colors" title="리포트">
+                        <FileBarChart size={14} />
+                      </Link>
                     </div>
                   </div>
                 );

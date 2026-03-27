@@ -6,6 +6,7 @@ import {
   Calendar,
   User,
   Hash,
+  Plus,
 } from "lucide-react";
 
 export const revalidate = 60;
@@ -15,7 +16,7 @@ const statusLabels: Record<string, { label: string; className: string }> = {
   completed: { label: "완료", className: "bg-stone-100 text-stone-800" },
   draft: {
     label: "준비중",
-    className: "border border-stone-300 text-stone-700 bg-white",
+    className: "border border-stone-200 text-stone-700 bg-white",
   },
 };
 
@@ -46,11 +47,20 @@ export default async function ProjectsPage() {
 
   return (
     <div>
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-stone-800">프로젝트</h1>
-        <p className="text-sm text-stone-500 mt-1">
-          교육 프로젝트를 관리하세요
-        </p>
+      <div className="mb-8 flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-stone-800">프로젝트</h1>
+          <p className="text-sm text-stone-500 mt-1">
+            교육 프로젝트를 관리하세요
+          </p>
+        </div>
+        <Link
+          href="/admin/quick-create"
+          className="inline-flex items-center gap-2 rounded-lg bg-teal-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-teal-700 transition-colors"
+        >
+          <Plus size={16} />
+          새 프로젝트
+        </Link>
       </div>
 
       {projects.length === 0 ? (

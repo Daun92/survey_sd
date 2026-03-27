@@ -11,7 +11,7 @@ const statusLabels: Record<string, { label: string; className: string }> = {
   reviewed: { label: "검토완료", className: "bg-blue-100 text-blue-800" },
   pending: {
     label: "대기중",
-    className: "border border-stone-300 text-stone-700",
+    className: "border border-stone-200 text-stone-700",
   },
 };
 

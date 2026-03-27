@@ -1,3 +1,4 @@
+import { redirect } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import {
   Settings2,
@@ -8,6 +9,8 @@ import {
   Server,
   Layers,
 } from "lucide-react";
+import { GeminiSettings } from "./gemini-settings";
+import { getUserProfile, canAccessSettings } from "@/lib/auth";
 
 export const revalidate = 300;
 
@@ -27,6 +30,11 @@ async function getSettingsData() {
 }
 
 export default async function SettingsPage() {
+  const profile = await getUserProfile();
+  if (!canAccessSettings(profile)) {
+    redirect("/admin?error=unauthorized");
+  }
+
   const { appSettings, serviceTypes } = await getSettingsData();
 
   return (
@@ -39,6 +47,8 @@ export default async function SettingsPage() {
       </div>
 
       <div className="space-y-6">
+        {/* Gemini AI 설정 */}
+        <GeminiSettings />
         {/* 기본 설정 */}
         <div className="rounded-xl border border-stone-200 bg-white shadow-sm">
           <div className="flex items-center gap-3 p-5 border-b border-stone-100">

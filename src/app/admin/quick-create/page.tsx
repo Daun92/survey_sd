@@ -5,8 +5,12 @@ import { QuickCreateForm } from "./QuickCreateForm";
 export const dynamic = "force-dynamic";
 
 async function getFormData() {
-  const [{ data: customers }, { data: templates }, { data: serviceTypes }] =
+  const [{ data: projects }, { data: customers }, { data: templates }] =
     await Promise.all([
+      supabase
+        .from("projects")
+        .select("id, name, customers(id, company_name)")
+        .order("created_at", { ascending: false }),
       supabase
         .from("customers")
         .select("id, company_name")
@@ -14,33 +18,55 @@ async function getFormData() {
         .order("company_name"),
       supabase
         .from("cs_survey_templates")
-        .select("id, name, division_label, cs_survey_questions(count)")
+        .select(
+          "id, name, division, division_label, cs_survey_questions(id, question_no, question_text, question_type, page_type, response_options, section_label, sort_order)"
+        )
         .eq("is_active", true)
         .order("created_at", { ascending: false }),
-      supabase
-        .from("service_types")
-        .select("id, name")
-        .eq("is_active", true)
-        .order("id"),
     ]);
 
-  const templatesWithCount = (templates ?? []).map((t) => ({
-    id: t.id,
-    name: t.name,
-    division_label: t.division_label,
-    questionCount:
-      (t.cs_survey_questions as unknown as { count: number }[])?.[0]?.count ?? 0,
-  }));
+  const projectList = (projects ?? []).map((p) => {
+    const customer = Array.isArray(p.customers)
+      ? p.customers[0]
+      : p.customers;
+    return {
+      id: p.id as string,
+      name: p.name as string,
+      customerName: (customer as { company_name?: string } | null)?.company_name ?? null,
+    };
+  });
+
+  const templateList = (templates ?? []).map((t: any) => {
+    const questions = (t.cs_survey_questions ?? []).sort(
+      (a: any, b: any) => a.sort_order - b.sort_order
+    );
+    return {
+      id: t.id,
+      name: t.name,
+      division: t.division,
+      division_label: t.division_label,
+      questionCount: questions.length,
+      questions: questions.map((q: any) => ({
+        id: q.id,
+        questionNo: q.question_no,
+        questionText: q.question_text,
+        questionType: q.question_type,
+        pageType: q.page_type,
+        responseOptions: q.response_options,
+        sectionLabel: q.section_label,
+      })),
+    };
+  });
 
   return {
+    projects: projectList,
     customers: customers ?? [],
-    templates: templatesWithCount,
-    serviceTypes: serviceTypes ?? [],
+    templates: templateList,
   };
 }
 
 export default async function QuickCreatePage() {
-  const { customers, templates, serviceTypes } = await getFormData();
+  const { projects, customers, templates } = await getFormData();
 
   return (
     <div className="max-w-2xl">
@@ -52,14 +78,14 @@ export default async function QuickCreatePage() {
           <h1 className="text-2xl font-bold text-stone-800">간편 생성</h1>
         </div>
         <p className="text-sm text-stone-500 mt-1">
-          프로젝트부터 설문 배포까지 한 번에 완료합니다
+          새 설문을 빠르게 만들어 보세요
         </p>
       </div>
 
       <QuickCreateForm
+        projects={projects}
         customers={customers}
         templates={templates}
-        serviceTypes={serviceTypes}
       />
     </div>
   );

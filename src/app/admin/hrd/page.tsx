@@ -6,17 +6,19 @@ import {
   Target,
   CheckCircle,
 } from "lucide-react";
+import { HrdRoundActions } from "./round-actions";
 
 export const revalidate = 60;
 
 const statusLabels: Record<string, { label: string; className: string }> = {
-  active: { label: "진행중", className: "bg-emerald-100 text-emerald-800" },
-  closed: { label: "마감", className: "bg-stone-100 text-stone-800" },
+  collecting: { label: "수집 중", className: "bg-emerald-100 text-emerald-800" },
+  closed: { label: "수집 완료", className: "bg-rose-100 text-rose-800" },
   draft: {
     label: "준비중",
-    className: "border border-stone-300 text-stone-700",
+    className: "border border-stone-200 text-stone-700",
   },
-  scheduled: { label: "예정", className: "bg-blue-100 text-blue-800" },
+  analyzing: { label: "분석 중", className: "bg-amber-100 text-amber-800" },
+  published: { label: "발행 완료", className: "bg-blue-100 text-blue-800" },
 };
 
 function formatDate(dateStr: string | null) {
@@ -37,17 +39,10 @@ async function getData() {
 
   const roundIds = rounds.map((r) => r.id);
 
-  const [{ count: respondentTotal }, { data: respondentsByRound }] =
-    await Promise.all([
-      supabase
-        .from("hrd_respondents")
-        .select("*", { count: "exact", head: true })
-        .in("round_id", roundIds),
-      supabase
-        .from("hrd_respondents")
-        .select("round_id, status")
-        .in("round_id", roundIds),
-    ]);
+  const { data: respondentsByRound } = await supabase
+    .from("hrd_respondents")
+    .select("round_id, status")
+    .in("round_id", roundIds);
 
   const respondentMap: Record<
     string,
@@ -77,11 +72,14 @@ export default async function HrdPage() {
 
   return (
     <div>
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-stone-800">실태조사 관리</h1>
-        <p className="text-sm text-stone-500 mt-1">
-          HRD 실태조사 라운드를 관리하세요
-        </p>
+      <div className="mb-8 flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-stone-800">실태조사 관리</h1>
+          <p className="text-sm text-stone-500 mt-1">
+            HRD 실태조사 라운드를 관리하세요
+          </p>
+        </div>
+        <HrdRoundActions rounds={rounds} />
       </div>
 
       {rounds.length === 0 ? (
@@ -173,7 +171,12 @@ export default async function HrdPage() {
                     {formatDate(round.starts_at)} ~{" "}
                     {formatDate(round.ends_at)}
                   </span>
-                  <span>생성: {formatDate(round.created_at)}</span>
+                  <HrdRoundActions
+                    roundId={round.id}
+                    roundStatus={round.status}
+                    roundTitle={round.title}
+                    mode="row"
+                  />
                 </div>
               </div>
             );

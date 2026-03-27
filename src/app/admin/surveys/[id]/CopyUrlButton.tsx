@@ -7,7 +7,7 @@ export function CopyUrlButton({ urlToken }: { urlToken: string }) {
   const [copied, setCopied] = useState(false);
 
   const handleCopy = async () => {
-    const url = `${window.location.origin}/survey/${urlToken}`;
+    const url = `${window.location.origin}/s/${urlToken}`;
     await navigator.clipboard.writeText(url);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);

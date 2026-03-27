@@ -2,11 +2,14 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useRouter } from "next/navigation";
 import {
   LayoutDashboard,
   ClipboardList,
   BookOpen,
   ChartColumn,
+  Send,
+  UserCheck,
   FileSearch,
   PenTool,
   Users,
@@ -14,13 +17,19 @@ import {
   FileChartColumnIncreasing,
   Building2,
   Settings,
+  LogOut,
+  UserCog,
 } from "lucide-react";
+import { createClient } from "@/lib/supabase/client";
+import type { UserProfile } from "@/lib/auth";
 
 const eduMenuItems = [
   { href: "/admin", label: "대시보드", icon: LayoutDashboard },
   { href: "/admin/surveys", label: "설문 관리", icon: ClipboardList },
   { href: "/admin/cs-templates", label: "문항 템플릿", icon: BookOpen },
   { href: "/admin/responses", label: "응답 및 리포트", icon: ChartColumn },
+  { href: "/admin/respondents", label: "응답자 관리", icon: UserCheck },
+  { href: "/admin/distribute", label: "배부 관리", icon: Send },
 ];
 
 const hrdMenuItems = [
@@ -32,14 +41,46 @@ const hrdMenuItems = [
   { href: "/admin/hrd/consulting", label: "컨설팅 보고서", icon: Building2 },
 ];
 
+const roleLabels: Record<string, string> = {
+  admin: "관리자",
+  creator: "편집자",
+  viewer: "조회자",
+};
+
+const departmentLabels: Record<string, string> = {
+  im: "수행/IM",
+  am: "AM",
+  sales: "영업기획",
+  marketing: "마케팅실",
+  consulting: "컨설팅",
+};
+
 function isActive(pathname: string, href: string) {
   if (href === "/admin") return pathname === "/admin";
   if (href === "/admin/hrd") return pathname === "/admin/hrd";
   return pathname.startsWith(href);
 }
 
-export function Sidebar() {
+interface SidebarProps {
+  userProfile: UserProfile;
+}
+
+export function Sidebar({ userProfile }: SidebarProps) {
   const pathname = usePathname();
+  const router = useRouter();
+
+  const showHrd =
+    userProfile.role === "admin" || userProfile.department === "marketing";
+  const showSettings = userProfile.role === "admin";
+
+  const avatarChar =
+    userProfile.displayName?.[0] || userProfile.email?.[0] || "?";
+
+  async function handleLogout() {
+    const supabase = createClient();
+    await supabase.auth.signOut();
+    router.push("/login");
+  }
 
   return (
     <aside className="fixed left-0 top-0 z-40 h-screen w-60 overflow-y-auto bg-stone-900 text-white">
@@ -70,7 +111,7 @@ export function Sidebar() {
                   href={item.href}
                   className={`flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition-colors ${
                     active
-                      ? "bg-teal-500/15 text-teal-400 font-medium"
+                      ? "bg-teal-50/10 text-teal-300 font-medium"
                       : "text-stone-400 hover:bg-stone-800 hover:text-white"
                   }`}
                 >
@@ -82,56 +123,92 @@ export function Sidebar() {
           </div>
         </div>
 
-        <div>
-          <div className="px-3 py-2">
-            <span className="text-[10px] font-semibold uppercase tracking-wider text-stone-500">
-              HRD 실태조사
-            </span>
+        {showHrd && (
+          <div>
+            <div className="px-3 py-2">
+              <span className="text-[10px] font-semibold uppercase tracking-wider text-stone-500">
+                HRD 실태조사
+              </span>
+            </div>
+            <div className="space-y-0.5">
+              {hrdMenuItems.map((item) => {
+                const active = isActive(pathname, item.href);
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className={`flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition-colors ${
+                      active
+                        ? "bg-teal-50/10 text-teal-300 font-medium"
+                        : "text-stone-400 hover:bg-stone-800 hover:text-white"
+                    }`}
+                  >
+                    <item.icon size={18} aria-hidden="true" />
+                    {item.label}
+                  </Link>
+                );
+              })}
+            </div>
           </div>
-          <div className="space-y-0.5">
-            {hrdMenuItems.map((item) => {
-              const active = isActive(pathname, item.href);
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={`flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition-colors ${
-                    active
-                      ? "bg-teal-500/15 text-teal-400 font-medium"
-                      : "text-stone-400 hover:bg-stone-800 hover:text-white"
-                  }`}
-                >
-                  <item.icon size={18} aria-hidden="true" />
-                  {item.label}
-                </Link>
-              );
-            })}
-          </div>
-        </div>
+        )}
 
-        <div className="border-t border-stone-800 pt-2">
-          <Link
-            href="/admin/settings"
-            className={`flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition-colors ${
-              isActive(pathname, "/admin/settings")
-                ? "bg-teal-500/15 text-teal-400 font-medium"
-                : "text-stone-400 hover:bg-stone-800 hover:text-white"
-            }`}
-          >
-            <Settings size={18} aria-hidden="true" />
-            설정
-          </Link>
-        </div>
+        {showSettings && (
+          <div className="border-t border-stone-800 pt-2">
+            <Link
+              href="/admin/settings"
+              className={`flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition-colors ${
+                isActive(pathname, "/admin/settings")
+                  ? "bg-teal-50/10 text-teal-300 font-medium"
+                  : "text-stone-400 hover:bg-stone-800 hover:text-white"
+              }`}
+            >
+              <Settings size={18} aria-hidden="true" />
+              설정
+            </Link>
+          </div>
+        )}
       </nav>
 
-      <div className="absolute bottom-0 left-0 right-0 border-t border-stone-800 bg-stone-900 px-5 py-4">
-        <div className="flex items-center gap-2.5">
-          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-stone-700 text-xs font-semibold text-stone-300">
-            관
+      <div className="absolute bottom-0 left-0 right-0 border-t border-stone-800 bg-stone-900 px-5 py-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-stone-700 text-xs font-semibold text-stone-300">
+              {avatarChar}
+            </div>
+            <div className="flex flex-col">
+              <span className="text-[13px] font-medium text-stone-200">
+                {userProfile.displayName || userProfile.email}
+              </span>
+              <div className="flex items-center gap-1.5">
+                <span className="text-[10px] text-teal-400">
+                  {roleLabels[userProfile.role] || userProfile.role}
+                </span>
+                {userProfile.department && (
+                  <>
+                    <span className="text-[10px] text-stone-600">·</span>
+                    <span className="text-[10px] text-stone-500">
+                      {departmentLabels[userProfile.department] || userProfile.department}
+                    </span>
+                  </>
+                )}
+              </div>
+            </div>
           </div>
-          <div className="flex flex-col">
-            <span className="text-[13px] font-medium text-stone-200">관리자</span>
-            <span className="text-[11px] text-stone-500">admin@exc.co.kr</span>
+          <div className="flex items-center gap-0.5">
+            <Link
+              href="/admin/account"
+              className="rounded-md p-1.5 text-stone-500 hover:bg-stone-800 hover:text-stone-300 transition-colors"
+              title="계정 설정"
+            >
+              <UserCog size={16} />
+            </Link>
+            <button
+              onClick={handleLogout}
+              className="rounded-md p-1.5 text-stone-500 hover:bg-stone-800 hover:text-stone-300 transition-colors"
+              title="로그아웃"
+            >
+              <LogOut size={16} />
+            </button>
           </div>
         </div>
       </div>
