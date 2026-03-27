@@ -1,6 +1,6 @@
 'use server'
 
-import { supabase } from '@/lib/supabase'
+import { createClient } from '@/lib/supabase/server'
 import { createBatchSchema, type CreateBatchInput } from '@/lib/validations/distribution'
 
 // ─── 배부 배치 + 개별 링크 생성 ───
@@ -11,6 +11,7 @@ export async function createDistributionBatch(input: CreateBatchInput) {
   }
 
   const { survey_id, recipients } = parsed.data
+  const supabase = await createClient()
 
   // 설문 존재 확인
   const { data: survey } = await supabase
@@ -67,6 +68,7 @@ export async function createDistributionBatch(input: CreateBatchInput) {
 
 // ─── 배부 배치 목록 조회 ───
 export async function getDistributionBatches() {
+  const supabase = await createClient()
   const { data: batches } = await supabase
     .from('distribution_batches')
     .select(`
@@ -91,6 +93,7 @@ export async function getDistributionBatches() {
 
 // ─── 배치 내 개별 배부 목록 조회 ───
 export async function getDistributions(batchId: string) {
+  const supabase = await createClient()
   const { data: distributions } = await supabase
     .from('distributions')
     .select('id, recipient_name, recipient_email, recipient_company, recipient_department, recipient_position, recipient_phone, unique_token, status, sent_at, opened_at, started_at, completed_at, created_at')
@@ -102,6 +105,7 @@ export async function getDistributions(batchId: string) {
 
 // ─── 배부 배치 삭제 ───
 export async function deleteDistributionBatch(batchId: string) {
+  const supabase = await createClient()
   // distributions는 CASCADE로 자동 삭제
   const { error } = await supabase
     .from('distribution_batches')
