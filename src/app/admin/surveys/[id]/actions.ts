@@ -172,3 +172,109 @@ export async function reorderQuestions(
   if (failed?.error) throw new Error("순서 변경 실패: " + failed.error.message);
   revalidatePath(`/admin/surveys/${surveyId}`);
 }
+
+// ─── Section actions ───
+
+export async function renameSection(
+  surveyId: string,
+  oldName: string,
+  newName: string
+) {
+  const trimmed = newName.trim();
+  if (!trimmed) throw new Error("섹션 이름을 입력해 주세요");
+
+  const { error } = await supabase
+    .from("edu_questions")
+    .update({ section: trimmed })
+    .eq("survey_id", surveyId)
+    .eq("section", oldName);
+
+  if (error) throw new Error("섹션 이름 변경 실패: " + error.message);
+
+  // section_intros 키도 마이그레이션
+  const { data: survey } = await supabase
+    .from("edu_surveys")
+    .select("settings")
+    .eq("id", surveyId)
+    .single();
+
+  const settings = (survey?.settings as Record<string, unknown>) ?? {};
+  const intros = (settings.section_intros as Record<string, unknown>) ?? {};
+  if (intros[oldName]) {
+    intros[trimmed] = intros[oldName];
+    delete intros[oldName];
+    await supabase
+      .from("edu_surveys")
+      .update({ settings: { ...settings, section_intros: intros }, updated_at: new Date().toISOString() })
+      .eq("id", surveyId);
+  }
+
+  revalidatePath(`/admin/surveys/${surveyId}`);
+}
+
+export async function updateSectionIntro(
+  surveyId: string,
+  sectionName: string,
+  intro: { title?: string; description?: string; color?: string }
+) {
+  const { data: survey } = await supabase
+    .from("edu_surveys")
+    .select("settings")
+    .eq("id", surveyId)
+    .single();
+
+  const settings = (survey?.settings as Record<string, unknown>) ?? {};
+  const intros = (settings.section_intros as Record<string, unknown>) ?? {};
+  intros[sectionName] = intro;
+
+  const { error } = await supabase
+    .from("edu_surveys")
+    .update({ settings: { ...settings, section_intros: intros }, updated_at: new Date().toISOString() })
+    .eq("id", surveyId);
+
+  if (error) throw new Error("섹션 안내 저장 실패: " + error.message);
+  revalidatePath(`/admin/surveys/${surveyId}`);
+}
+
+export async function deleteSection(surveyId: string, sectionName: string) {
+  const { count } = await supabase
+    .from("edu_questions")
+    .select("*", { count: "exact", head: true })
+    .eq("survey_id", surveyId)
+    .eq("section", sectionName);
+
+  if ((count ?? 0) > 0) {
+    throw new Error("질문이 있는 섹션은 삭제할 수 없습니다. 먼저 질문을 이동해 주세요.");
+  }
+
+  const { data: survey } = await supabase
+    .from("edu_surveys")
+    .select("settings")
+    .eq("id", surveyId)
+    .single();
+
+  const settings = (survey?.settings as Record<string, unknown>) ?? {};
+  const intros = (settings.section_intros as Record<string, unknown>) ?? {};
+  delete intros[sectionName];
+
+  await supabase
+    .from("edu_surveys")
+    .update({ settings: { ...settings, section_intros: intros }, updated_at: new Date().toISOString() })
+    .eq("id", surveyId);
+
+  revalidatePath(`/admin/surveys/${surveyId}`);
+}
+
+export async function updateQuestionSection(
+  questionId: string,
+  surveyId: string,
+  newSection: string
+) {
+  const { error } = await supabase
+    .from("edu_questions")
+    .update({ section: newSection })
+    .eq("id", questionId);
+
+  if (error) throw new Error("섹션 이동 실패: " + error.message);
+  revalidatePath(`/admin/surveys/${surveyId}`);
+}

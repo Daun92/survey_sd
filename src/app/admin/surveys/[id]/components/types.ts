@@ -77,7 +77,7 @@ export interface EditorProps {
   submissionCount: number;
 }
 
-export type PanelMode = "preview" | "edit" | "add";
+export type PanelMode = "preview" | "edit" | "add" | "section_edit";
 export type PreviewTab = "landing" | "questions" | "ending";
 
 // ─── Constants ───
