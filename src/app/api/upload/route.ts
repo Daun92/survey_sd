@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { supabase } from "@/lib/supabase";
 import { requireAuthAPI } from "@/lib/auth";
 
 export async function POST(request: NextRequest) {
+  // 인증 확인 (서버 클라이언트, 쿠키 기반)
   const auth = await requireAuthAPI();
   if (auth.error) return auth.error;
 
@@ -29,8 +30,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const supabase = await createClient();
-
     const ext = file.name.split(".").pop() || "jpg";
     const fileName = `hero-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
     const filePath = `survey-images/${fileName}`;
@@ -38,6 +37,7 @@ export async function POST(request: NextRequest) {
     const arrayBuffer = await file.arrayBuffer();
     const buffer = new Uint8Array(arrayBuffer);
 
+    // Storage 업로드는 anon 클라이언트 사용 (RLS에서 anon INSERT 허용됨)
     const { error: uploadError } = await supabase.storage
       .from("survey-assets")
       .upload(filePath, buffer, {

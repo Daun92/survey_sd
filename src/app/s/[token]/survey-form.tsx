@@ -150,7 +150,7 @@ export default function SurveyForm({ survey, groupToken }: { survey: SurveyData;
     const sectionName = survey.sections[sectionIdx]?.name
     if (!sectionName || !survey.settings.section_intros) return null
     const intro = survey.settings.section_intros[sectionName]
-    if (!intro?.title && !intro?.description) return null
+    if (!intro?.title && !intro?.description && !intro?.image_url) return null
     return intro
   }
 
