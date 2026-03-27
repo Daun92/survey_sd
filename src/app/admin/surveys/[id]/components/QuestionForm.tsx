@@ -9,20 +9,23 @@ interface Props {
   surveyId: string;
   question?: Question;
   allQuestions?: Question[];
+  sectionNames?: string[];
+  defaultSection?: string;
   nextSortOrder: number;
   onDone: () => void;
   onCancel: () => void;
   onDeleted?: () => void;
 }
 
-export function QuestionForm({ surveyId, question, allQuestions, nextSortOrder, onDone, onCancel, onDeleted }: Props) {
+export function QuestionForm({ surveyId, question, allQuestions, sectionNames, defaultSection, nextSortOrder, onDone, onCancel, onDeleted }: Props) {
   const isEdit = !!question;
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [questionText, setQuestionText] = useState(question?.question_text || "");
   const [questionType, setQuestionType] = useState(question?.question_type || "likert_5");
   const [questionCode, setQuestionCode] = useState(question?.question_code || "");
-  const [section, setSection] = useState(question?.section || "일반");
+  const [section, setSection] = useState(question?.section || defaultSection || "일반");
+  const [customSection, setCustomSection] = useState(false);
   const [isRequired, setIsRequired] = useState(question?.is_required ?? true);
   const [options, setOptions] = useState<string[]>(question ? parseOptions(question.options) : ["옵션 1", "옵션 2"]);
 
@@ -107,7 +110,32 @@ export function QuestionForm({ surveyId, question, allQuestions, nextSortOrder, 
       <div className="grid grid-cols-2 gap-3">
         <div>
           <label className="block text-[13px] font-medium text-stone-600 mb-1">섹션</label>
-          <input type="text" value={section} onChange={(e) => setSection(e.target.value)} placeholder="일반" className="w-full rounded-lg border border-stone-300 px-3 py-2 text-sm focus:border-teal-500 focus:ring-1 focus:ring-teal-500 outline-none" />
+          {sectionNames && sectionNames.length > 0 && !customSection ? (
+            <select
+              value={section}
+              onChange={(e) => {
+                if (e.target.value === "__new__") {
+                  setCustomSection(true);
+                  setSection("");
+                } else {
+                  setSection(e.target.value);
+                }
+              }}
+              className="w-full rounded-lg border border-stone-300 px-3 py-2 text-sm focus:border-teal-500 focus:ring-1 focus:ring-teal-500 outline-none"
+            >
+              {sectionNames.map((s) => (
+                <option key={s} value={s}>{s}</option>
+              ))}
+              <option value="__new__">+ 새 섹션</option>
+            </select>
+          ) : (
+            <div className="flex gap-1.5">
+              <input type="text" value={section} onChange={(e) => setSection(e.target.value)} placeholder="섹션 이름" className="flex-1 rounded-lg border border-stone-300 px-3 py-2 text-sm focus:border-teal-500 focus:ring-1 focus:ring-teal-500 outline-none" autoFocus={customSection} />
+              {customSection && sectionNames && sectionNames.length > 0 && (
+                <button type="button" onClick={() => { setCustomSection(false); setSection(sectionNames[0]); }} className="text-xs text-stone-400 hover:text-stone-600">취소</button>
+              )}
+            </div>
+          )}
         </div>
         {!isInfoBlock && (
           <div className="flex items-end pb-1">
