@@ -215,7 +215,7 @@ export async function renameSection(
 export async function updateSectionIntro(
   surveyId: string,
   sectionName: string,
-  intro: { title?: string; description?: string; color?: string }
+  intro: { title?: string; description?: string; color?: string; image_url?: string }
 ) {
   const { data: survey } = await supabase
     .from("edu_surveys")

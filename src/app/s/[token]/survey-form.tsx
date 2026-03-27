@@ -60,6 +60,7 @@ interface SurveyData {
       title?: string
       description?: string
       color?: string
+      image_url?: string
     }>
   }
   sessionName: string
@@ -71,7 +72,7 @@ const DEFAULT_RESPONDENT_FIELDS: RespondentFieldConfig[] = [
   { id: 'department', label: '소속', enabled: true, required: false },
 ]
 
-type Step = 'landing' | 'questions' | 'section_intro' | 'ending'
+type Step = 'landing' | 'questions' | 'ending'
 
 const INTRO_COLOR_MAP: Record<string, { bg: string; icon: string; border: string }> = {
   teal: { bg: 'bg-teal-50', icon: 'text-teal-600', border: 'border-teal-200' },
@@ -155,13 +156,7 @@ export default function SurveyForm({ survey, groupToken }: { survey: SurveyData;
 
   const handleStart = () => {
     startTimeRef.current = Date.now()
-    // 첫 섹션에 인터스티셜이 있으면 먼저 표시
-    const intro = getSectionIntro(0)
-    if (intro) {
-      setStep('section_intro')
-    } else {
-      setStep('questions')
-    }
+    setStep('questions')
     scrollToTop()
   }
 
@@ -426,12 +421,7 @@ export default function SurveyForm({ survey, groupToken }: { survey: SurveyData;
   const handleNextSection = () => {
     if (!validateCurrentSection()) return
     if (currentSectionIdx < totalSections - 1) {
-      const nextIdx = currentSectionIdx + 1
-      setCurrentSectionIdx(nextIdx)
-      const intro = getSectionIntro(nextIdx)
-      if (intro) {
-        setStep('section_intro')
-      }
+      setCurrentSectionIdx(currentSectionIdx + 1)
       scrollToTop()
     }
   }
@@ -439,7 +429,6 @@ export default function SurveyForm({ survey, groupToken }: { survey: SurveyData;
   const handlePrevSection = () => {
     if (currentSectionIdx > 0) {
       setCurrentSectionIdx(currentSectionIdx - 1)
-      setStep('questions')
       scrollToTop()
     } else {
       setStep('landing')
@@ -447,55 +436,6 @@ export default function SurveyForm({ survey, groupToken }: { survey: SurveyData;
   }
 
   const isLastSection = currentSectionIdx >= totalSections - 1
-
-  // ─── Section Interstitial Page ───
-  if (step === 'section_intro') {
-    const intro = getSectionIntro(currentSectionIdx)
-    const colors = INTRO_COLOR_MAP[intro?.color || 'teal'] || INTRO_COLOR_MAP.teal
-    return (
-      <MobileFrame>
-      <div className="flex-1 flex flex-col bg-stone-50">
-        <div className="bg-white">
-          <div className="flex items-center justify-between px-6 py-3.5">
-            <button
-              onClick={handlePrevSection}
-              className="flex items-center gap-1 text-stone-500 hover:text-stone-700 transition-colors"
-            >
-              <ChevronLeft size={18} />
-              <span className="text-[15px] font-semibold text-stone-800">{survey.title}</span>
-            </button>
-            <span className="text-[13px] text-stone-400">{currentSectionIdx + 1}/{totalSections}</span>
-          </div>
-          <div className="h-[3px] bg-stone-100">
-            <div className="h-full bg-teal-500 transition-all duration-300 rounded-r-full" style={{ width: `${((currentSectionIdx + 1) / totalSections) * 100}%` }} />
-          </div>
-        </div>
-        <div className="flex-1 flex flex-col items-center justify-center px-8">
-          <div className="flex flex-col items-center gap-5 -mt-12">
-            <div className={`flex items-center justify-center w-16 h-16 rounded-full ${colors.bg} border ${colors.border}`}>
-              <FileText size={28} className={colors.icon} />
-            </div>
-            <div className="text-center space-y-2">
-              <h2 className="text-xl font-bold text-stone-900">{intro?.title || currentSection?.name || ''}</h2>
-              {intro?.description && (
-                <p className="text-sm text-stone-500 leading-relaxed whitespace-pre-line">{intro.description}</p>
-              )}
-            </div>
-          </div>
-        </div>
-        <div className="px-6 pb-6 pt-4">
-          <button
-            onClick={() => { setStep('questions'); scrollToTop() }}
-            className="w-full h-[48px] bg-teal-600 hover:bg-teal-700 text-white font-semibold text-sm rounded-2xl flex items-center justify-center gap-2 transition-colors shadow-sm"
-          >
-            시작하기
-            <ChevronRight size={16} />
-          </button>
-        </div>
-      </div>
-      </MobileFrame>
-    )
-  }
 
   // ─── Questions Page ───
   return (
@@ -529,6 +469,28 @@ export default function SurveyForm({ survey, groupToken }: { survey: SurveyData;
           </div>
         )}
       </div>
+
+      {/* Inline Section Banner */}
+      {(() => {
+        const intro = getSectionIntro(currentSectionIdx)
+        if (!intro) return null
+        const colors = INTRO_COLOR_MAP[intro.color || 'teal'] || INTRO_COLOR_MAP.teal
+        return (
+          <div className={`mx-6 mt-5 rounded-xl border ${colors.border} ${colors.bg} overflow-hidden`}>
+            {intro.image_url && (
+              <img src={intro.image_url} alt="" className="w-full h-28 object-cover" />
+            )}
+            <div className="px-4 py-3">
+              {intro.title && (
+                <p className={`text-[15px] font-bold ${colors.icon}`}>{intro.title}</p>
+              )}
+              {intro.description && (
+                <p className="text-[13px] text-stone-600 mt-1 leading-relaxed whitespace-pre-line">{intro.description}</p>
+              )}
+            </div>
+          </div>
+        )
+      })()}
 
       {/* Questions — current section only */}
       <div className="flex-1 max-w-2xl mx-auto w-full px-6 py-6 space-y-6">

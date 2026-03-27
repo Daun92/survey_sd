@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { Check, Loader2, Trash2 } from "lucide-react";
+import { useState, useRef } from "react";
+import { Check, Loader2, Trash2, Upload, X, ImageIcon } from "lucide-react";
 import { renameSection, updateSectionIntro, deleteSection } from "../actions";
 import type { SectionIntro } from "./types";
 
@@ -25,25 +25,43 @@ interface Props {
 export function SectionForm({ surveyId, sectionName, questionCount, intro, onDone, onCancel }: Props) {
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [name, setName] = useState(sectionName);
   const [introTitle, setIntroTitle] = useState(intro?.title ?? "");
   const [introDescription, setIntroDescription] = useState(intro?.description ?? "");
   const [introColor, setIntroColor] = useState<string>(intro?.color ?? "teal");
+  const [introImageUrl, setIntroImageUrl] = useState(intro?.image_url ?? "");
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleImageUpload = async (file: File) => {
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const res = await fetch("/api/upload", { method: "POST", body: formData });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      setIntroImageUrl(data.url);
+    } catch (e) {
+      alert(e instanceof Error ? e.message : "이미지 업로드 실패");
+    } finally {
+      setUploading(false);
+    }
+  };
 
   const handleSave = async () => {
     if (!name.trim()) return;
     setSaving(true);
     try {
-      // 이름이 변경되었으면 섹션 이름 일괄 변경
       if (name.trim() !== sectionName) {
         await renameSection(surveyId, sectionName, name.trim());
       }
 
-      // 인터스티셜 설정 저장
       await updateSectionIntro(surveyId, name.trim(), {
         title: introTitle.trim() || undefined,
         description: introDescription.trim() || undefined,
         color: introColor,
+        image_url: introImageUrl || undefined,
       });
 
       onDone();
@@ -93,11 +111,11 @@ export function SectionForm({ surveyId, sectionName, questionCount, intro, onDon
         )}
       </div>
 
-      {/* 인터스티셜 안내 */}
+      {/* 섹션 안내 배너 */}
       <div className="border-t border-stone-100 pt-3">
-        <p className="text-[13px] font-medium text-stone-700 mb-2">섹션 안내 페이지</p>
+        <p className="text-[13px] font-medium text-stone-700 mb-1">섹션 안내 배너</p>
         <p className="text-[11px] text-stone-400 mb-2">
-          설정하면 이 섹션으로 전환할 때 안내 화면이 표시됩니다
+          설정하면 질문 목록 상단에 안내 배너가 표시됩니다
         </p>
 
         <div className="space-y-2">
@@ -118,8 +136,45 @@ export function SectionForm({ surveyId, sectionName, questionCount, intro, onDon
               value={introDescription}
               onChange={(e) => setIntroDescription(e.target.value)}
               placeholder="이 섹션에 대한 안내 (선택)"
-              rows={3}
+              rows={2}
               className="w-full rounded-lg border border-stone-200 px-3 py-1.5 text-sm focus:border-teal-500 focus:ring-1 focus:ring-teal-500 outline-none resize-none"
+            />
+          </div>
+
+          {/* 이미지 업로드 */}
+          <div>
+            <label className="block text-[11px] text-stone-500 mb-0.5">배너 이미지</label>
+            {introImageUrl ? (
+              <div className="relative rounded-lg overflow-hidden border border-stone-200">
+                <img src={introImageUrl} alt="섹션 배너" className="w-full h-24 object-cover" />
+                <button
+                  onClick={() => setIntroImageUrl("")}
+                  className="absolute top-1.5 right-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-black/50 text-white hover:bg-black/70"
+                >
+                  <X size={10} />
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploading}
+                className="w-full flex items-center justify-center gap-1.5 rounded-lg border border-dashed border-stone-200 px-3 py-3 text-[11px] text-stone-400 hover:border-teal-300 hover:text-teal-600 hover:bg-teal-50/50 transition-colors disabled:opacity-50"
+              >
+                {uploading ? <Loader2 size={12} className="animate-spin" /> : <ImageIcon size={12} />}
+                {uploading ? "업로드 중..." : "이미지 업로드 (선택)"}
+              </button>
+            )}
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp,image/gif"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) handleImageUpload(file);
+                e.target.value = "";
+              }}
             />
           </div>
 
