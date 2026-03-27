@@ -93,7 +93,12 @@ function MobileFrame({ children }: { children: React.ReactNode }) {
   )
 }
 
-export default function SurveyForm({ survey, groupToken }: { survey: SurveyData; groupToken: string | null }) {
+export default function SurveyForm({ survey, groupToken, distributionToken, respondentName }: {
+  survey: SurveyData
+  groupToken: string | null
+  distributionToken?: string
+  respondentName?: string
+}) {
   const [step, setStep] = useState<Step>('landing')
   const [answers, setAnswers] = useState<Record<string, number | string>>({})
   const [respondentInfo, setRespondentInfo] = useState<Record<string, string>>({})
@@ -148,11 +153,12 @@ export default function SurveyForm({ survey, groupToken }: { survey: SurveyData;
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           answers,
-          respondent_name: respondentInfo.name || null,
+          respondent_name: respondentName || respondentInfo.name || null,
           respondent_department: respondentInfo.department || null,
           respondent_position: respondentInfo.position || null,
           respondent_info: respondentInfo,
           class_group_id: groupToken || null,
+          distribution_token: distributionToken || null,
         }),
       })
 
@@ -213,7 +219,12 @@ export default function SurveyForm({ survey, groupToken }: { survey: SurveyData;
 
         {/* Welcome Message */}
         <div className="px-6 pb-2">
-          {survey.settings.welcome_message ? (
+          {respondentName ? (
+            <p className="text-[14px] text-stone-600 leading-relaxed text-center">
+              <strong>{respondentName}</strong>님, 안녕하세요.<br />
+              {survey.settings.welcome_message || '귀하의 소중한 의견은 더 나은 교육 서비스를\n제공하는 데 큰 도움이 됩니다.'}
+            </p>
+          ) : survey.settings.welcome_message ? (
             <p className="text-[14px] text-stone-600 leading-relaxed whitespace-pre-line text-center">
               {survey.settings.welcome_message}
             </p>
@@ -253,8 +264,8 @@ export default function SurveyForm({ survey, groupToken }: { survey: SurveyData;
             </div>
           )}
 
-          {/* Dynamic Respondent Fields */}
-          {survey.settings.collect_respondent_info !== false && respondentFields.length > 0 && (
+          {/* Dynamic Respondent Fields — 개별 링크일 때는 숨김 (자동 식별) */}
+          {!distributionToken && survey.settings.collect_respondent_info !== false && respondentFields.length > 0 && (
             <div className="space-y-2.5">
               <p className="text-[11px] font-semibold text-stone-500 uppercase tracking-widest">응답자 정보</p>
               <div className="grid grid-cols-2 gap-2">
