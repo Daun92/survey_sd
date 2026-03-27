@@ -6,11 +6,10 @@ import { renameSection, updateSectionIntro, deleteSection } from "../actions";
 import type { SectionIntro } from "./types";
 
 const INTRO_COLORS = [
-  { value: "teal", label: "청록", className: "bg-teal-500" },
-  { value: "blue", label: "파랑", className: "bg-blue-500" },
-  { value: "amber", label: "노랑", className: "bg-amber-500" },
-  { value: "rose", label: "빨강", className: "bg-rose-500" },
-  { value: "violet", label: "보라", className: "bg-violet-500" },
+  { value: "neutral", label: "기본", style: { backgroundColor: "#a8a29e" } },
+  { value: "brand", label: "브랜드", style: { backgroundColor: "#14b8a6" } },
+  { value: "warm", label: "따뜻한", style: { backgroundColor: "#d97706" } },
+  { value: "cool", label: "시원한", style: { backgroundColor: "#3b82f6" } },
 ] as const;
 
 interface Props {
@@ -29,7 +28,7 @@ export function SectionForm({ surveyId, sectionName, questionCount, intro, onDon
   const [name, setName] = useState(sectionName);
   const [introTitle, setIntroTitle] = useState(intro?.title ?? "");
   const [introDescription, setIntroDescription] = useState(intro?.description ?? "");
-  const [introColor, setIntroColor] = useState<string>(intro?.color ?? "teal");
+  const [introColor, setIntroColor] = useState<string>(intro?.color ?? "brand");
   const [introImageUrl, setIntroImageUrl] = useState(intro?.image_url ?? "");
   const [introImageSize, setIntroImageSize] = useState<string>(intro?.image_size ?? "original");
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -209,18 +208,19 @@ export function SectionForm({ surveyId, sectionName, questionCount, intro, onDon
           )}
 
           <div>
-            <label className="block text-[11px] text-stone-500 mb-1">색상</label>
+            <label className="block text-[11px] text-stone-500 mb-1">색상 테마</label>
             <div className="flex items-center gap-2">
               {INTRO_COLORS.map((c) => (
                 <button
                   key={c.value}
                   type="button"
                   onClick={() => setIntroColor(c.value)}
-                  className={`h-6 w-6 rounded-full ${c.className} transition-all ${
+                  className={`h-6 w-6 rounded-full transition-all ${
                     introColor === c.value
                       ? "ring-2 ring-offset-1 ring-stone-400 scale-110"
                       : "opacity-50 hover:opacity-80"
                   }`}
+                  style={c.style}
                   title={c.label}
                 />
               ))}

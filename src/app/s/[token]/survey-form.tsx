@@ -75,12 +75,17 @@ const DEFAULT_RESPONDENT_FIELDS: RespondentFieldConfig[] = [
 
 type Step = 'landing' | 'questions' | 'ending'
 
-const INTRO_STYLE_MAP: Record<string, { bg: string; border: string; color: string }> = {
-  teal: { bg: '#f0fdfa', border: '#99f6e4', color: '#0d9488' },
-  blue: { bg: '#eff6ff', border: '#bfdbfe', color: '#2563eb' },
-  amber: { bg: '#fffbeb', border: '#fde68a', color: '#d97706' },
-  rose: { bg: '#fff1f2', border: '#fecdd3', color: '#e11d48' },
-  violet: { bg: '#f5f3ff', border: '#ddd6fe', color: '#7c3aed' },
+const INTRO_STYLE_MAP: Record<string, { bg: string; border: string; color: string; bar: string }> = {
+  neutral: { bg: '#fafaf9', border: '#e7e5e4', color: '#44403c', bar: '#a8a29e' },
+  brand:   { bg: '#f0fdfa', border: '#ccfbf1', color: '#0d9488', bar: '#14b8a6' },
+  warm:    { bg: '#faf5f0', border: '#e8ddd0', color: '#92400e', bar: '#d97706' },
+  cool:    { bg: '#f0f5fa', border: '#d0dde8', color: '#1e40af', bar: '#3b82f6' },
+  // 하위 호환: 이전 색상명도 지원
+  teal:    { bg: '#f0fdfa', border: '#ccfbf1', color: '#0d9488', bar: '#14b8a6' },
+  blue:    { bg: '#f0f5fa', border: '#d0dde8', color: '#1e40af', bar: '#3b82f6' },
+  amber:   { bg: '#faf5f0', border: '#e8ddd0', color: '#92400e', bar: '#d97706' },
+  rose:    { bg: '#fafaf9', border: '#e7e5e4', color: '#44403c', bar: '#a8a29e' },
+  violet:  { bg: '#fafaf9', border: '#e7e5e4', color: '#44403c', bar: '#a8a29e' },
 }
 
 const likertLabels: Record<number, string> = { 5: '매우 만족', 4: '만족', 3: '보통', 2: '불만족', 1: '매우 불만족' }
@@ -483,44 +488,47 @@ export default function SurveyForm({ survey, groupToken }: { survey: SurveyData;
           return null
         }
 
-        const colors = INTRO_STYLE_MAP[intro.color || 'teal'] || INTRO_STYLE_MAP.teal
+        const colors = INTRO_STYLE_MAP[intro.color || 'brand'] || INTRO_STYLE_MAP.brand
         return (
           <div
             data-testid="section-banner"
             className="mx-6 mt-4 mb-2 shadow-sm"
             style={{
               backgroundColor: colors.bg,
-              border: `1.5px solid ${colors.border}`,
-              borderRadius: '12px',
+              border: `1px solid ${colors.border}`,
+              borderLeft: `4px solid ${colors.bar}`,
+              borderRadius: '8px',
             }}
           >
-            {intro.image_url && (() => {
-              const size = intro.image_size || 'original'
-              const imgStyle: Record<string, string> = {
-                height: 'auto',
-                maxHeight: '200px',
-                display: 'block',
-              }
-              if (size === 'original') {
-                imgStyle.width = 'auto'
-                imgStyle.maxWidth = '100%'
-                imgStyle.margin = '0 auto'
-              } else if (size === 'full') {
-                imgStyle.width = '100%'
-              } else if (size === 'medium') {
-                imgStyle.width = '60%'
-                imgStyle.margin = '0 auto'
-              } else if (size === 'small') {
-                imgStyle.width = '40%'
-                imgStyle.margin = '0 auto'
-              }
-              return (
-                <div style={{ borderRadius: '12px 12px 0 0', overflow: 'hidden', textAlign: 'center' }}>
-                  <img src={intro.image_url} alt="" style={imgStyle} />
-                </div>
-              )
-            })()}
-            <div style={{ padding: '12px 16px' }}>
+            <div style={{ padding: '14px 16px' }}>
+              {intro.image_url && (() => {
+                const size = intro.image_size || 'original'
+                const imgStyle: Record<string, string> = {
+                  height: 'auto',
+                  maxHeight: '200px',
+                  display: 'block',
+                  borderRadius: '6px',
+                }
+                if (size === 'original') {
+                  imgStyle.width = 'auto'
+                  imgStyle.maxWidth = '100%'
+                  imgStyle.margin = '0 auto 10px'
+                } else if (size === 'full') {
+                  imgStyle.width = '100%'
+                  imgStyle.marginBottom = '10px'
+                } else if (size === 'medium') {
+                  imgStyle.width = '60%'
+                  imgStyle.margin = '0 auto 10px'
+                } else if (size === 'small') {
+                  imgStyle.width = '40%'
+                  imgStyle.margin = '0 auto 10px'
+                }
+                return (
+                  <div style={{ textAlign: 'center' }}>
+                    <img src={intro.image_url} alt="" style={imgStyle} />
+                  </div>
+                )
+              })()}
               {intro.title && (
                 <p
                   style={{
