@@ -18,6 +18,7 @@ import {
   Building2,
   Settings,
   LogOut,
+  UserCog,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import type { UserProfile } from "@/lib/auth";
@@ -193,13 +194,22 @@ export function Sidebar({ userProfile }: SidebarProps) {
               </div>
             </div>
           </div>
-          <button
-            onClick={handleLogout}
-            className="rounded-md p-1.5 text-stone-500 hover:bg-stone-800 hover:text-stone-300 transition-colors"
-            title="로그아웃"
-          >
-            <LogOut size={16} />
-          </button>
+          <div className="flex items-center gap-0.5">
+            <Link
+              href="/admin/account"
+              className="rounded-md p-1.5 text-stone-500 hover:bg-stone-800 hover:text-stone-300 transition-colors"
+              title="계정 설정"
+            >
+              <UserCog size={16} />
+            </Link>
+            <button
+              onClick={handleLogout}
+              className="rounded-md p-1.5 text-stone-500 hover:bg-stone-800 hover:text-stone-300 transition-colors"
+              title="로그아웃"
+            >
+              <LogOut size={16} />
+            </button>
+          </div>
         </div>
       </div>
     </aside>
