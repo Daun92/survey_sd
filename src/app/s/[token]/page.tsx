@@ -2,6 +2,9 @@ import { supabase } from '@/lib/supabase'
 import { notFound } from 'next/navigation'
 import SurveyForm from './survey-form'
 
+// 설문 데이터는 항상 최신 상태를 반영해야 함
+export const dynamic = 'force-dynamic'
+
 interface SurveySection {
   name: string
   questions: {
