@@ -473,22 +473,60 @@ export default function SurveyForm({ survey, groupToken }: { survey: SurveyData;
       {/* Inline Section Banner */}
       {(() => {
         const intro = getSectionIntro(currentSectionIdx)
-        if (!intro) return null
-        const style = INTRO_STYLE_MAP[intro.color || 'teal'] || INTRO_STYLE_MAP.teal
+        // 디버깅: intro가 없어도 섹션 이름으로 안내 표시
+        const sectionName = survey.sections[currentSectionIdx]?.name
+        if (!intro && !sectionName) return null
+
+        if (!intro) {
+          // section_intros 미설정 시 기본 섹션 헤더 배너
+          return null
+        }
+
+        const colors = INTRO_STYLE_MAP[intro.color || 'teal'] || INTRO_STYLE_MAP.teal
         return (
           <div
-            className="mx-6 mt-5 rounded-xl overflow-hidden"
-            style={{ backgroundColor: style.bg, border: `1px solid ${style.border}` }}
+            data-testid="section-banner"
+            className="mx-6 mt-4 mb-2 rounded-xl overflow-hidden shadow-sm"
+            style={{
+              backgroundColor: colors.bg,
+              border: `1.5px solid ${colors.border}`,
+              minHeight: '48px',
+            }}
           >
             {intro.image_url && (
-              <img src={intro.image_url} alt="" className="w-full h-28 object-cover" />
+              <img
+                src={intro.image_url}
+                alt=""
+                className="w-full object-cover"
+                style={{ height: '120px' }}
+              />
             )}
-            <div className="px-4 py-3">
+            <div style={{ padding: '12px 16px' }}>
               {intro.title && (
-                <p className="text-[15px] font-bold" style={{ color: style.color }}>{intro.title}</p>
+                <p
+                  style={{
+                    fontSize: '15px',
+                    fontWeight: 700,
+                    color: colors.color,
+                    margin: 0,
+                    lineHeight: 1.4,
+                  }}
+                >
+                  {intro.title}
+                </p>
               )}
               {intro.description && (
-                <p className="text-[13px] text-stone-600 mt-1 leading-relaxed whitespace-pre-line">{intro.description}</p>
+                <p
+                  style={{
+                    fontSize: '13px',
+                    color: '#57534e',
+                    marginTop: '4px',
+                    lineHeight: 1.6,
+                    whiteSpace: 'pre-line',
+                  }}
+                >
+                  {intro.description}
+                </p>
               )}
             </div>
           </div>
