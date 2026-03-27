@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
+import { requireAuthAPI } from "@/lib/auth";
 
 export async function POST(request: NextRequest) {
+  const auth = await requireAuthAPI();
+  if (auth.error) return auth.error;
+
   try {
     const formData = await request.formData();
     const file = formData.get("file") as File | null;

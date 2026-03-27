@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 
 export type AppRole = "admin" | "creator" | "viewer";
@@ -97,4 +98,78 @@ export function canAccessHrd(profile: UserProfile): boolean {
 /** 설정 페이지 접근 가능 여부 (admin만) */
 export function canAccessSettings(profile: UserProfile): boolean {
   return profile.role === "admin";
+}
+
+// ============================================
+// API Route용 인증 헬퍼
+// Server Component의 redirect 대신 JSON 응답 반환
+// ============================================
+
+const ROLE_HIERARCHY: Record<AppRole, number> = {
+  admin: 3,
+  creator: 2,
+  viewer: 1,
+};
+
+/**
+ * API Route에서 인증을 확인합니다.
+ * 인증 실패 시 401 NextResponse를 반환합니다.
+ */
+export async function requireAuthAPI(): Promise<
+  { user: { id: string; email?: string }; error?: never } | { user?: never; error: NextResponse }
+> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return {
+      error: NextResponse.json(
+        { error: "인증이 필요합니다" },
+        { status: 401 }
+      ),
+    };
+  }
+
+  return { user };
+}
+
+/**
+ * API Route에서 특정 역할 이상인지 확인합니다.
+ * 인증 실패 시 401, 권한 부족 시 403을 반환합니다.
+ */
+export async function requireRoleAPI(
+  minRole: AppRole
+): Promise<
+  { profile: UserProfile; error?: never } | { profile?: never; error: NextResponse }
+> {
+  const authResult = await requireAuthAPI();
+  if (authResult.error) return { error: authResult.error };
+
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("user_roles")
+    .select("role, department, display_name")
+    .eq("user_id", authResult.user.id)
+    .single();
+
+  const profile: UserProfile = {
+    id: authResult.user.id,
+    email: authResult.user.email || "",
+    displayName: data?.display_name || authResult.user.email?.split("@")[0] || "",
+    role: (data?.role as AppRole) || "viewer",
+    department: (data?.department as AppDepartment) || null,
+  };
+
+  if (ROLE_HIERARCHY[profile.role] < ROLE_HIERARCHY[minRole]) {
+    return {
+      error: NextResponse.json(
+        { error: "권한이 부족합니다" },
+        { status: 403 }
+      ),
+    };
+  }
+
+  return { profile };
 }
