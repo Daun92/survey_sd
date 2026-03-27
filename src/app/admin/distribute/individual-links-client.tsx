@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useState, useTransition, useRef } from 'react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -9,7 +9,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
 import {
   Plus, Trash2, Link2, Copy, Check, Users, ChevronDown, ChevronUp,
-  ClipboardList, Loader2, ExternalLink,
+  ClipboardList, Loader2, ExternalLink, Download, Upload,
 } from 'lucide-react'
 import { createDistributionBatch, getDistributions, deleteDistributionBatch } from './actions'
 
@@ -80,6 +80,108 @@ export default function IndividualLinksClient({
   const [isLoadingDist, setIsLoadingDist] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [successMsg, setSuccessMsg] = useState<string | null>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  // ─── CSV 샘플 다운로드 ───
+  const downloadCsvSample = () => {
+    const bom = '\uFEFF'
+    const header = '이름,이메일,부서,직급'
+    const rows = [
+      '홍길동,hong@example.com,경영지원팀,과장',
+      '김영희,kim@example.com,인사팀,대리',
+      '이철수,,마케팅팀,',
+    ]
+    const csv = bom + [header, ...rows].join('\n')
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = '수신자_샘플.csv'
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
+  // ─── CSV 파일 import ───
+  const handleCsvImport = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    const reader = new FileReader()
+    reader.onload = (event) => {
+      const text = event.target?.result as string
+      if (!text) return
+
+      const lines = text.split(/\r?\n/).filter(l => l.trim())
+      if (lines.length < 2) {
+        setError('CSV 파일에 데이터가 없습니다. 헤더 행 아래에 수신자 정보를 입력해 주세요.')
+        return
+      }
+
+      // 첫 행은 헤더로 간주하고 건너뜀
+      const parsed: RecipientRow[] = []
+      for (let i = 1; i < lines.length; i++) {
+        const cols = parseCsvLine(lines[i])
+        const name = cols[0]?.trim() || ''
+        if (!name) continue
+        parsed.push({
+          name,
+          email: cols[1]?.trim() || '',
+          department: cols[2]?.trim() || '',
+          position: cols[3]?.trim() || '',
+        })
+      }
+
+      if (parsed.length === 0) {
+        setError('CSV 파일에서 유효한 수신자를 찾을 수 없습니다. 이름 열은 필수입니다.')
+        return
+      }
+
+      if (parsed.length > 100) {
+        setError(`최대 100명까지 등록 가능합니다. (현재 ${parsed.length}명)`)
+        return
+      }
+
+      setRecipients(parsed)
+      setError(null)
+      setSuccessMsg(`CSV에서 ${parsed.length}명의 수신자를 불러왔습니다`)
+      setTimeout(() => setSuccessMsg(null), 3000)
+    }
+    reader.readAsText(file, 'UTF-8')
+
+    // 같은 파일 재선택 허용
+    e.target.value = ''
+  }
+
+  // CSV 라인 파서 (쉼표 구분, 큰따옴표 지원)
+  const parseCsvLine = (line: string): string[] => {
+    const result: string[] = []
+    let current = ''
+    let inQuotes = false
+    for (let i = 0; i < line.length; i++) {
+      const char = line[i]
+      if (inQuotes) {
+        if (char === '"' && line[i + 1] === '"') {
+          current += '"'
+          i++
+        } else if (char === '"') {
+          inQuotes = false
+        } else {
+          current += char
+        }
+      } else {
+        if (char === '"') {
+          inQuotes = true
+        } else if (char === ',') {
+          result.push(current)
+          current = ''
+        } else {
+          current += char
+        }
+      }
+    }
+    result.push(current)
+    return result
+  }
 
   // ─── 수신자 입력 ───
   const addRecipientRow = () => {
@@ -221,15 +323,42 @@ export default function IndividualLinksClient({
             </Select>
           </div>
 
-          {/* 입력 모드 토글 */}
-          <div className="flex items-center gap-2">
-            <label className="text-sm font-medium text-stone-700">수신자 입력</label>
-            <button
-              onClick={() => setBulkMode(!bulkMode)}
-              className="text-xs text-teal-600 hover:text-teal-700 underline"
-            >
-              {bulkMode ? '개별 입력으로 전환' : '일괄 붙여넣기'}
-            </button>
+          {/* 입력 모드 토글 + CSV 버튼 */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <label className="text-sm font-medium text-stone-700">수신자 입력</label>
+              <button
+                onClick={() => setBulkMode(!bulkMode)}
+                className="text-xs text-teal-600 hover:text-teal-700 underline"
+              >
+                {bulkMode ? '개별 입력으로 전환' : '일괄 붙여넣기'}
+              </button>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <button
+                onClick={downloadCsvSample}
+                className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs text-stone-600 hover:bg-stone-100 border border-stone-200 transition-colors"
+                title="CSV 샘플 다운로드"
+              >
+                <Download size={13} />
+                샘플 CSV
+              </button>
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs text-teal-700 hover:bg-teal-50 border border-teal-200 transition-colors"
+                title="CSV 파일 불러오기"
+              >
+                <Upload size={13} />
+                CSV 불러오기
+              </button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".csv"
+                onChange={handleCsvImport}
+                className="hidden"
+              />
+            </div>
           </div>
 
           {bulkMode ? (
