@@ -61,6 +61,7 @@ interface SurveyData {
       description?: string
       color?: string
       image_url?: string
+      image_size?: string
     }>
   }
   sessionName: string
@@ -493,15 +494,32 @@ export default function SurveyForm({ survey, groupToken }: { survey: SurveyData;
               borderRadius: '12px',
             }}
           >
-            {intro.image_url && (
-              <div style={{ borderRadius: '12px 12px 0 0', overflow: 'hidden' }}>
-                <img
-                  src={intro.image_url}
-                  alt=""
-                  style={{ width: '100%', height: 'auto', maxHeight: '200px', objectFit: 'contain', display: 'block' }}
-                />
-              </div>
-            )}
+            {intro.image_url && (() => {
+              const size = intro.image_size || 'original'
+              const imgStyle: Record<string, string> = {
+                height: 'auto',
+                maxHeight: '200px',
+                display: 'block',
+              }
+              if (size === 'original') {
+                imgStyle.width = 'auto'
+                imgStyle.maxWidth = '100%'
+                imgStyle.margin = '0 auto'
+              } else if (size === 'full') {
+                imgStyle.width = '100%'
+              } else if (size === 'medium') {
+                imgStyle.width = '60%'
+                imgStyle.margin = '0 auto'
+              } else if (size === 'small') {
+                imgStyle.width = '40%'
+                imgStyle.margin = '0 auto'
+              }
+              return (
+                <div style={{ borderRadius: '12px 12px 0 0', overflow: 'hidden', textAlign: 'center' }}>
+                  <img src={intro.image_url} alt="" style={imgStyle} />
+                </div>
+              )
+            })()}
             <div style={{ padding: '12px 16px' }}>
               {intro.title && (
                 <p

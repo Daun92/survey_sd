@@ -31,6 +31,7 @@ export function SectionForm({ surveyId, sectionName, questionCount, intro, onDon
   const [introDescription, setIntroDescription] = useState(intro?.description ?? "");
   const [introColor, setIntroColor] = useState<string>(intro?.color ?? "teal");
   const [introImageUrl, setIntroImageUrl] = useState(intro?.image_url ?? "");
+  const [introImageSize, setIntroImageSize] = useState<string>(intro?.image_size ?? "original");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleImageUpload = async (file: File) => {
@@ -62,6 +63,7 @@ export function SectionForm({ surveyId, sectionName, questionCount, intro, onDon
         description: introDescription.trim() || undefined,
         color: introColor,
         image_url: introImageUrl || undefined,
+        image_size: introImageUrl ? introImageSize : undefined,
       });
 
       onDone();
@@ -177,6 +179,34 @@ export function SectionForm({ surveyId, sectionName, questionCount, intro, onDon
               }}
             />
           </div>
+
+          {/* 이미지 크기 선택 */}
+          {introImageUrl && (
+            <div>
+              <label className="block text-[11px] text-stone-500 mb-1">이미지 크기</label>
+              <div className="flex gap-1.5">
+                {[
+                  { value: "original", label: "원본" },
+                  { value: "full", label: "전체" },
+                  { value: "medium", label: "중간" },
+                  { value: "small", label: "작게" },
+                ].map((s) => (
+                  <button
+                    key={s.value}
+                    type="button"
+                    onClick={() => setIntroImageSize(s.value)}
+                    className={`flex-1 rounded-md px-2 py-1 text-[11px] font-medium border transition-all ${
+                      introImageSize === s.value
+                        ? "border-teal-400 bg-teal-50 text-teal-700"
+                        : "border-stone-200 text-stone-400 hover:border-stone-300"
+                    }`}
+                  >
+                    {s.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
           <div>
             <label className="block text-[11px] text-stone-500 mb-1">색상</label>

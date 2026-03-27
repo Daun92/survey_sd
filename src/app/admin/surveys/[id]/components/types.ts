@@ -20,6 +20,7 @@ export interface SectionIntro {
   description?: string;
   color?: "teal" | "blue" | "amber" | "rose" | "violet";
   image_url?: string;
+  image_size?: "full" | "medium" | "small" | "original";
 }
 
 export interface SurveySettings {
