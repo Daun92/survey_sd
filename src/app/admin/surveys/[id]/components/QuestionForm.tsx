@@ -23,7 +23,9 @@ export function QuestionForm({ surveyId, question, allQuestions, sectionNames, d
   const [deleting, setDeleting] = useState(false);
   const [questionText, setQuestionText] = useState(question?.question_text || "");
   const [questionType, setQuestionType] = useState(question?.question_type || "likert_5");
-  const [questionCode, setQuestionCode] = useState(question?.question_code || "");
+  const [questionCode, setQuestionCode] = useState(
+    question?.question_code || (isEdit ? "" : `Q${nextSortOrder + 1}`)
+  );
   const [section, setSection] = useState(question?.section || defaultSection || "일반");
   const [customSection, setCustomSection] = useState(false);
   const [isRequired, setIsRequired] = useState(question?.is_required ?? true);
