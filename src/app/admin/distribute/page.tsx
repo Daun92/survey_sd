@@ -30,14 +30,14 @@ async function getSurveyData() {
   }));
 }
 
-async function getDistributionBatches() {
+async function getPersonalLinkBatches() {
   const { data: batches } = await supabase
     .from("distribution_batches")
     .select(`
       id, survey_id, channel, total_count, sent_count, opened_count, completed_count, created_at,
       edu_surveys ( title, status )
     `)
-    .eq("channel", "link")
+    .eq("channel", "personal_link")
     .order("created_at", { ascending: false });
 
   return (batches ?? []).map((b: any) => ({
@@ -45,6 +45,7 @@ async function getDistributionBatches() {
     surveyId: b.survey_id,
     surveyTitle: b.edu_surveys?.title ?? "(삭제된 설문)",
     surveyStatus: b.edu_surveys?.status ?? "unknown",
+    channel: b.channel,
     totalCount: b.total_count,
     sentCount: b.sent_count,
     openedCount: b.opened_count,
@@ -56,12 +57,12 @@ async function getDistributionBatches() {
 export default async function DistributePage() {
   const [surveys, batches] = await Promise.all([
     getSurveyData(),
-    getDistributionBatches(),
+    getPersonalLinkBatches(),
   ]);
 
   return (
     <div>
-      <DistributeTabs surveys={surveys} />
+      <DistributeTabs surveys={surveys} batches={batches} />
       {/* 워크플로우 다음 단계 */}
       <div className="mt-6 rounded-xl border border-stone-200 bg-white shadow-sm p-5 flex items-center justify-between">
         <div>
