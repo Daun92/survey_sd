@@ -173,7 +173,7 @@ export async function addTemplateQuestion(templateId: string, data: {
 }) {
   const { error } = await supabase
     .from("cs_survey_questions")
-    .insert({ template_id: templateId, ...data, page_type: data.page_type || "1P" });
+    .insert({ template_id: templateId, ...data, page_type: data.page_type || "1P", result_column: data.question_no || "" });
   if (error) throw new Error("문항 추가 실패: " + error.message);
   revalidatePath(`/admin/cs-templates/${templateId}`);
 }
