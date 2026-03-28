@@ -1,245 +1,297 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { Pencil, Plus, Trash2, Check, X, Loader2, Save } from "lucide-react";
-import { updateTemplate, addTemplateQuestion, updateTemplateQuestion, deleteTemplateQuestion } from "../actions";
+import { Plus, FileText, Layers, ChevronDown, ChevronRight, Pencil } from "lucide-react";
+import {
+  DndContext, closestCenter, KeyboardSensor, PointerSensor,
+  useSensor, useSensors, type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { reorderTemplateQuestions, updateQuestionSectionLabel } from "../actions";
 
-interface Question {
-  id: string;
-  question_no: string;
-  question_text: string;
-  question_type: string;
-  page_type: string | null;
-  response_options: string | null;
-  section_label: string | null;
-  sort_order: number;
-}
+import { type CSQuestion, type SurveySettings, type PanelMode, type PreviewTab } from "./components/types";
+import { TemplateInfoEditor } from "./components/TemplateInfoEditor";
+import { SettingsPanel } from "./components/SettingsPanel";
+import { SortableQuestionRow } from "./components/SortableQuestionRow";
+import { RightPanel } from "./components/RightPanel";
 
 interface Props {
   templateId: string;
   templateName: string;
   templateDescription: string;
+  divisionLabel: string;
   isSystem: boolean;
-  questions: Question[];
+  isActive: boolean;
+  settings: SurveySettings;
+  questions: CSQuestion[];
 }
 
-const questionTypeLabels: Record<string, string> = {
-  single_choice: "단일선택",
-  multiple_choice: "복수선택",
-  likert_5: "5점 척도",
-  likert_6: "6점 척도",
-  likert_7: "7점 척도",
-  text: "주관식",
-  rating: "평점",
-  yes_no: "예/아니오",
-};
-
-export function TemplateEditor({ templateId, templateName, templateDescription, isSystem, questions }: Props) {
+export function TemplateEditor({ templateId, templateName, templateDescription, divisionLabel, isSystem, isActive, settings: initialSettings, questions }: Props) {
   const router = useRouter();
-  const [editingName, setEditingName] = useState(false);
-  const [name, setName] = useState(templateName);
-  const [description, setDescription] = useState(templateDescription);
-  const [savingName, setSavingName] = useState(false);
+  const refresh = useCallback(() => router.refresh(), [router]);
 
-  // Question editing
-  const [editingQId, setEditingQId] = useState<string | null>(null);
-  const [addingQuestion, setAddingQuestion] = useState(false);
+  // ─── State ───
+  const [panelMode, setPanelMode] = useState<PanelMode>("preview");
+  const [editingQuestionId, setEditingQuestionId] = useState<string | null>(null);
+  const [editingSectionName, setEditingSectionName] = useState<string | null>(null);
+  const [previewTab, setPreviewTab] = useState<PreviewTab>("landing");
+  const [liveSettings, setLiveSettings] = useState<SurveySettings>(initialSettings);
+  const [collapsedSections, setCollapsedSections] = useState<Set<string>>(new Set());
+  const [addToSection, setAddToSection] = useState<string | null>(null);
 
-  const handleSaveName = async () => {
-    setSavingName(true);
+  // ─── Drag & Drop ───
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
+
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const oldIndex = questions.findIndex((q) => q.id === active.id);
+    const newIndex = questions.findIndex((q) => q.id === over.id);
+    if (oldIndex === -1 || newIndex === -1) return;
+
+    const draggedQuestion = questions[oldIndex];
+    const targetQuestion = questions[newIndex];
+
+    const oldSection = draggedQuestion.section_label || "기타";
+    const newSection = targetQuestion.section_label || "기타";
+
+    const reordered = arrayMove(questions, oldIndex, newIndex);
     try {
-      await updateTemplate(templateId, { name, description });
-      setEditingName(false);
-      router.refresh();
+      await reorderTemplateQuestions(templateId, reordered.map((q, idx) => ({ id: q.id, sort_order: idx })));
+      if (oldSection !== newSection) {
+        await updateQuestionSectionLabel(draggedQuestion.id, templateId, newSection);
+      }
+      refresh();
     } catch (e) {
-      alert(e instanceof Error ? e.message : "수정 실패");
-    } finally {
-      setSavingName(false);
+      alert(e instanceof Error ? e.message : "순서 변경 실패");
     }
   };
 
+  // ─── Computed ───
+  const nextSortOrder = questions.length > 0 ? Math.max(...questions.map((q) => q.sort_order)) + 1 : 0;
+  const editingQuestion = editingQuestionId ? questions.find((q) => q.id === editingQuestionId) ?? null : null;
+
+  const sections: Record<string, (CSQuestion & { _globalIndex: number })[]> = {};
+  questions.forEach((q, idx) => {
+    const section = q.section_label || "기타";
+    if (!sections[section]) sections[section] = [];
+    sections[section].push({ ...q, _globalIndex: idx });
+  });
+
+  const sectionNames = Object.keys(sections);
+
+  // ─── Handlers ───
+  const handleSelectQuestion = (id: string) => {
+    setEditingQuestionId(id);
+    setEditingSectionName(null);
+    setPanelMode("edit");
+  };
+
+  const handleSelectSection = (sectionName: string) => {
+    setEditingSectionName(sectionName);
+    setEditingQuestionId(null);
+    setPanelMode("section_edit");
+  };
+
+  const handleAddToSection = (sectionName: string) => {
+    setAddToSection(sectionName);
+    setEditingQuestionId(null);
+    setEditingSectionName(null);
+    setPanelMode("add");
+  };
+
+  const toggleSection = (sectionName: string) => {
+    setCollapsedSections((prev) => {
+      const next = new Set(prev);
+      if (next.has(sectionName)) next.delete(sectionName);
+      else next.add(sectionName);
+      return next;
+    });
+  };
+
+  const handlePanelSaved = () => {
+    setPanelMode("preview");
+    setPreviewTab("questions");
+    setEditingQuestionId(null);
+    setEditingSectionName(null);
+    setAddToSection(null);
+    refresh();
+  };
+
+  const handlePanelCancel = () => {
+    setPanelMode("preview");
+    setEditingQuestionId(null);
+    setEditingSectionName(null);
+    setAddToSection(null);
+  };
+
+  // 시스템 템플릿은 읽기 전용
   if (isSystem) return null;
 
   return (
-    <div className="space-y-6">
-      {/* 이름/설명 편집 */}
-      {editingName ? (
-        <div className="rounded-xl border border-teal-200 bg-teal-50/30 p-4 space-y-3">
-          <div>
-            <label className="block text-[13px] font-medium text-stone-600 mb-1">템플릿 이름</label>
-            <input type="text" value={name} onChange={(e) => setName(e.target.value)} className="w-full rounded-lg border border-stone-300 px-3 py-2 text-sm focus:border-teal-500 focus:ring-1 focus:ring-teal-500 outline-none" />
-          </div>
-          <div>
-            <label className="block text-[13px] font-medium text-stone-600 mb-1">설명</label>
-            <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={2} className="w-full rounded-lg border border-stone-300 px-3 py-2 text-sm focus:border-teal-500 focus:ring-1 focus:ring-teal-500 outline-none resize-none" />
-          </div>
-          <div className="flex gap-2">
-            <button onClick={handleSaveName} disabled={savingName} className="inline-flex items-center gap-1.5 rounded-lg bg-teal-600 px-4 py-2 text-xs font-semibold text-white hover:bg-teal-700 disabled:opacity-50">
-              {savingName ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />} 저장
-            </button>
-            <button onClick={() => { setName(templateName); setDescription(templateDescription); setEditingName(false); }} className="inline-flex items-center gap-1.5 rounded-lg border border-stone-300 px-4 py-2 text-xs font-medium text-stone-600 hover:bg-stone-50">취소</button>
-          </div>
-        </div>
-      ) : (
-        <button onClick={() => setEditingName(true)} className="inline-flex items-center gap-1.5 text-xs text-stone-400 hover:text-teal-600">
-          <Pencil size={12} /> 이름/설명 수정
-        </button>
-      )}
-
-      {/* 문항 추가 버튼 */}
-      <div className="flex justify-end">
-        <button
-          onClick={() => setAddingQuestion(true)}
-          className="inline-flex items-center gap-1.5 rounded-lg bg-teal-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-teal-700"
-        >
-          <Plus size={13} /> 문항 추가
-        </button>
-      </div>
-
-      {/* 추가 폼 */}
-      {addingQuestion && (
-        <QuestionEditForm
-          templateId={templateId}
-          nextSortOrder={questions.length > 0 ? Math.max(...questions.map((q) => q.sort_order)) + 1 : 0}
-          onDone={() => { setAddingQuestion(false); router.refresh(); }}
-          onCancel={() => setAddingQuestion(false)}
-        />
-      )}
-
-      {/* 문항별 수정/삭제 */}
-      {questions.map((q) => (
-        editingQId === q.id ? (
-          <QuestionEditForm
-            key={q.id}
+    <div className="flex gap-6 items-start">
+      {/* ── Left Column ── */}
+      <div className="flex-1 min-w-0 space-y-5">
+        {/* Template Info */}
+        <div className="rounded-xl border border-stone-200 bg-white shadow-sm p-5">
+          <TemplateInfoEditor
             templateId={templateId}
-            question={q}
-            nextSortOrder={q.sort_order}
-            onDone={() => { setEditingQId(null); router.refresh(); }}
-            onCancel={() => setEditingQId(null)}
+            name={templateName}
+            description={templateDescription}
+            onUpdated={refresh}
           />
-        ) : (
-          <div key={q.id} className="group flex items-start gap-3 px-4 py-3 border-b border-stone-100 last:border-0 hover:bg-stone-50/50">
-            <span className="text-xs font-mono text-stone-400 mt-0.5 shrink-0 w-12">{q.question_no}</span>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm text-stone-800 leading-relaxed">{q.question_text}</p>
-              {q.response_options && <p className="text-xs text-stone-400 mt-0.5">{q.response_options}</p>}
+          <div className="flex items-center gap-6 mt-4 pt-4 border-t border-stone-100">
+            <div className="flex items-center gap-2">
+              <FileText size={14} className="text-stone-400" />
+              <span className="text-sm text-stone-600"><strong className="text-stone-800">{questions.length}</strong> 문항</span>
             </div>
-            <span className="inline-flex rounded bg-stone-100 px-1.5 py-0.5 text-[11px] font-medium text-stone-600 shrink-0">
-              {questionTypeLabels[q.question_type] ?? q.question_type}
+            <div className="flex items-center gap-2">
+              <Layers size={14} className="text-stone-400" />
+              <span className="text-sm text-stone-600"><strong className="text-stone-800">{sectionNames.length}</strong> 섹션</span>
+            </div>
+            <span className="inline-flex items-center rounded-full bg-teal-50 px-2.5 py-0.5 text-xs font-medium text-teal-700 ml-auto">
+              {divisionLabel}
             </span>
-            <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
-              <button onClick={() => setEditingQId(q.id)} className="rounded p-1 text-stone-400 hover:text-teal-600 hover:bg-teal-50"><Pencil size={13} /></button>
-              <QuestionDeleteButton questionId={q.id} templateId={templateId} onDeleted={() => router.refresh()} />
-            </div>
           </div>
-        )
-      ))}
+        </div>
+
+        {/* Settings */}
+        <SettingsPanel
+          templateId={templateId}
+          initialSettings={liveSettings}
+          onSettingsChange={setLiveSettings}
+          onSaved={refresh}
+        />
+
+        {/* Question List — Section Accordion */}
+        <div className="rounded-xl border border-stone-200 bg-white shadow-sm">
+          <div className="px-5 py-4 border-b border-stone-100 flex items-center justify-between">
+            <h2 className="text-sm font-semibold text-stone-900">템플릿 문항</h2>
+            <button
+              onClick={() => { setPanelMode("add"); setEditingQuestionId(null); setEditingSectionName(null); setAddToSection(null); }}
+              className="inline-flex items-center gap-1.5 rounded-lg bg-teal-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-teal-700 transition-colors"
+            >
+              <Plus size={13} /> 문항 추가
+            </button>
+          </div>
+
+          {questions.length === 0 ? (
+            <div className="p-10 text-center">
+              <div className="flex justify-center mb-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-stone-100 text-stone-400"><Plus size={20} /></div>
+              </div>
+              <p className="text-sm text-stone-500 mb-3">문항을 추가해 주세요</p>
+              <button onClick={() => setPanelMode("add")} className="inline-flex items-center gap-1.5 rounded-lg bg-teal-600 px-4 py-2 text-sm font-semibold text-white hover:bg-teal-700 transition-colors"><Plus size={14} /> 첫 문항 추가</button>
+            </div>
+          ) : (
+            <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+              <SortableContext items={questions.map((q) => q.id)} strategy={verticalListSortingStrategy}>
+                <div>
+                  {Object.entries(sections).map(([sectionName, sectionQuestions]) => {
+                    const isCollapsed = collapsedSections.has(sectionName);
+                    const isSectionSelected = editingSectionName === sectionName && panelMode === "section_edit";
+                    const intro = liveSettings.section_intros?.[sectionName];
+                    const introColor = intro?.color || "teal";
+                    const colorDotClass: Record<string, string> = {
+                      teal: "bg-teal-500", blue: "bg-blue-500", amber: "bg-amber-500", rose: "bg-rose-500", violet: "bg-violet-500",
+                      neutral: "bg-stone-500", brand: "bg-teal-500", warm: "bg-amber-500", cool: "bg-blue-500",
+                    };
+
+                    return (
+                      <div key={sectionName}>
+                        <div
+                          className={`flex items-center gap-2 px-4 py-2.5 border-b border-stone-100 cursor-pointer select-none transition-colors ${
+                            isSectionSelected ? "bg-teal-50/60" : "bg-stone-50/80 hover:bg-stone-100/60"
+                          }`}
+                        >
+                          <button onClick={() => toggleSection(sectionName)} className="text-stone-400 hover:text-stone-600 shrink-0">
+                            {isCollapsed ? <ChevronRight size={14} /> : <ChevronDown size={14} />}
+                          </button>
+
+                          <div className="flex-1 flex items-center gap-2 min-w-0" onClick={() => toggleSection(sectionName)}>
+                            {(intro?.title || intro?.description) && (
+                              <span className={`h-2.5 w-2.5 rounded-full shrink-0 ${colorDotClass[introColor] || colorDotClass.teal}`} title="인트로 설정됨" />
+                            )}
+                            <span className="text-[13px] font-semibold text-stone-700 truncate">{sectionName}</span>
+                            <span className="text-[11px] text-stone-400 shrink-0">({sectionQuestions.length})</span>
+                          </div>
+
+                          <button
+                            onClick={(e) => { e.stopPropagation(); handleSelectSection(sectionName); }}
+                            className={`shrink-0 inline-flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-medium transition-colors ${
+                              isSectionSelected ? "bg-teal-100 text-teal-700" : "text-stone-400 hover:bg-stone-200 hover:text-stone-600"
+                            }`}
+                            title="섹션 편집"
+                          >
+                            <Pencil size={11} /> 편집
+                          </button>
+                        </div>
+
+                        {!isCollapsed && (
+                          <>
+                            {(() => {
+                              let displayNum = 0;
+                              return sectionQuestions.map((question) => {
+                                displayNum++;
+                                return (
+                                  <SortableQuestionRow
+                                    key={question.id}
+                                    question={question}
+                                    index={question._globalIndex}
+                                    displayOrder={displayNum}
+                                    isSelected={editingQuestionId === question.id && panelMode === "edit"}
+                                    onSelect={handleSelectQuestion}
+                                  />
+                                );
+                              });
+                            })()}
+                            <div className="px-4 py-2 border-b border-stone-100">
+                              <button
+                                onClick={() => handleAddToSection(sectionName)}
+                                className="w-full inline-flex items-center justify-center gap-1 rounded-lg border border-dashed border-stone-200 px-3 py-1.5 text-[11px] text-stone-400 hover:border-teal-300 hover:text-teal-600 hover:bg-teal-50/50 transition-colors"
+                              >
+                                <Plus size={11} /> 이 섹션에 문항 추가
+                              </button>
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </SortableContext>
+            </DndContext>
+          )}
+        </div>
+      </div>
+
+      {/* ── Right Panel ── */}
+      <div className="hidden lg:block w-[400px] shrink-0 self-stretch">
+        <RightPanel
+          panelMode={panelMode}
+          previewTab={previewTab}
+          onPreviewTabChange={setPreviewTab}
+          templateId={templateId}
+          templateName={templateName}
+          questions={questions}
+          liveSettings={liveSettings}
+          editingQuestion={editingQuestion}
+          editingSectionName={editingSectionName}
+          editingSectionQuestionCount={editingSectionName ? (sections[editingSectionName]?.length ?? 0) : 0}
+          sectionNames={sectionNames}
+          defaultSection={addToSection}
+          nextSortOrder={nextSortOrder}
+          onSaved={handlePanelSaved}
+          onCancel={handlePanelCancel}
+          onDeleted={handlePanelSaved}
+        />
+      </div>
     </div>
-  );
-}
-
-// ── Question Edit Form ──
-
-function QuestionEditForm({ templateId, question, nextSortOrder, onDone, onCancel }: {
-  templateId: string;
-  question?: Question;
-  nextSortOrder: number;
-  onDone: () => void;
-  onCancel: () => void;
-}) {
-  const isEdit = !!question;
-  const [saving, setSaving] = useState(false);
-  const [questionNo, setQuestionNo] = useState(question?.question_no || "");
-  const [questionText, setQuestionText] = useState(question?.question_text || "");
-  const [questionType, setQuestionType] = useState(question?.question_type || "likert_5");
-  const [responseOptions, setResponseOptions] = useState(question?.response_options || "");
-  const [sectionLabel, setSectionLabel] = useState(question?.section_label || "");
-
-  const handleSave = async () => {
-    if (!questionText.trim()) return;
-    setSaving(true);
-    try {
-      if (isEdit && question) {
-        await updateTemplateQuestion(question.id, templateId, {
-          question_no: questionNo, question_text: questionText,
-          question_type: questionType, response_options: responseOptions || undefined,
-          section_label: sectionLabel || undefined,
-        });
-      } else {
-        await addTemplateQuestion(templateId, {
-          question_no: questionNo || `Q${nextSortOrder + 1}`,
-          question_text: questionText, question_type: questionType,
-          response_options: responseOptions || undefined,
-          section_label: sectionLabel || undefined,
-          sort_order: nextSortOrder,
-        });
-      }
-      onDone();
-    } catch (e) {
-      alert(e instanceof Error ? e.message : "저장 실패");
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  return (
-    <div className="rounded-lg border border-teal-200 bg-teal-50/30 p-4 space-y-3">
-      <p className="text-sm font-semibold text-stone-800">{isEdit ? "문항 수정" : "새 문항 추가"}</p>
-      <div className="grid grid-cols-4 gap-3">
-        <div>
-          <label className="block text-[11px] text-stone-500 mb-0.5">문항 코드</label>
-          <input type="text" value={questionNo} onChange={(e) => setQuestionNo(e.target.value)} placeholder="Q1" className="w-full rounded border border-stone-300 px-2 py-1.5 text-xs focus:border-teal-500 outline-none" />
-        </div>
-        <div>
-          <label className="block text-[11px] text-stone-500 mb-0.5">유형</label>
-          <select value={questionType} onChange={(e) => setQuestionType(e.target.value)} className="w-full rounded border border-stone-300 px-2 py-1.5 text-xs focus:border-teal-500 outline-none">
-            {Object.entries(questionTypeLabels).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
-          </select>
-        </div>
-        <div>
-          <label className="block text-[11px] text-stone-500 mb-0.5">섹션</label>
-          <input type="text" value={sectionLabel} onChange={(e) => setSectionLabel(e.target.value)} placeholder="일반" className="w-full rounded border border-stone-300 px-2 py-1.5 text-xs focus:border-teal-500 outline-none" />
-        </div>
-        <div>
-          <label className="block text-[11px] text-stone-500 mb-0.5">선택지 (/ 구분)</label>
-          <input type="text" value={responseOptions} onChange={(e) => setResponseOptions(e.target.value)} placeholder="옵션1/옵션2/옵션3" className="w-full rounded border border-stone-300 px-2 py-1.5 text-xs focus:border-teal-500 outline-none" />
-        </div>
-      </div>
-      <div>
-        <label className="block text-[11px] text-stone-500 mb-0.5">질문 내용 *</label>
-        <textarea value={questionText} onChange={(e) => setQuestionText(e.target.value)} rows={2} className="w-full rounded border border-stone-300 px-2 py-1.5 text-xs focus:border-teal-500 outline-none resize-none" />
-      </div>
-      <div className="flex gap-2">
-        <button onClick={handleSave} disabled={saving || !questionText.trim()} className="inline-flex items-center gap-1 rounded-lg bg-teal-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-teal-700 disabled:opacity-50">
-          {saving ? <Loader2 size={12} className="animate-spin" /> : <Check size={12} />} {isEdit ? "수정" : "추가"}
-        </button>
-        <button onClick={onCancel} className="inline-flex items-center gap-1 rounded-lg border border-stone-300 px-3 py-1.5 text-xs font-medium text-stone-600 hover:bg-stone-50">취소</button>
-      </div>
-    </div>
-  );
-}
-
-// ── Question Delete Button ──
-
-function QuestionDeleteButton({ questionId, templateId, onDeleted }: { questionId: string; templateId: string; onDeleted: () => void }) {
-  const [deleting, setDeleting] = useState(false);
-
-  const handleDelete = async () => {
-    if (!confirm("이 문항을 삭제하시겠습니까?")) return;
-    setDeleting(true);
-    try {
-      await deleteTemplateQuestion(questionId, templateId);
-      onDeleted();
-    } catch (e) {
-      alert(e instanceof Error ? e.message : "삭제 실패");
-      setDeleting(false);
-    }
-  };
-
-  return (
-    <button onClick={handleDelete} disabled={deleting} className="rounded p-1 text-stone-400 hover:text-red-500 hover:bg-red-50 disabled:opacity-50">
-      {deleting ? <Loader2 size={13} className="animate-spin" /> : <Trash2 size={13} />}
-    </button>
   );
 }

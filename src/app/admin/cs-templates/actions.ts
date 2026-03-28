@@ -191,3 +191,145 @@ export async function deleteTemplateQuestion(questionId: string, templateId: str
   if (error) throw new Error("문항 삭제 실패: " + error.message);
   revalidatePath(`/admin/cs-templates/${templateId}`);
 }
+
+// ── 템플릿 설정(settings JSONB) 머지 저장 ──
+export async function updateTemplateSettings(
+  templateId: string,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  settings: Record<string, any>
+) {
+  const { data: current } = await supabase
+    .from("cs_survey_templates")
+    .select("settings")
+    .eq("id", templateId)
+    .single();
+
+  const merged = { ...((current?.settings as Record<string, unknown>) ?? {}), ...settings };
+
+  const { error } = await supabase
+    .from("cs_survey_templates")
+    .update({ settings: merged, updated_at: new Date().toISOString() })
+    .eq("id", templateId);
+
+  if (error) throw new Error("설정 저장 실패: " + error.message);
+  revalidatePath(`/admin/cs-templates/${templateId}`);
+}
+
+// ── 문항 순서 일괄 업데이트 (드래그앤드롭) ──
+export async function reorderTemplateQuestions(
+  templateId: string,
+  orderedIds: { id: string; sort_order: number }[]
+) {
+  const promises = orderedIds.map(({ id, sort_order }) =>
+    supabase.from("cs_survey_questions").update({ sort_order }).eq("id", id)
+  );
+  const results = await Promise.all(promises);
+  const failed = results.find((r) => r.error);
+  if (failed?.error) throw new Error("순서 변경 실패: " + failed.error.message);
+  revalidatePath(`/admin/cs-templates/${templateId}`);
+}
+
+// ── 문항 섹션 이동 ──
+export async function updateQuestionSectionLabel(
+  questionId: string,
+  templateId: string,
+  newSection: string
+) {
+  const { error } = await supabase
+    .from("cs_survey_questions")
+    .update({ section_label: newSection })
+    .eq("id", questionId);
+  if (error) throw new Error("섹션 이동 실패: " + error.message);
+  revalidatePath(`/admin/cs-templates/${templateId}`);
+}
+
+// ── 섹션 이름 변경 ──
+export async function renameTemplateSection(
+  templateId: string,
+  oldName: string,
+  newName: string
+) {
+  const trimmed = newName.trim();
+  if (!trimmed) throw new Error("섹션 이름을 입력해 주세요");
+
+  const { error } = await supabase
+    .from("cs_survey_questions")
+    .update({ section_label: trimmed })
+    .eq("template_id", templateId)
+    .eq("section_label", oldName);
+  if (error) throw new Error("섹션 이름 변경 실패: " + error.message);
+
+  // section_intros 키 마이그레이션
+  const { data: template } = await supabase
+    .from("cs_survey_templates")
+    .select("settings")
+    .eq("id", templateId)
+    .single();
+
+  const settings = (template?.settings as Record<string, unknown>) ?? {};
+  const intros = (settings.section_intros as Record<string, unknown>) ?? {};
+  if (intros[oldName]) {
+    intros[trimmed] = intros[oldName];
+    delete intros[oldName];
+    await supabase
+      .from("cs_survey_templates")
+      .update({ settings: { ...settings, section_intros: intros }, updated_at: new Date().toISOString() })
+      .eq("id", templateId);
+  }
+
+  revalidatePath(`/admin/cs-templates/${templateId}`);
+}
+
+// ── 섹션 인트로 저장 ──
+export async function updateTemplateSectionIntro(
+  templateId: string,
+  sectionName: string,
+  intro: { title?: string; description?: string; color?: string; image_url?: string; image_size?: string }
+) {
+  const { data: template } = await supabase
+    .from("cs_survey_templates")
+    .select("settings")
+    .eq("id", templateId)
+    .single();
+
+  const settings = (template?.settings as Record<string, unknown>) ?? {};
+  const intros = (settings.section_intros as Record<string, unknown>) ?? {};
+  intros[sectionName] = intro;
+
+  const { error } = await supabase
+    .from("cs_survey_templates")
+    .update({ settings: { ...settings, section_intros: intros }, updated_at: new Date().toISOString() })
+    .eq("id", templateId);
+  if (error) throw new Error("섹션 안내 저장 실패: " + error.message);
+  revalidatePath(`/admin/cs-templates/${templateId}`);
+}
+
+// ── 빈 섹션 삭제 ──
+export async function deleteTemplateSection(templateId: string, sectionName: string) {
+  const { count } = await supabase
+    .from("cs_survey_questions")
+    .select("*", { count: "exact", head: true })
+    .eq("template_id", templateId)
+    .eq("section_label", sectionName);
+
+  if ((count ?? 0) > 0) {
+    throw new Error("문항이 있는 섹션은 삭제할 수 없습니다. 먼저 문항을 이동해 주세요.");
+  }
+
+  const { data: template } = await supabase
+    .from("cs_survey_templates")
+    .select("settings")
+    .eq("id", templateId)
+    .single();
+
+  const settings = (template?.settings as Record<string, unknown>) ?? {};
+  const intros = (settings.section_intros as Record<string, unknown>) ?? {};
+  delete intros[sectionName];
+
+  await supabase
+    .from("cs_survey_templates")
+    .update({ settings: { ...settings, section_intros: intros }, updated_at: new Date().toISOString() })
+    .eq("id", templateId);
+
+  revalidatePath(`/admin/cs-templates/${templateId}`);
+}
