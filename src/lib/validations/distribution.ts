@@ -1,23 +1,25 @@
 import { z } from "zod";
 
-// ─── 개별 링크 배부 스키마 ───
+// ─── 배포 CSV 행 스키마 ───
 
-export const recipientSchema = z.object({
-  name: z.string().min(1, "이름은 필수입니다").max(100),
-  email: z.string().email().max(255).nullable().optional(),
-  company: z.string().max(100).nullable().optional(),
-  department: z.string().max(100).nullable().optional(),
-  position: z.string().max(100).nullable().optional(),
-  phone: z.string().max(30).nullable().optional(),
+export const distributionRowSchema = z.object({
+  company: z.string().min(1, "회사명 필수"),
+  name: z.string().min(1, "담당자명 필수"),
+  email: z.string().default(""),
+  phone: z.string().default(""),
+  phoneNormalized: z.string().default(""),
+  emailValid: z.boolean(),
+  project: z.string().default(""),
+  course: z.string().default(""),
+  am: z.string().default(""),
+  team: z.string().default(""),
+  rowNumber: z.number(),
 });
 
 export const createBatchSchema = z.object({
-  survey_id: z.string().uuid("유효한 설문 ID가 필요합니다"),
-  recipients: z
-    .array(recipientSchema)
-    .min(1, "최소 1명의 수신자가 필요합니다")
-    .max(100, "최대 100명까지 일괄 생성 가능합니다"),
+  surveyId: z.string().uuid("유효한 설문 ID가 필요합니다"),
+  rows: z.array(distributionRowSchema).min(1, "최소 1건의 데이터가 필요합니다"),
 });
 
-export type RecipientInput = z.infer<typeof recipientSchema>;
+export type DistributionRow = z.infer<typeof distributionRowSchema>;
 export type CreateBatchInput = z.infer<typeof createBatchSchema>;

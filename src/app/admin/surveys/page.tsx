@@ -81,16 +81,19 @@ async function getSurveys(statusFilter?: string, query?: string): Promise<Survey
 }
 
 async function getStatusCounts() {
-  const { data } = await supabase
-    .from("edu_surveys")
-    .select("status");
-
-  const counts: Record<string, number> = { all: 0, active: 0, closed: 0, draft: 0 };
-  (data ?? []).forEach((s: { status: string }) => {
-    counts.all += 1;
-    if (counts[s.status] !== undefined) counts[s.status] += 1;
-  });
-  return counts;
+  // 상태별 count를 병렬로 조회 (전체 row를 가져오지 않음)
+  const [total, active, closed, draft] = await Promise.all([
+    supabase.from("edu_surveys").select("*", { count: "exact", head: true }),
+    supabase.from("edu_surveys").select("*", { count: "exact", head: true }).eq("status", "active"),
+    supabase.from("edu_surveys").select("*", { count: "exact", head: true }).eq("status", "closed"),
+    supabase.from("edu_surveys").select("*", { count: "exact", head: true }).eq("status", "draft"),
+  ]);
+  return {
+    all: total.count ?? 0,
+    active: active.count ?? 0,
+    closed: closed.count ?? 0,
+    draft: draft.count ?? 0,
+  };
 }
 
 export default async function SurveysPage({

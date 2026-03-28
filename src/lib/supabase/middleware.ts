@@ -2,6 +2,15 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
 export async function updateSession(request: NextRequest) {
+  const pathname = request.nextUrl.pathname;
+
+  // 공개 경로는 인증 체크 없이 바로 통과 (getUser() 호출 스킵)
+  const isAdminRoute = pathname.startsWith("/admin");
+  if (!isAdminRoute) {
+    return NextResponse.next({ request });
+  }
+
+  // /admin 경로만 세션 갱신 + 인증 체크
   let supabaseResponse = NextResponse.next({
     request,
   });
@@ -29,17 +38,14 @@ export async function updateSession(request: NextRequest) {
     }
   );
 
-  // 세션 갱신 — getUser()는 Auth 서버를 직접 호출하여 안전함
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
-  // /admin 경로는 인증 필수
-  const isAdminRoute = request.nextUrl.pathname.startsWith("/admin");
-  if (!user && isAdminRoute) {
+  if (!user) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
-    url.searchParams.set("redirect", request.nextUrl.pathname);
+    url.searchParams.set("redirect", pathname);
     return NextResponse.redirect(url);
   }
 

@@ -9,6 +9,7 @@ import {
   BookOpen,
   ChartColumn,
   Send,
+  Mail,
   UserCheck,
   FileSearch,
   PenTool,
@@ -29,6 +30,7 @@ const eduMenuItems = [
   { href: "/admin/cs-templates", label: "문항 템플릿", icon: BookOpen },
   { href: "/admin/responses", label: "응답 및 리포트", icon: ChartColumn },
   { href: "/admin/distribute", label: "배부 관리", icon: Send },
+  { href: "/admin/email-templates", label: "메일 템플릿", icon: Mail },
 ];
 
 const adminOnlyEduItems = [

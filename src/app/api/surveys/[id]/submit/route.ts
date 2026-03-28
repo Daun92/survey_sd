@@ -103,7 +103,7 @@ export async function POST(
       return NextResponse.json({ error: '응답 저장에 실패했습니다' }, { status: 500 })
     }
 
-    // distribution 상태 업데이트
+    // distribution 완료 처리
     if (distributionId) {
       await supabase
         .from('distributions')
