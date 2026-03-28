@@ -156,7 +156,7 @@ export default function DistributeTabs({ surveys, batches: initialBatches }: { s
       }, ...prev])
       setPersonalStep('result')
     } catch {
-      setError('링크 생성 중 오류가 ��생했습니다')
+      setError('링크 생성 중 오류가 발생했습니다')
       setPersonalStep('preview')
     }
   }
@@ -212,7 +212,7 @@ export default function DistributeTabs({ surveys, batches: initialBatches }: { s
   }
 
   const handleDeleteBatch = async (id: string) => {
-    if (!confirm('이 배치를 삭제하시겠습니까? 포함된 모든 개인 링크가 삭���됩니다.')) return
+    if (!confirm('이 배치를 삭제하시겠습니까? 포함된 모든 개인 링크가 삭제됩니다.')) return
     setDeletingBatchId(id)
     try {
       const result = await deleteDistributionBatch(id)
@@ -226,7 +226,7 @@ export default function DistributeTabs({ surveys, batches: initialBatches }: { s
         }
       }
     } catch {
-      setError('배치 삭제에 실패���습니다')
+      setError('배치 삭제에 실패했습니다')
     } finally {
       setDeletingBatchId(null)
     }
@@ -271,7 +271,7 @@ export default function DistributeTabs({ surveys, batches: initialBatches }: { s
                     <CardDescription className="mt-1">{fileName} · {selectedSurvey?.title}</CardDescription>
                   </div>
                   <Button variant="outline" size="sm" onClick={resetPersonal}>
-                    <ArrowLeft size={14} className="mr-1" /> 돌아가���
+                    <ArrowLeft size={14} className="mr-1" /> 돌아가기
                   </Button>
                 </div>
               </CardHeader>
@@ -355,7 +355,7 @@ export default function DistributeTabs({ surveys, batches: initialBatches }: { s
                 <div className="flex items-center justify-between">
                   <div>
                     <CardTitle className="flex items-center gap-2">
-                      <CheckCircle2 size={18} className="text-emerald-600" /> 링�� 생성 완료
+                      <CheckCircle2 size={18} className="text-emerald-600" /> 링크 생성 완료
                     </CardTitle>
                     <CardDescription className="mt-1">
                       {results.length}건의 개인 링크가 생성되었습니다 · {selectedSurvey?.title}
@@ -378,7 +378,7 @@ export default function DistributeTabs({ surveys, batches: initialBatches }: { s
                     <thead>
                       <tr className="bg-stone-50 border-b border-stone-200">
                         <th className="text-left px-3 py-2 text-stone-500 font-medium w-10">#</th>
-                        <th className="text-left px-3 py-2 text-stone-500 font-medium">담당��</th>
+                        <th className="text-left px-3 py-2 text-stone-500 font-medium">담당자</th>
                         <th className="text-left px-3 py-2 text-stone-500 font-medium">이메일</th>
                         <th className="text-left px-3 py-2 text-stone-500 font-medium">개인 링크</th>
                         <th className="text-center px-3 py-2 text-stone-500 font-medium w-16"></th>
