@@ -2,7 +2,7 @@
 
 import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, FileText, Users, Layers, Link2, ExternalLink, QrCode, ChevronDown, ChevronRight, Pencil } from "lucide-react";
+import { Plus, FileText, Users, Layers, Link2, ExternalLink, QrCode, ChevronDown, ChevronRight, Pencil, Eye, X } from "lucide-react";
 import {
   DndContext, closestCenter, KeyboardSensor, PointerSensor,
   useSensor, useSensors, type DragEndEvent,
@@ -33,6 +33,7 @@ export default function SurveyEditor({ survey, questions, submissionCount }: Edi
   const [liveSettings, setLiveSettings] = useState<SurveySettings>(() => (survey.settings as SurveySettings) ?? {});
   const [collapsedSections, setCollapsedSections] = useState<Set<string>>(new Set());
   const [addToSection, setAddToSection] = useState<string | null>(null);
+  const [mobilePanel, setMobilePanel] = useState(false);
 
   // ─── Drag & Drop ───
   const sensors = useSensors(
@@ -293,7 +294,7 @@ export default function SurveyEditor({ survey, questions, submissionCount }: Edi
         )}
       </div>
 
-      {/* ── Right Panel ── */}
+      {/* ── Right Panel (desktop) ── */}
       <div className="hidden lg:block w-[400px] shrink-0 self-stretch">
         <RightPanel
           panelMode={panelMode}
@@ -315,6 +316,47 @@ export default function SurveyEditor({ survey, questions, submissionCount }: Edi
           onDeleted={handlePanelSaved}
         />
       </div>
+
+      {/* ── Mobile Panel Modal ── */}
+      {mobilePanel && (
+        <div className="fixed inset-0 z-50 lg:hidden">
+          <div className="absolute inset-0 bg-black/40" onClick={() => setMobilePanel(false)} />
+          <div className="absolute inset-x-0 bottom-0 top-12 bg-white rounded-t-2xl overflow-y-auto p-4">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-sm font-semibold text-stone-800">미리보기 · 편집</span>
+              <button onClick={() => setMobilePanel(false)} className="rounded-lg p-1.5 text-stone-400 hover:bg-stone-100"><X size={18} /></button>
+            </div>
+            <RightPanel
+              panelMode={panelMode}
+              previewTab={previewTab}
+              onPreviewTabChange={setPreviewTab}
+              surveyId={survey.id}
+              surveyTitle={survey.title}
+              surveyDescription={survey.description || ""}
+              questions={questions}
+              liveSettings={liveSettings}
+              editingQuestion={editingQuestion}
+              editingSectionName={editingSectionName}
+              editingSectionQuestionCount={editingSectionName ? (sections[editingSectionName]?.length ?? 0) : 0}
+              sectionNames={sectionNames}
+              defaultSection={addToSection}
+              nextSortOrder={nextSortOrder}
+              onSaved={() => { handlePanelSaved(); setMobilePanel(false); }}
+              onCancel={() => { handlePanelCancel(); setMobilePanel(false); }}
+              onDeleted={() => { handlePanelSaved(); setMobilePanel(false); }}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Mobile FAB — 미리보기/편집 열기 */}
+      <button
+        onClick={() => setMobilePanel(true)}
+        className="fixed bottom-6 right-6 z-40 lg:hidden flex h-12 w-12 items-center justify-center rounded-full bg-teal-600 text-white shadow-lg hover:bg-teal-700 transition-colors"
+        title="미리보기"
+      >
+        <Eye size={20} />
+      </button>
 
       {/* AI FAB */}
       <AiFab surveyId={survey.id} educationType={survey.education_type || ""} templates={[]} onQuestionsAdded={refresh} />

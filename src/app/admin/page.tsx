@@ -36,6 +36,7 @@ async function getDashboardData() {
     { data: prevWeekSubmissions },
     { data: distributions },
     { data: surveyDetails },
+    { data: submissionCounts },
   ] = await Promise.all([
     // 진행중 설문
     supabase
@@ -74,12 +75,11 @@ async function getDashboardData() {
       `)
       .in("status", ["active", "draft"])
       .order("created_at", { ascending: false }),
+    // 설문별 응답 수 집계
+    supabase
+      .from("edu_submissions")
+      .select("survey_id"),
   ]);
-
-  // 설문별 응답 수 집계
-  const { data: submissionCounts } = await supabase
-    .from("edu_submissions")
-    .select("survey_id");
 
   const submissionBySurvey: Record<string, number> = {};
   (submissionCounts ?? []).forEach((s: any) => {
