@@ -23,13 +23,11 @@ interface Props {
   templateName: string;
   templateDescription: string;
   divisionLabel: string;
-  isSystem: boolean;
-  isActive: boolean;
   settings: SurveySettings;
   questions: CSQuestion[];
 }
 
-export function TemplateEditor({ templateId, templateName, templateDescription, divisionLabel, isSystem, isActive, settings: initialSettings, questions }: Props) {
+export function TemplateEditor({ templateId, templateName, templateDescription, divisionLabel, settings: initialSettings, questions }: Props) {
   const router = useRouter();
   const refresh = useCallback(() => router.refresh(), [router]);
 
@@ -130,9 +128,6 @@ export function TemplateEditor({ templateId, templateName, templateDescription, 
     setEditingSectionName(null);
     setAddToSection(null);
   };
-
-  // 시스템 템플릿은 읽기 전용
-  if (isSystem) return null;
 
   return (
     <div className="flex gap-6 items-start">
@@ -243,7 +238,6 @@ export function TemplateEditor({ templateId, templateName, templateDescription, 
                                   <SortableQuestionRow
                                     key={question.id}
                                     question={question}
-                                    index={question._globalIndex}
                                     displayOrder={displayNum}
                                     isSelected={editingQuestionId === question.id && panelMode === "edit"}
                                     onSelect={handleSelectQuestion}

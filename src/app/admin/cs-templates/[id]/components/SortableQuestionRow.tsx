@@ -7,7 +7,6 @@ import { type CSQuestion, csQuestionTypeLabels, parseResponseOptions } from "./t
 
 interface Props {
   question: CSQuestion;
-  index: number;
   displayOrder: number;
   isSelected: boolean;
   onSelect: (id: string) => void;

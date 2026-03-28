@@ -151,8 +151,6 @@ export default async function CSTemplateDetailPage({
         templateName={template.name}
         templateDescription={template.description || ""}
         divisionLabel={template.division_label}
-        isSystem={false}
-        isActive={template.is_active}
         settings={settings as Record<string, unknown>}
         questions={questions.map((q) => ({ ...q, template_id: template.id }))}
       />

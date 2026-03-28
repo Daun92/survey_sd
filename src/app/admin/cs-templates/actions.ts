@@ -39,7 +39,8 @@ export async function duplicateTemplate(templateId: string) {
 
   if (questions && questions.length > 0) {
     const copied = questions.map((q) => ({ ...q, template_id: newTemplate.id }));
-    await supabase.from("cs_survey_questions").insert(copied);
+    const { error: insertError } = await supabase.from("cs_survey_questions").insert(copied);
+    if (insertError) throw new Error("문항 복제 실패: " + insertError.message);
   }
 
   revalidatePath("/admin/cs-templates");
@@ -81,17 +82,18 @@ export async function createTemplateFromSurvey(surveyId: string, name: string) {
     .order("sort_order", { ascending: true });
 
   if (questions && questions.length > 0) {
-    const templateQuestions = questions.map((q) => ({
+    const templateQuestions = questions.map((q, idx) => ({
       template_id: template.id,
       page_type: "1P",
-      question_no: q.question_code || `Q${q.sort_order + 1}`,
+      question_no: q.question_code || `Q${idx + 1}`,
       question_text: q.question_text,
       question_type: q.question_type === "multiple_choice" ? "single_choice" : q.question_type,
       response_options: q.options ? (typeof q.options === "string" ? q.options : JSON.parse(q.options)?.join("/")) : null,
       section_label: q.section,
       sort_order: q.sort_order,
     }));
-    await supabase.from("cs_survey_questions").insert(templateQuestions);
+    const { error: insertError } = await supabase.from("cs_survey_questions").insert(templateQuestions);
+    if (insertError) throw new Error("문항 복제 실패: " + insertError.message);
   }
 
   revalidatePath("/admin/cs-templates");
