@@ -72,7 +72,10 @@ async function getProjectDetail(id: string) {
       .order("created_at", { ascending: false }),
   ]);
 
-  if (projectError || !project) return null;
+  if (projectError || !project) {
+    console.error("[projects/[id]] Supabase error:", projectError);
+    return null;
+  }
 
   return {
     project,

@@ -11,7 +11,7 @@ function formatDateTime(dateStr: string) {
 }
 
 async function getResponseDetail(surveyId: string) {
-  const [{ data: survey }, { data: questions }, { data: submissions }] =
+  const [{ data: survey, error: surveyError }, { data: questions }, { data: submissions }] =
     await Promise.all([
       supabase
         .from("edu_surveys")
@@ -30,7 +30,10 @@ async function getResponseDetail(surveyId: string) {
         .order("submitted_at", { ascending: false }),
     ]);
 
-  if (!survey) return null;
+  if (surveyError || !survey) {
+    console.error("[responses/[surveyId]] Supabase error:", surveyError);
+    return null;
+  }
 
   return {
     survey,

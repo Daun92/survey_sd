@@ -38,7 +38,10 @@ async function getTemplateDetail(id: string) {
       .order("sort_order", { ascending: true }),
   ]);
 
-  if (error || !template) return null;
+  if (error || !template) {
+    console.error("[cs-templates/[id]] Supabase error:", error);
+    return null;
+  }
 
   return { template, questions: questions ?? [] };
 }

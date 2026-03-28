@@ -52,7 +52,10 @@ async function getSurveyDetail(id: string) {
       .eq("survey_id", id),
   ]);
 
-  if (surveyError || !survey) return null;
+  if (surveyError || !survey) {
+    console.error("[surveys/[id]] Supabase error:", surveyError);
+    return null;
+  }
 
   const session = survey.sessions as any;
   const course = session?.courses;
