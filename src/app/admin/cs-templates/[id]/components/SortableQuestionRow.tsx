@@ -1,13 +1,13 @@
 "use client";
 
-import { GripVertical } from "lucide-react";
+import { GripVertical, GitBranch, Info } from "lucide-react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { type CSQuestion, csQuestionTypeLabels, parseResponseOptions } from "./types";
 
 interface Props {
   question: CSQuestion;
-  displayOrder: number;
+  displayOrder: number | null;
   isSelected: boolean;
   onSelect: (id: string) => void;
 }
@@ -16,6 +16,7 @@ export function SortableQuestionRow({ question, displayOrder, isSelected, onSele
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: question.id });
   const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1, zIndex: isDragging ? 10 : undefined };
   const opts = parseResponseOptions(question.response_options);
+  const isInfoBlock = question.question_type === "info_block";
 
   return (
     <div
@@ -31,7 +32,11 @@ export function SortableQuestionRow({ question, displayOrder, isSelected, onSele
       </button>
 
       <span className="text-[11px] text-stone-300 mt-0.5 shrink-0 w-5 text-right tabular-nums">
-        #{displayOrder}
+        {isInfoBlock ? (
+          <Info size={12} className="inline text-blue-300" />
+        ) : (
+          displayOrder != null ? `#${displayOrder}` : ""
+        )}
       </span>
 
       {question.question_no && (
@@ -41,7 +46,15 @@ export function SortableQuestionRow({ question, displayOrder, isSelected, onSele
       )}
 
       <div className="flex-1 min-w-0">
-        <p className="text-sm text-stone-800 leading-relaxed">{question.question_text}</p>
+        <p className={`text-sm leading-relaxed ${isInfoBlock ? "text-stone-500 italic" : "text-stone-800"}`}>
+          {question.skip_logic && (
+            <span className="inline-flex items-center gap-0.5 text-amber-500 mr-1" title="조건부 문항">
+              <GitBranch size={12} />
+            </span>
+          )}
+          {question.question_text}
+          {question.is_required && !isInfoBlock && <span className="text-red-400 ml-0.5">*</span>}
+        </p>
         {opts.length > 0 && (
           <div className="flex flex-wrap gap-1 mt-1">
             {opts.map((opt, i) => <span key={i} className="inline-flex rounded bg-stone-100 px-1.5 py-0.5 text-[11px] text-stone-500">{opt}</span>)}
@@ -49,7 +62,9 @@ export function SortableQuestionRow({ question, displayOrder, isSelected, onSele
         )}
       </div>
 
-      <span className="inline-flex rounded px-1.5 py-0.5 text-[11px] font-medium shrink-0 bg-stone-100 text-stone-500">
+      <span className={`inline-flex rounded px-1.5 py-0.5 text-[11px] font-medium shrink-0 ${
+        isInfoBlock ? "bg-blue-50 text-blue-500" : "bg-stone-100 text-stone-500"
+      }`}>
         {csQuestionTypeLabels[question.question_type] ?? question.question_type}
       </span>
     </div>

@@ -33,7 +33,7 @@ async function getTemplateDetail(id: string) {
       .single(),
     supabase
       .from("cs_survey_questions")
-      .select("id, question_no, question_text, question_type, page_type, response_options, section_label, sort_order")
+      .select("id, question_no, question_text, question_type, page_type, response_options, section_label, sort_order, is_required, skip_logic, metadata")
       .eq("template_id", id)
       .order("sort_order", { ascending: true }),
   ]);

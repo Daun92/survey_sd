@@ -240,12 +240,13 @@ export function TemplateEditor({ templateId, templateName, templateDescription, 
                             {(() => {
                               let displayNum = 0;
                               return sectionQuestions.map((question) => {
-                                displayNum++;
+                                const isInfo = question.question_type === "info_block";
+                                if (!isInfo) displayNum++;
                                 return (
                                   <SortableQuestionRow
                                     key={question.id}
                                     question={question}
-                                    displayOrder={displayNum}
+                                    displayOrder={isInfo ? null : displayNum}
                                     isSelected={editingQuestionId === question.id && panelMode === "edit"}
                                     onSelect={handleSelectQuestion}
                                   />

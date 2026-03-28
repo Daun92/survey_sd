@@ -85,6 +85,7 @@ export function RightPanel({
             key={panelMode === "edit" ? editingQuestion?.id : `__add__${defaultSection}`}
             templateId={templateId}
             question={panelMode === "edit" ? (editingQuestion ?? undefined) : undefined}
+            allQuestions={questions}
             sectionNames={sectionNames}
             defaultSection={defaultSection ?? undefined}
             nextSortOrder={nextSortOrder}

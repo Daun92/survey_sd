@@ -325,17 +325,19 @@ function EndingPreview({ settings }: { settings: SurveySettings }) {
       </p>
 
       {/* Stats placeholder */}
-      <div className="flex items-center gap-4 text-stone-400 mb-8">
-        <div className="text-center">
-          <p className="text-lg font-bold text-stone-600">--</p>
-          <p className="text-[10px]">응답 수</p>
+      {settings.show_ending_stats && (
+        <div className="flex items-center gap-4 text-stone-400 mb-8">
+          <div className="text-center">
+            <p className="text-lg font-bold text-stone-600">--</p>
+            <p className="text-[10px]">응답 수</p>
+          </div>
+          <div className="h-6 w-px bg-stone-200" />
+          <div className="text-center">
+            <p className="text-lg font-bold text-stone-600">--</p>
+            <p className="text-[10px]">소요 시간</p>
+          </div>
         </div>
-        <div className="h-6 w-px bg-stone-200" />
-        <div className="text-center">
-          <p className="text-lg font-bold text-stone-600">--</p>
-          <p className="text-[10px]">소요 시간</p>
-        </div>
-      </div>
+      )}
 
       <div className="flex items-center gap-2 opacity-30">
         <Image src="/logo_exc.png" alt="EXPERT" width={60} height={12} className="h-3 w-auto" />
