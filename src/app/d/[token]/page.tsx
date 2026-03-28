@@ -159,16 +159,23 @@ export default async function DistributionEntryPage({ params }: {
 
   // 설문 비활성 상태
   if (data.survey.status !== 'active') {
+    const isDraft = data.survey.status === 'draft'
     return (
       <div className="min-h-screen bg-stone-50 flex items-center justify-center p-4">
         <div className="max-w-md w-full text-center bg-white rounded-xl shadow-sm border border-stone-200 p-8">
-          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-stone-100">
-            <svg className="h-8 w-8 text-stone-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <div className={`mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full ${isDraft ? 'bg-amber-100' : 'bg-stone-100'}`}>
+            <svg className={`h-8 w-8 ${isDraft ? 'text-amber-500' : 'text-stone-400'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
           </div>
-          <h2 className="text-xl font-bold text-stone-800 mb-2">설문이 종료되었습니다</h2>
-          <p className="text-sm text-stone-500">이 설문은 현재 응답을 받지 않고 있습니다.</p>
+          <h2 className="text-xl font-bold text-stone-800 mb-2">
+            {isDraft ? '설문이 아직 시작되지 않았습니다' : '설문이 종료되었습니다'}
+          </h2>
+          <p className="text-sm text-stone-500">
+            {isDraft
+              ? '이 설문은 준비 중입니다. 잠시 후 다시 시도해주세요.'
+              : '이 설문은 현재 응답을 받지 않고 있습니다.'}
+          </p>
         </div>
       </div>
     )
