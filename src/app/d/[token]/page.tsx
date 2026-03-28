@@ -21,13 +21,13 @@ async function getDistributionByToken(token: string) {
   // 1. distribution 조회
   const { data: dist, error: distErr } = await supabase
     .from('distributions')
-    .select('id, survey_id, respondent_id, status, unique_token')
+    .select('id, survey_id, respondent_id, recipient_name, recipient_email, status, unique_token')
     .eq('unique_token', token)
     .single()
 
   if (distErr || !dist) return null
 
-  // 2. survey 데이터 조회 (기존 /s/[token] 패턴 재사용)
+  // 2. survey 데이터 조회
   const { data: survey, error: surveyErr } = await supabase
     .from('edu_surveys')
     .select(`
@@ -91,6 +91,11 @@ async function getDistributionByToken(token: string) {
         position: respondent.position ?? undefined,
       }
     }
+  }
+
+  // Fallback: if no respondent record, use recipient_name from distribution
+  if (!prefillRespondent.name && dist.recipient_name) {
+    prefillRespondent.name = dist.recipient_name
   }
 
   // 6. opened 상태 업데이트 (pending → opened)

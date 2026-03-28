@@ -22,6 +22,7 @@ interface SurveyQuestion {
   required: boolean
   options?: string[] | null
   skip_logic?: SkipLogicCondition | null
+  metadata?: Record<string, unknown> | null
 }
 
 interface SurveySection {
@@ -55,6 +56,13 @@ interface SurveyData {
     hero_image_url?: string
     show_meta_info?: boolean
     respondent_fields?: RespondentFieldConfig[]
+    section_intros?: Record<string, {
+      title?: string
+      description?: string
+      color?: string
+      image_url?: string
+      image_size?: string
+    }>
   }
   sessionName: string
   sections: SurveySection[]
@@ -66,6 +74,19 @@ const DEFAULT_RESPONDENT_FIELDS: RespondentFieldConfig[] = [
 ]
 
 type Step = 'landing' | 'questions' | 'ending'
+
+const INTRO_STYLE_MAP: Record<string, { bg: string; border: string; color: string; bar: string }> = {
+  neutral: { bg: '#fafaf9', border: '#e7e5e4', color: '#44403c', bar: '#a8a29e' },
+  brand:   { bg: '#f0fdfa', border: '#ccfbf1', color: '#0d9488', bar: '#14b8a6' },
+  warm:    { bg: '#faf5f0', border: '#e8ddd0', color: '#92400e', bar: '#d97706' },
+  cool:    { bg: '#f0f5fa', border: '#d0dde8', color: '#1e40af', bar: '#3b82f6' },
+  // 하위 호환: 이전 색상명도 지원
+  teal:    { bg: '#f0fdfa', border: '#ccfbf1', color: '#0d9488', bar: '#14b8a6' },
+  blue:    { bg: '#f0f5fa', border: '#d0dde8', color: '#1e40af', bar: '#3b82f6' },
+  amber:   { bg: '#faf5f0', border: '#e8ddd0', color: '#92400e', bar: '#d97706' },
+  rose:    { bg: '#fafaf9', border: '#e7e5e4', color: '#44403c', bar: '#a8a29e' },
+  violet:  { bg: '#fafaf9', border: '#e7e5e4', color: '#44403c', bar: '#a8a29e' },
+}
 
 const likertLabels: Record<number, string> = { 5: '매우 만족', 4: '만족', 3: '보통', 2: '불만족', 1: '매우 불만족' }
 
@@ -148,6 +169,14 @@ export default function SurveyForm({ survey, groupToken, distributionToken, pref
     setAnswers((prev) => ({ ...prev, [questionId]: value }))
   }
 
+  const getSectionIntro = (sectionIdx: number) => {
+    const sectionName = survey.sections[sectionIdx]?.name
+    if (!sectionName || !survey.settings.section_intros) return null
+    const intro = survey.settings.section_intros[sectionName]
+    if (!intro?.title && !intro?.description && !intro?.image_url) return null
+    return intro
+  }
+
   const handleStart = () => {
     startTimeRef.current = Date.now()
     setStep('questions')
@@ -173,7 +202,7 @@ export default function SurveyForm({ survey, groupToken, distributionToken, pref
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           answers,
-          respondent_name: respondentInfo.name || null,
+          respondent_name: prefillRespondent?.name || respondentInfo.name || null,
           respondent_department: respondentInfo.department || null,
           respondent_position: respondentInfo.position || null,
           respondent_info: respondentInfo,
@@ -279,8 +308,8 @@ export default function SurveyForm({ survey, groupToken, distributionToken, pref
             </div>
           )}
 
-          {/* Dynamic Respondent Fields */}
-          {survey.settings.collect_respondent_info !== false && respondentFields.length > 0 && (
+          {/* Dynamic Respondent Fields — 개별 링크일 때는 숨김 (자동 식별) */}
+          {!distributionToken && survey.settings.collect_respondent_info !== false && respondentFields.length > 0 && (
             <div className="space-y-2.5">
               <p className="text-[11px] font-semibold text-stone-500 uppercase tracking-widest">응답자 정보</p>
               <div className="grid grid-cols-2 gap-2">
@@ -458,7 +487,7 @@ export default function SurveyForm({ survey, groupToken, distributionToken, pref
             <ChevronLeft size={18} />
             <span className="text-[15px] font-semibold text-stone-800">{survey.title}</span>
           </button>
-          <span className="text-[13px] font-medium text-teal-600">{answeredLikert}/{totalLikert}</span>
+          <span className="text-[13px] font-medium text-teal-600">{currentSectionIdx + 1}/{totalSections}</span>
         </div>
         <div className="h-[3px] bg-stone-100">
           <div
@@ -477,12 +506,127 @@ export default function SurveyForm({ survey, groupToken, distributionToken, pref
         )}
       </div>
 
+      {/* Inline Section Banner */}
+      {(() => {
+        const intro = getSectionIntro(currentSectionIdx)
+        // 디버깅: intro가 없어도 섹션 이름으로 안내 표시
+        const sectionName = survey.sections[currentSectionIdx]?.name
+        if (!intro && !sectionName) return null
+
+        if (!intro) {
+          // section_intros 미설정 시 기본 섹션 헤더 배너
+          return null
+        }
+
+        const colors = INTRO_STYLE_MAP[intro.color || 'brand'] || INTRO_STYLE_MAP.brand
+        return (
+          <div
+            data-testid="section-banner"
+            className="mx-6 mt-4 mb-2 shadow-sm"
+            style={{
+              backgroundColor: colors.bg,
+              border: `1px solid ${colors.border}`,
+              borderLeft: `4px solid ${colors.bar}`,
+              borderRadius: '8px',
+            }}
+          >
+            <div style={{ padding: '14px 16px' }}>
+              {intro.image_url && (() => {
+                const size = intro.image_size || 'original'
+                const imgStyle: Record<string, string> = {
+                  height: 'auto',
+                  maxHeight: '200px',
+                  display: 'block',
+                  borderRadius: '6px',
+                }
+                if (size === 'original') {
+                  imgStyle.width = 'auto'
+                  imgStyle.maxWidth = '100%'
+                  imgStyle.margin = '0 auto 10px'
+                } else if (size === 'full') {
+                  imgStyle.width = '100%'
+                  imgStyle.marginBottom = '10px'
+                } else if (size === 'medium') {
+                  imgStyle.width = '60%'
+                  imgStyle.margin = '0 auto 10px'
+                } else if (size === 'small') {
+                  imgStyle.width = '40%'
+                  imgStyle.margin = '0 auto 10px'
+                }
+                return (
+                  <div style={{ textAlign: 'center' }}>
+                    <img src={intro.image_url} alt="" style={imgStyle} />
+                  </div>
+                )
+              })()}
+              {intro.title && (
+                <p
+                  style={{
+                    fontSize: '15px',
+                    fontWeight: 700,
+                    color: colors.color,
+                    margin: 0,
+                    lineHeight: 1.4,
+                  }}
+                >
+                  {intro.title}
+                </p>
+              )}
+              {intro.description && (
+                <p
+                  style={{
+                    fontSize: '13px',
+                    color: '#57534e',
+                    marginTop: '4px',
+                    lineHeight: 1.6,
+                    whiteSpace: 'pre-line',
+                  }}
+                >
+                  {intro.description}
+                </p>
+              )}
+            </div>
+          </div>
+        )
+      })()}
+
       {/* Questions — current section only */}
       <div className="flex-1 max-w-2xl mx-auto w-full px-6 py-6 space-y-6">
         {(() => {
           let visibleIdx = 0
           return currentSection && currentSection.questions.map((question) => {
             if (!shouldShowQuestion(question, answers)) return null
+
+            // 안내 블록 렌더링
+            if (question.type === 'info_block') {
+              const style = (question.metadata?.block_style as string) || 'info'
+              if (style === 'divider') {
+                return (
+                  <div key={question.id} id={`q-${question.id}`} className="py-2">
+                    <div className="flex items-center gap-3">
+                      <div className="flex-1 h-px bg-stone-200" />
+                      {question.text && <span className="text-xs text-stone-400 shrink-0">{String(question.text)}</span>}
+                      <div className="flex-1 h-px bg-stone-200" />
+                    </div>
+                  </div>
+                )
+              }
+              const blockColors = style === 'warning'
+                ? 'bg-amber-50 border-amber-200 text-amber-800'
+                : 'bg-blue-50 border-blue-200 text-blue-800'
+              const iconColor = style === 'warning' ? 'text-amber-500' : 'text-blue-500'
+              return (
+                <div key={question.id} id={`q-${question.id}`} className={`rounded-xl border px-4 py-3 ${blockColors}`}>
+                  <div className="flex items-start gap-2.5">
+                    <span className={`mt-0.5 shrink-0 ${iconColor}`}>
+                      {style === 'warning' ? '⚠' : 'ℹ'}
+                    </span>
+                    <p className="text-sm leading-relaxed whitespace-pre-line">{String(question.text ?? '')}</p>
+                  </div>
+                </div>
+              )
+            }
+
             visibleIdx++
             return (
             <div key={question.id} id={`q-${question.id}`} className="space-y-3">

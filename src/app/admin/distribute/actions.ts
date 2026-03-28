@@ -329,3 +329,57 @@ export async function scheduleEmailBatch(
 
   return { queued: queueInserts.length }
 }
+
+// ─── 배부 배치 목록 조회 ───
+export async function getDistributionBatches() {
+  const supabase = createAdminClient()
+  const { data: batches } = await supabase
+    .from('distribution_batches')
+    .select(`
+      id, survey_id, channel, total_count, sent_count, opened_count, completed_count, created_at,
+      edu_surveys ( title, status )
+    `)
+    .order('created_at', { ascending: false })
+
+  return (batches ?? []).map((b: any) => ({
+    id: b.id,
+    surveyId: b.survey_id,
+    surveyTitle: b.edu_surveys?.title ?? '(삭제된 설문)',
+    surveyStatus: b.edu_surveys?.status ?? 'unknown',
+    channel: b.channel,
+    totalCount: b.total_count,
+    sentCount: b.sent_count,
+    openedCount: b.opened_count,
+    completedCount: b.completed_count,
+    createdAt: b.created_at,
+  }))
+}
+
+// ─── 배치 내 개별 배부 목록 조회 ───
+export async function getDistributions(batchId: string) {
+  const supabase = createAdminClient()
+  const { data: distributions } = await supabase
+    .from('distributions')
+    .select('id, recipient_name, recipient_email, recipient_company, recipient_department, recipient_position, recipient_phone, unique_token, status, sent_at, opened_at, started_at, completed_at, created_at')
+    .eq('batch_id', batchId)
+    .order('created_at', { ascending: true })
+
+  return distributions ?? []
+}
+
+// ─── 배부 배치 삭제 ───
+export async function deleteDistributionBatch(batchId: string) {
+  const supabase = createAdminClient()
+  // distributions는 CASCADE로 자동 삭제
+  const { error } = await supabase
+    .from('distribution_batches')
+    .delete()
+    .eq('id', batchId)
+
+  if (error) {
+    console.error('Batch deletion error:', error)
+    return { error: '배부 배치 삭제에 실패했습니다' }
+  }
+
+  return { success: true }
+}

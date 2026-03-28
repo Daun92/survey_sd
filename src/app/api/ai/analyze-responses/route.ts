@@ -1,8 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
 import { analyzeOpenResponses } from '@/lib/gemini'
+import { requireAuthAPI } from '@/lib/auth'
 
 export async function POST(request: NextRequest) {
+  const auth = await requireAuthAPI()
+  if (auth.error) return auth.error
+
   try {
     const body = await request.json()
     const { questionText, responses } = body

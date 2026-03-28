@@ -51,6 +51,26 @@ export async function POST(
       }
     }
 
+    // 개별 링크(distribution) 정보 조회
+    let distRespondentName = respondent_name
+    let distributionId: string | null = null
+    if (distribution_token) {
+      const { data: dist } = await supabase
+        .from('distributions')
+        .select('id, recipient_name, recipient_email, status, batch_id')
+        .eq('unique_token', distribution_token)
+        .eq('survey_id', survey.id)
+        .single()
+
+      if (dist) {
+        if (dist.status === 'completed') {
+          return NextResponse.json({ error: '이미 응답을 완료한 링크입니다' }, { status: 400 })
+        }
+        distributionId = dist.id
+        distRespondentName = dist.recipient_name || respondent_name
+      }
+    }
+
     // total_score 계산 (숫자형 응답 합산)
     const totalScore = Object.values(answers).reduce((sum: number, val) => {
       const num = Number(val)
@@ -64,7 +84,7 @@ export async function POST(
         survey_id: survey.id,
         session_id: survey.session_id,
         class_group_id: resolvedGroupId,
-        respondent_name: respondent_name || null,
+        respondent_name: distRespondentName || null,
         respondent_department: respondent_department || null,
         respondent_position: respondent_position || null,
         answers,
@@ -84,14 +104,14 @@ export async function POST(
     }
 
     // distribution 완료 처리
-    if (distribution_token) {
+    if (distributionId) {
       await supabase
         .from('distributions')
         .update({
           status: 'completed',
           completed_at: new Date().toISOString(),
         })
-        .eq('unique_token', distribution_token)
+        .eq('id', distributionId)
     }
 
     return NextResponse.json({ success: true, id: submission.id })

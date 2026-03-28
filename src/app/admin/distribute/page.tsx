@@ -3,7 +3,7 @@ import Link from "next/link";
 import { MessageSquare } from "lucide-react";
 import DistributeTabs from "./distribute-tabs";
 
-export const revalidate = 60;
+export const revalidate = 0;
 
 async function getSurveyData() {
   const { data: surveys } = await supabase
@@ -30,8 +30,34 @@ async function getSurveyData() {
   }));
 }
 
+async function getDistributionBatches() {
+  const { data: batches } = await supabase
+    .from("distribution_batches")
+    .select(`
+      id, survey_id, channel, total_count, sent_count, opened_count, completed_count, created_at,
+      edu_surveys ( title, status )
+    `)
+    .eq("channel", "link")
+    .order("created_at", { ascending: false });
+
+  return (batches ?? []).map((b: any) => ({
+    id: b.id,
+    surveyId: b.survey_id,
+    surveyTitle: b.edu_surveys?.title ?? "(삭제된 설문)",
+    surveyStatus: b.edu_surveys?.status ?? "unknown",
+    totalCount: b.total_count,
+    sentCount: b.sent_count,
+    openedCount: b.opened_count,
+    completedCount: b.completed_count,
+    createdAt: b.created_at,
+  }));
+}
+
 export default async function DistributePage() {
-  const surveys = await getSurveyData();
+  const [surveys, batches] = await Promise.all([
+    getSurveyData(),
+    getDistributionBatches(),
+  ]);
 
   return (
     <div>

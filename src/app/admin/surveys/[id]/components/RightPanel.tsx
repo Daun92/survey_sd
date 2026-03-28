@@ -1,9 +1,10 @@
 "use client";
 
-import { Eye, Pencil } from "lucide-react";
+import { Eye, Pencil, Layers } from "lucide-react";
 import SurveyPreview from "../survey-preview";
 import { QuestionForm } from "./QuestionForm";
-import { type Question, type SurveySettings, type PanelMode, type PreviewTab } from "./types";
+import { SectionForm } from "./SectionForm";
+import { type Question, type SurveySettings, type SectionIntro, type PanelMode, type PreviewTab } from "./types";
 
 interface Props {
   panelMode: PanelMode;
@@ -15,6 +16,10 @@ interface Props {
   questions: Question[];
   liveSettings: SurveySettings;
   editingQuestion: Question | null;
+  editingSectionName: string | null;
+  editingSectionQuestionCount: number;
+  sectionNames: string[];
+  defaultSection: string | null;
   nextSortOrder: number;
   onSaved: () => void;
   onCancel: () => void;
@@ -24,10 +29,13 @@ interface Props {
 export function RightPanel({
   panelMode, previewTab, onPreviewTabChange,
   surveyId, surveyTitle, surveyDescription, questions, liveSettings,
-  editingQuestion, nextSortOrder,
+  editingQuestion, editingSectionName, editingSectionQuestionCount,
+  sectionNames, defaultSection,
+  nextSortOrder,
   onSaved, onCancel, onDeleted,
 }: Props) {
   const isPreview = panelMode === "preview";
+  const isSectionEdit = panelMode === "section_edit";
 
   return (
     <div className="sticky top-4 h-[calc(100vh-3rem)] overflow-y-auto">
@@ -41,9 +49,14 @@ export function RightPanel({
         >
           <Eye size={13} /> 미리보기
         </button>
-        {!isPreview && (
+        {!isPreview && !isSectionEdit && (
           <span className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-teal-600 text-white">
             <Pencil size={13} /> {panelMode === "add" ? "문항 추가" : "문항 편집"}
+          </span>
+        )}
+        {isSectionEdit && (
+          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-teal-600 text-white">
+            <Layers size={13} /> 섹션 편집
           </span>
         )}
       </div>
@@ -57,13 +70,27 @@ export function RightPanel({
           activeTab={previewTab}
           onTabChange={onPreviewTabChange}
         />
+      ) : isSectionEdit && editingSectionName ? (
+        <div className="rounded-xl border border-stone-200 bg-white shadow-sm p-5">
+          <SectionForm
+            key={editingSectionName}
+            surveyId={surveyId}
+            sectionName={editingSectionName}
+            questionCount={editingSectionQuestionCount}
+            intro={liveSettings.section_intros?.[editingSectionName]}
+            onDone={onSaved}
+            onCancel={onCancel}
+          />
+        </div>
       ) : (
         <div className="rounded-xl border border-stone-200 bg-white shadow-sm p-5">
           <QuestionForm
-            key={panelMode === "edit" ? editingQuestion?.id : "__add__"}
+            key={panelMode === "edit" ? editingQuestion?.id : `__add__${defaultSection}`}
             surveyId={surveyId}
             question={panelMode === "edit" ? (editingQuestion ?? undefined) : undefined}
             allQuestions={questions}
+            sectionNames={sectionNames}
+            defaultSection={defaultSection ?? undefined}
             nextSortOrder={nextSortOrder}
             onDone={onSaved}
             onCancel={onCancel}

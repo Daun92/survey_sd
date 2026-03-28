@@ -1,10 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
+import { requireAuthAPI } from '@/lib/auth'
 
 export async function GET(
   _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const auth = await requireAuthAPI()
+  if (auth.error) return auth.error
+
   try {
     const { id: surveyId } = await params
 
