@@ -10,7 +10,7 @@ import {
 import {
   arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
-import { reorderTemplateQuestions, updateQuestionSectionLabel } from "../actions";
+import { reorderTemplateQuestions, updateQuestionSectionLabel, getTemplateSettings } from "../actions";
 
 import { type CSQuestion, type SurveySettings, type PanelMode, type PreviewTab } from "./components/types";
 import { TemplateInfoEditor } from "./components/TemplateInfoEditor";
@@ -37,6 +37,7 @@ export function TemplateEditor({ templateId, templateName, templateDescription, 
   const [editingSectionName, setEditingSectionName] = useState<string | null>(null);
   const [previewTab, setPreviewTab] = useState<PreviewTab>("landing");
   const [liveSettings, setLiveSettings] = useState<SurveySettings>(initialSettings);
+  const [settingsVersion, setSettingsVersion] = useState(0);
   const [collapsedSections, setCollapsedSections] = useState<Set<string>>(new Set());
   const [addToSection, setAddToSection] = useState<string | null>(null);
   const [mobilePanel, setMobilePanel] = useState(false);
@@ -114,12 +115,16 @@ export function TemplateEditor({ templateId, templateName, templateDescription, 
     });
   };
 
-  const handlePanelSaved = () => {
+  const handlePanelSaved = async () => {
     setPanelMode("preview");
     setPreviewTab("questions");
     setEditingQuestionId(null);
     setEditingSectionName(null);
     setAddToSection(null);
+    // settings를 DB에서 재조회하여 동기화 (섹션 인트로 등 서버에서 직접 변경된 값 반영)
+    const freshSettings = await getTemplateSettings(templateId);
+    setLiveSettings(freshSettings as SurveySettings);
+    setSettingsVersion((v) => v + 1);
     refresh();
   };
 
@@ -159,6 +164,7 @@ export function TemplateEditor({ templateId, templateName, templateDescription, 
 
         {/* Settings */}
         <SettingsPanel
+          key={settingsVersion}
           templateId={templateId}
           initialSettings={liveSettings}
           onSettingsChange={setLiveSettings}
