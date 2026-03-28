@@ -43,19 +43,13 @@ export default function DistributeClient({ surveys }: { surveys: SurveyItem[] })
 
   if (surveys.length === 0) {
     return (
-      <div>
-        <div className="mb-6">
-          <h1 className="text-xl font-bold text-stone-800">QR 배포</h1>
-          <p className="text-sm text-stone-500 mt-1">설문 URL과 QR코드를 생성하여 배포하세요</p>
-        </div>
-        <Card>
-          <CardContent className="py-12 text-center">
-            <QrCode size={40} className="mx-auto text-stone-300 mb-3" />
-            <p className="text-sm text-stone-400">배포 가능한 설문이 없습니다</p>
-            <p className="text-xs text-stone-400 mt-1">설문을 생성하고 활성화하면 QR코드를 배포할 수 있습니다</p>
-          </CardContent>
-        </Card>
-      </div>
+      <Card>
+        <CardContent className="py-12 text-center">
+          <QrCode size={40} className="mx-auto text-stone-300 mb-3" />
+          <p className="text-sm text-stone-400">배포 가능한 설문이 없습니다</p>
+          <p className="text-xs text-stone-400 mt-1">설문을 생성하고 활성화하면 QR코드를 배포할 수 있습니다</p>
+        </CardContent>
+      </Card>
     )
   }
 
@@ -65,11 +59,7 @@ export default function DistributeClient({ surveys }: { surveys: SurveyItem[] })
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-xl font-bold text-stone-800">QR 배포</h1>
-          <p className="text-sm text-stone-500 mt-1">설문 URL과 QR코드를 생성하여 배포하세요</p>
-        </div>
+      <div className="flex items-center justify-end mb-6">
         <Button variant="outline" onClick={handlePrint}>
           <Printer size={16} className="mr-1.5" />
           QR 인쇄

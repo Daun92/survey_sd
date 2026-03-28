@@ -1,7 +1,7 @@
 import { supabase } from "@/lib/supabase";
 import Link from "next/link";
 import { MessageSquare } from "lucide-react";
-import DistributeClient from "./distribute-client";
+import DistributeTabs from "./distribute-tabs";
 
 export const revalidate = 60;
 
@@ -35,7 +35,7 @@ export default async function DistributePage() {
 
   return (
     <div>
-      <DistributeClient surveys={surveys} />
+      <DistributeTabs surveys={surveys} />
       {/* 워크플로우 다음 단계 */}
       <div className="mt-6 rounded-xl border border-stone-200 bg-white shadow-sm p-5 flex items-center justify-between">
         <div>

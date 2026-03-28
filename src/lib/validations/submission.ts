@@ -9,6 +9,7 @@ export const submitSurveySchema = z.object({
   respondent_position: z.string().max(100).nullable().optional(),
   respondent_info: z.record(z.string(), z.string()).optional(),
   class_group_id: z.string().nullable().optional(),
+  distribution_token: z.string().nullable().optional(),
 });
 
 export const submitHrdResponseSchema = z.object({

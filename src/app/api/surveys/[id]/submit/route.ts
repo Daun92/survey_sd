@@ -18,7 +18,7 @@ export async function POST(
       )
     }
 
-    const { answers, respondent_name, respondent_department, respondent_position, class_group_id } = parsed.data
+    const { answers, respondent_name, respondent_department, respondent_position, class_group_id, distribution_token } = parsed.data
 
     // 설문 조회
     const { data: survey, error: surveyError } = await supabase
@@ -81,6 +81,17 @@ export async function POST(
     if (submitError) {
       console.error('Submission error:', submitError)
       return NextResponse.json({ error: '응답 저장에 실패했습니다' }, { status: 500 })
+    }
+
+    // distribution 완료 처리
+    if (distribution_token) {
+      await supabase
+        .from('distributions')
+        .update({
+          status: 'completed',
+          completed_at: new Date().toISOString(),
+        })
+        .eq('unique_token', distribution_token)
     }
 
     return NextResponse.json({ success: true, id: submission.id })

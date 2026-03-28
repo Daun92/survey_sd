@@ -93,10 +93,27 @@ function MobileFrame({ children }: { children: React.ReactNode }) {
   )
 }
 
-export default function SurveyForm({ survey, groupToken }: { survey: SurveyData; groupToken: string | null }) {
+interface PrefillRespondent {
+  name?: string
+  department?: string
+  position?: string
+}
+
+export default function SurveyForm({ survey, groupToken, distributionToken, prefillRespondent }: {
+  survey: SurveyData
+  groupToken: string | null
+  distributionToken?: string
+  prefillRespondent?: PrefillRespondent
+}) {
   const [step, setStep] = useState<Step>('landing')
   const [answers, setAnswers] = useState<Record<string, number | string>>({})
-  const [respondentInfo, setRespondentInfo] = useState<Record<string, string>>({})
+  const [respondentInfo, setRespondentInfo] = useState<Record<string, string>>(() => {
+    const initial: Record<string, string> = {}
+    if (prefillRespondent?.name) initial.name = prefillRespondent.name
+    if (prefillRespondent?.department) initial.department = prefillRespondent.department
+    if (prefillRespondent?.position) initial.position = prefillRespondent.position
+    return initial
+  })
   const [consentChecked, setConsentChecked] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -135,6 +152,14 @@ export default function SurveyForm({ survey, groupToken }: { survey: SurveyData;
     startTimeRef.current = Date.now()
     setStep('questions')
     scrollToTop()
+    // distribution 상태를 started로 업데이트
+    if (distributionToken) {
+      fetch(`/api/distributions/${distributionToken}/status`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'started' }),
+      }).catch(() => {}) // 실패해도 설문 진행에 영향 없음
+    }
   }
 
   const handleSubmit = async () => {
@@ -153,6 +178,7 @@ export default function SurveyForm({ survey, groupToken }: { survey: SurveyData;
           respondent_position: respondentInfo.position || null,
           respondent_info: respondentInfo,
           class_group_id: groupToken || null,
+          distribution_token: distributionToken || null,
         }),
       })
 
@@ -258,16 +284,20 @@ export default function SurveyForm({ survey, groupToken }: { survey: SurveyData;
             <div className="space-y-2.5">
               <p className="text-[11px] font-semibold text-stone-500 uppercase tracking-widest">응답자 정보</p>
               <div className="grid grid-cols-2 gap-2">
-                {respondentFields.map((field) => (
-                  <Input
-                    key={field.id}
-                    placeholder={`${field.label}${field.required ? ' *' : ''}`}
-                    type={field.id === 'email' ? 'email' : field.id === 'phone' ? 'tel' : 'text'}
-                    value={respondentInfo[field.id] || ''}
-                    onChange={(e) => setRespondentInfo(prev => ({ ...prev, [field.id]: e.target.value }))}
-                    className="h-10 rounded-xl text-sm"
-                  />
-                ))}
+                {respondentFields.map((field) => {
+                  const isPrefilled = !!prefillRespondent && !!(prefillRespondent as any)[field.id]
+                  return (
+                    <Input
+                      key={field.id}
+                      placeholder={`${field.label}${field.required ? ' *' : ''}`}
+                      type={field.id === 'email' ? 'email' : field.id === 'phone' ? 'tel' : 'text'}
+                      value={respondentInfo[field.id] || ''}
+                      onChange={(e) => setRespondentInfo(prev => ({ ...prev, [field.id]: e.target.value }))}
+                      readOnly={isPrefilled}
+                      className={`h-10 rounded-xl text-sm ${isPrefilled ? 'bg-stone-100 text-stone-500' : ''}`}
+                    />
+                  )
+                })}
               </div>
             </div>
           )}
