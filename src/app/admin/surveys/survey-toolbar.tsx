@@ -8,7 +8,7 @@ import { SurveyListClient, ViewToggle, type SurveyItem } from "./survey-list-cli
 export type { SurveyItem };
 
 type SortKey = "starts_at" | "title" | "submission_count" | "customer_name";
-type GroupKey = "none" | "customer_name" | "status" | "month";
+type GroupKey = "none" | "customer_name" | "project_name" | "status" | "month";
 
 const sortOptions: { key: SortKey; label: string }[] = [
   { key: "starts_at", label: "배포일" },
@@ -20,6 +20,7 @@ const sortOptions: { key: SortKey; label: string }[] = [
 const groupOptions: { key: GroupKey; label: string }[] = [
   { key: "none", label: "그룹 없음" },
   { key: "customer_name", label: "고객사" },
+  { key: "project_name", label: "프로젝트" },
   { key: "status", label: "상태" },
   { key: "month", label: "배포월" },
 ];
@@ -55,6 +56,8 @@ function groupSurveys(surveys: SurveyItem[], key: GroupKey): { label: string; it
     let groupLabel: string;
     if (key === "customer_name") {
       groupLabel = s.customer_name || "고객사 미지정";
+    } else if (key === "project_name") {
+      groupLabel = s.project_name || "프로젝트 미지정";
     } else if (key === "status") {
       groupLabel = statusLabels[s.status] || s.status;
     } else {
