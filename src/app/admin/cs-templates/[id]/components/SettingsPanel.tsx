@@ -203,6 +203,10 @@ export function SettingsPanel({ templateId, initialSettings, onSettingsChange, o
               <input type="text" value={settings.thank_you_message ?? ""} onChange={(e) => update({ thank_you_message: e.target.value })} placeholder="소중한 의견에 감사드립니다." className="w-full rounded-lg border border-stone-200 px-3 py-2 text-sm focus:border-teal-500 focus:ring-1 focus:ring-teal-500 outline-none" />
             </div>
           </div>
+          <label className="flex items-center gap-2.5 rounded-lg border border-stone-200 px-3 py-2.5 cursor-pointer hover:bg-stone-50 transition-colors">
+            <input type="checkbox" checked={settings.show_ending_stats ?? false} onChange={(e) => update({ show_ending_stats: e.target.checked })} className="accent-teal-600" />
+            <span className="text-sm text-stone-700">엔딩 페이지에 응답 수 · 소요시간 표시</span>
+          </label>
 
           <button onClick={handleSave} disabled={saving} className="inline-flex items-center gap-1.5 rounded-lg bg-teal-600 px-4 py-2 text-xs font-semibold text-white hover:bg-teal-700 transition-colors disabled:opacity-50">
             {saving ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />} 설정 저장

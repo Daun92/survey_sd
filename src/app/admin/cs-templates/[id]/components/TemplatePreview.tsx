@@ -299,17 +299,19 @@ function EndingPreview({ settings }: { settings: SurveySettings }) {
       <p className="text-sm text-stone-500 whitespace-pre-line leading-relaxed mb-6">
         {settings.thank_you_message || "소중한 의견에 감사드립니다.\n응답 내용은 서비스 품질 개선에 활용됩니다."}
       </p>
-      <div className="flex items-center gap-4 text-stone-400 mb-8">
-        <div className="text-center">
-          <p className="text-lg font-bold text-stone-600">--</p>
-          <p className="text-[10px]">응답 수</p>
+      {settings.show_ending_stats && (
+        <div className="flex items-center gap-4 text-stone-400 mb-8">
+          <div className="text-center">
+            <p className="text-lg font-bold text-stone-600">--</p>
+            <p className="text-[10px]">응답 수</p>
+          </div>
+          <div className="h-6 w-px bg-stone-200" />
+          <div className="text-center">
+            <p className="text-lg font-bold text-stone-600">--</p>
+            <p className="text-[10px]">소요 시간</p>
+          </div>
         </div>
-        <div className="h-6 w-px bg-stone-200" />
-        <div className="text-center">
-          <p className="text-lg font-bold text-stone-600">--</p>
-          <p className="text-[10px]">소요 시간</p>
-        </div>
-      </div>
+      )}
       <div className="flex items-center gap-2 opacity-30">
         <Image src="/logo_exc.png" alt="EXPERT" width={60} height={12} className="h-3 w-auto" />
       </div>

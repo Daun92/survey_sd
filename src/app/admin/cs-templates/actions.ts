@@ -170,28 +170,35 @@ export async function addTemplateQuestion(templateId: string, data: {
   section_label?: string;
   page_type?: string;
   sort_order: number;
+  is_required?: boolean;
+  skip_logic?: unknown;
+  metadata?: unknown;
 }) {
-  const { error } = await supabase
-    .from("cs_survey_questions")
-    .insert({ template_id: templateId, ...data, page_type: data.page_type || "1P", result_column: data.question_no || "" });
+  const { skip_logic, metadata, ...rest } = data;
+  const insertData: Record<string, unknown> = {
+    template_id: templateId,
+    ...rest,
+    page_type: data.page_type || "1P",
+    result_column: data.question_no || "",
+    is_required: data.is_required ?? true,
+  };
+  if (skip_logic) insertData.skip_logic = skip_logic;
+  if (metadata) insertData.metadata = metadata;
+
+  const { error } = await supabase.from("cs_survey_questions").insert(insertData);
   if (error) throw new Error("문항 추가 실패: " + error.message);
   revalidatePath(`/admin/cs-templates/${templateId}`);
 }
 
 // ── 템플릿 문항 수정 ──
-export async function updateTemplateQuestion(questionId: string, templateId: string, data: {
-  question_no?: string;
-  question_text?: string;
-  question_type?: string;
-  response_options?: string;
-  section_label?: string;
-}) {
+export async function updateTemplateQuestion(questionId: string, templateId: string, data: Record<string, unknown>) {
   const updateData: Record<string, unknown> = {};
-  if (data.question_no !== undefined) updateData.question_no = data.question_no;
-  if (data.question_text !== undefined) updateData.question_text = data.question_text;
-  if (data.question_type !== undefined) updateData.question_type = data.question_type;
-  if (data.response_options !== undefined) updateData.response_options = data.response_options;
-  if (data.section_label !== undefined) updateData.section_label = data.section_label;
+  const fields = ["question_no", "question_text", "question_type", "response_options", "section_label", "is_required"];
+  for (const key of fields) {
+    if (data[key] !== undefined) updateData[key] = data[key];
+  }
+  if (data.skip_logic !== undefined) updateData.skip_logic = data.skip_logic;
+  if (data.metadata !== undefined) updateData.metadata = data.metadata;
 
   const { error } = await supabase.from("cs_survey_questions").update(updateData).eq("id", questionId);
   if (error) throw new Error("문항 수정 실패: " + error.message);

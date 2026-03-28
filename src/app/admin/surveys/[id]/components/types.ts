@@ -35,6 +35,7 @@ export interface SurveySettings {
   require_consent?: boolean;
   hero_image_url?: string;
   show_meta_info?: boolean;
+  show_ending_stats?: boolean;
   respondent_fields?: RespondentFieldConfig[];
   section_intros?: Record<string, SectionIntro>;
 }

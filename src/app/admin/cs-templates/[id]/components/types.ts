@@ -11,6 +11,14 @@ export {
   likertLabels,
 } from "@/app/admin/surveys/[id]/components/types";
 
+export interface SkipLogic {
+  show_when: {
+    question_id: string;
+    operator: "equals" | "not_equals" | "greater_than" | "less_than";
+    value: string | number;
+  };
+}
+
 // CS 템플릿 전용 문항 타입
 export interface CSQuestion {
   id: string;
@@ -22,6 +30,9 @@ export interface CSQuestion {
   response_options: string | null;
   section_label: string | null;
   sort_order: number;
+  is_required?: boolean;
+  skip_logic?: SkipLogic | null;
+  metadata?: Record<string, unknown> | null;
 }
 
 // CS 템플릿 타입
