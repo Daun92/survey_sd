@@ -3,6 +3,16 @@
 import { supabase } from "@/lib/supabase";
 import { revalidatePath } from "next/cache";
 
+// ── 템플릿 settings 조회 ──
+export async function getTemplateSettings(templateId: string) {
+  const { data } = await supabase
+    .from("cs_survey_templates")
+    .select("settings")
+    .eq("id", templateId)
+    .single();
+  return (data?.settings as Record<string, unknown>) ?? {};
+}
+
 // ── 템플릿 복제 ──
 export async function duplicateTemplate(templateId: string) {
   // 원본 템플릿 조회
@@ -148,6 +158,7 @@ export async function updateTemplate(templateId: string, data: { name?: string; 
     .eq("id", templateId);
   if (error) throw new Error("수정 실패: " + error.message);
   revalidatePath("/admin/cs-templates");
+  revalidatePath(`/admin/cs-templates/${templateId}`);
 }
 
 // ── 템플릿 문항 추가 ──

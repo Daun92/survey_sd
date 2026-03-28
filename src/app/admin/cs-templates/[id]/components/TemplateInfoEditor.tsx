@@ -40,7 +40,7 @@ export function TemplateInfoEditor({ templateId, name: initialName, description:
     return (
       <div className="flex items-center justify-between gap-4">
         <div className="flex items-center gap-3 min-w-0">
-          <h1 className="text-lg font-bold text-stone-800 truncate">{initialName}</h1>
+          <h1 className="text-lg font-bold text-stone-800 truncate">{name}</h1>
         </div>
         <button onClick={() => setEditing(true)} className="shrink-0 inline-flex items-center gap-1.5 rounded-lg border border-stone-300 px-3 py-1.5 text-xs font-medium text-stone-600 hover:bg-stone-50 transition-colors">
           <Pencil size={12} /> 수정
