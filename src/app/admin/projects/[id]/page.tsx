@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { formatDate } from "@/lib/utils";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
@@ -42,12 +43,6 @@ const sessionStatusLabels: Record<string, { label: string; className: string }> 
   completed: { label: "완료", className: "bg-rose-100 text-rose-800" },
   cancelled: { label: "취소", className: "bg-red-100 text-red-800" },
 };
-
-function formatDate(dateStr: string | null) {
-  if (!dateStr) return "-";
-  const d = new Date(dateStr);
-  return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, "0")}.${String(d.getDate()).padStart(2, "0")}`;
-}
 
 async function getProjectDetail(supabase: Awaited<ReturnType<typeof createClient>>, id: string) {
   const [

@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { formatDate } from "@/lib/utils";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
@@ -11,12 +12,6 @@ import {
 import SurveyEditor from "./SurveyEditor";
 
 export const dynamic = "force-dynamic";
-
-function formatDate(dateStr: string | null) {
-  if (!dateStr) return "-";
-  const d = new Date(dateStr);
-  return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, "0")}.${String(d.getDate()).padStart(2, "0")}`;
-}
 
 async function getSurveyDetail(supabase: Awaited<ReturnType<typeof createClient>>, id: string) {
   const [

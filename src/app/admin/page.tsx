@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { formatDate } from "@/lib/utils";
 import Link from "next/link";
 import {
   ClipboardList,
@@ -235,11 +236,6 @@ function formatRelativeTime(dateStr: string) {
   if (hours < 24) return `${hours}시간 전`;
   const days = Math.floor(hours / 24);
   return `${days}일 전`;
-}
-
-function formatDate(dateStr: string) {
-  const d = new Date(dateStr);
-  return `${d.getMonth() + 1}/${d.getDate()}`;
 }
 
 // ─── 페이지 렌더 ───

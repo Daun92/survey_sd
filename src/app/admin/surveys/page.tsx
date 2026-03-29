@@ -23,7 +23,8 @@ async function getSurveys(supabase: Awaited<ReturnType<typeof createClient>>, st
         )
       )
     `)
-    .order("starts_at", { ascending: false, nullsFirst: false });
+    .order("starts_at", { ascending: false, nullsFirst: false })
+    .limit(500);
 
   if (statusFilter && statusFilter !== "all") {
     q = q.eq("status", statusFilter);

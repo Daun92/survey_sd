@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { formatDate } from "@/lib/utils";
 import {
   FileSearch,
   Calendar,
@@ -20,12 +21,6 @@ const statusLabels: Record<string, { label: string; className: string }> = {
   analyzing: { label: "분석 중", className: "bg-amber-100 text-amber-800" },
   published: { label: "발행 완료", className: "bg-blue-100 text-blue-800" },
 };
-
-function formatDate(dateStr: string | null) {
-  if (!dateStr) return "-";
-  const d = new Date(dateStr);
-  return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, "0")}.${String(d.getDate()).padStart(2, "0")}`;
-}
 
 async function getData() {
   const supabase = await createClient();

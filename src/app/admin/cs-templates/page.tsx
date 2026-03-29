@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { formatDate } from "@/lib/utils";
 import Link from "next/link";
 import {
   ListChecks,
@@ -46,11 +47,6 @@ async function getSurveys() {
     title: s.title,
     questionCount: (s.edu_questions as unknown as { count: number }[])?.[0]?.count ?? 0,
   }));
-}
-
-function formatDate(dateStr: string) {
-  const d = new Date(dateStr);
-  return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, "0")}.${String(d.getDate()).padStart(2, "0")}`;
 }
 
 export default async function CSTemplatesPage() {

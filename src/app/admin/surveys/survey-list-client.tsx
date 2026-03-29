@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { formatDate } from "@/lib/utils";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -77,25 +78,19 @@ const statusLabels: Record<string, { label: string; className: string }> = {
   draft: { label: "초안", className: "border border-stone-200 text-stone-700 bg-white" },
 };
 
-function formatDate(dateStr: string | null) {
+function formatDateShort(dateStr: string | null) {
   if (!dateStr) return "-";
   const d = new Date(dateStr);
   return `${String(d.getMonth() + 1).padStart(2, "0")}.${String(d.getDate()).padStart(2, "0")}`;
-}
-
-function formatDateFull(dateStr: string | null) {
-  if (!dateStr) return "-";
-  const d = new Date(dateStr);
-  return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, "0")}.${String(d.getDate()).padStart(2, "0")}`;
 }
 
 function DateRange({ starts_at, ends_at }: { starts_at: string | null; ends_at: string | null }) {
   if (!starts_at && !ends_at) return <span className="text-stone-400">미정</span>;
   return (
     <span className="text-[13px] text-stone-600">
-      {formatDateFull(starts_at)}
+      {formatDate(starts_at)}
       <span className="text-stone-300 mx-0.5">~</span>
-      {formatDate(ends_at)}
+      {formatDateShort(ends_at)}
     </span>
   );
 }

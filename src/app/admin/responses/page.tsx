@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { formatDate } from "@/lib/utils";
 import Link from "next/link";
 import { Eye, MessageSquare, Inbox } from "lucide-react";
 
@@ -8,12 +9,6 @@ const statusLabels: Record<string, { label: string; className: string }> = {
   active: { label: "진행중", className: "bg-emerald-100 text-emerald-800" },
   closed: { label: "마감", className: "bg-rose-100 text-rose-800" },
 };
-
-function formatDate(dateStr: string | null) {
-  if (!dateStr) return "-";
-  const d = new Date(dateStr);
-  return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, "0")}.${String(d.getDate()).padStart(2, "0")}`;
-}
 
 interface SurveyWithResponses {
   id: string;
@@ -32,7 +27,8 @@ async function getSurveysWithResponses(supabase: Awaited<ReturnType<typeof creat
     supabase
       .from("edu_surveys")
       .select("id, title, status, session_id, sessions(name, capacity), edu_submissions(count)")
-      .order("created_at", { ascending: false }),
+      .order("created_at", { ascending: false })
+      .limit(500),
     supabase
       .from("edu_submissions")
       .select("survey_id, total_score"),

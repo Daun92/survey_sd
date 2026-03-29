@@ -7,7 +7,8 @@ async function getRespondents(supabase: Awaited<ReturnType<typeof createClient>>
   const { data } = await supabase
     .from("respondents")
     .select("*, customers:customer_id(id, company_name)")
-    .order("created_at", { ascending: false });
+    .order("created_at", { ascending: false })
+    .limit(500);
   return data ?? [];
 }
 

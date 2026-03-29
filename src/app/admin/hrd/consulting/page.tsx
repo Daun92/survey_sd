@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { formatDate } from "@/lib/utils";
 import { Building2, FileText } from "lucide-react";
 
 export const revalidate = 60;
@@ -14,12 +15,6 @@ const statusLabels: Record<string, { label: string; className: string }> = {
     className: "border border-stone-200 text-stone-700",
   },
 };
-
-function formatDate(dateStr: string | null) {
-  if (!dateStr) return "-";
-  const d = new Date(dateStr);
-  return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, "0")}.${String(d.getDate()).padStart(2, "0")}`;
-}
 
 async function getData() {
   const supabase = await createClient();

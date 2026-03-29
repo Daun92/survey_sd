@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { formatDate } from "@/lib/utils";
 import Link from "next/link";
 import {
   BarChart3,
@@ -31,11 +32,6 @@ const ResponseTrend = dynamic(
 );
 
 export const revalidate = 60;
-
-function formatDate(dateStr: string) {
-  const d = new Date(dateStr);
-  return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, "0")}.${String(d.getDate()).padStart(2, "0")}`;
-}
 
 async function getSurveyReport(surveyId: string) {
   // 1단계: survey 존재 확인 (빠름)
