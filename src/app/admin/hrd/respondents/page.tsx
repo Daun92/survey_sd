@@ -1,4 +1,5 @@
-import { supabase } from "@/lib/supabase";
+import { createClient } from "@/lib/supabase/server";
+import { formatDate } from "@/lib/utils";
 import { Users } from "lucide-react";
 import { RespondentActions } from "./respondent-actions";
 
@@ -11,13 +12,8 @@ const statusLabels: Record<string, { label: string; className: string }> = {
   verified: { label: "검증됨", className: "bg-violet-100 text-violet-800" },
 };
 
-function formatDate(dateStr: string | null) {
-  if (!dateStr) return "-";
-  const d = new Date(dateStr);
-  return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, "0")}.${String(d.getDate()).padStart(2, "0")}`;
-}
-
 async function getData() {
+  const supabase = await createClient();
   const [{ data: respondents }, { data: rounds }] = await Promise.all([
     supabase
       .from("hrd_respondents")

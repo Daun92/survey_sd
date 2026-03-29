@@ -1,4 +1,4 @@
-import { supabase } from "@/lib/supabase";
+import { createClient } from "@/lib/supabase/server";
 import {
   Target,
   CheckCircle,
@@ -19,6 +19,7 @@ const respondentStatusLabels: Record<
 };
 
 async function getData() {
+  const supabase = await createClient();
   const { data: currentRound } = await supabase
     .from("hrd_survey_rounds")
     .select("id, title, year, round_number, status, target_count")

@@ -1,4 +1,5 @@
-import { supabase } from "@/lib/supabase";
+import { createClient } from "@/lib/supabase/server";
+import { formatDate } from "@/lib/utils";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, ListChecks, Calendar } from "lucide-react";
@@ -18,13 +19,8 @@ const questionTypeLabels: Record<string, string> = {
   yes_no: "예/아니오",
 };
 
-function formatDate(dateStr: string | null) {
-  if (!dateStr) return "-";
-  const d = new Date(dateStr);
-  return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, "0")}.${String(d.getDate()).padStart(2, "0")}`;
-}
-
 async function getTemplateDetail(id: string) {
+  const supabase = await createClient();
   const [{ data: template, error }, { data: questions }] = await Promise.all([
     supabase
       .from("cs_survey_templates")

@@ -1,11 +1,11 @@
-import { supabase } from "@/lib/supabase";
+import { createClient } from "@/lib/supabase/server";
 import Link from "next/link";
 import { Plus } from "lucide-react";
 import { SurveyToolbar, type SurveyItem } from "./survey-toolbar";
 
 export const revalidate = 60;
 
-async function getSurveys(statusFilter?: string, query?: string): Promise<SurveyItem[]> {
+async function getSurveys(supabase: Awaited<ReturnType<typeof createClient>>, statusFilter?: string, query?: string): Promise<SurveyItem[]> {
   let q = supabase
     .from("edu_surveys")
     .select(`
@@ -23,7 +23,8 @@ async function getSurveys(statusFilter?: string, query?: string): Promise<Survey
         )
       )
     `)
-    .order("starts_at", { ascending: false, nullsFirst: false });
+    .order("starts_at", { ascending: false, nullsFirst: false })
+    .limit(500);
 
   if (statusFilter && statusFilter !== "all") {
     q = q.eq("status", statusFilter);
@@ -80,7 +81,7 @@ async function getSurveys(statusFilter?: string, query?: string): Promise<Survey
   return result;
 }
 
-async function getStatusCounts() {
+async function getStatusCounts(supabase: Awaited<ReturnType<typeof createClient>>) {
   // 상태별 count를 병렬로 조회 (전체 row를 가져오지 않음)
   const [total, active, closed, draft] = await Promise.all([
     supabase.from("edu_surveys").select("*", { count: "exact", head: true }),
@@ -101,13 +102,14 @@ export default async function SurveysPage({
 }: {
   searchParams: Promise<{ status?: string; q?: string }>;
 }) {
+  const supabase = await createClient();
   const params = await searchParams;
   const statusFilter = params.status || "all";
   const query = params.q || "";
 
   const [surveys, counts] = await Promise.all([
-    getSurveys(statusFilter, query),
-    getStatusCounts(),
+    getSurveys(supabase, statusFilter, query),
+    getStatusCounts(supabase),
   ]);
 
   const tabs = [

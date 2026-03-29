@@ -1,10 +1,11 @@
-import { supabase } from "@/lib/supabase";
+import { createClient } from "@/lib/supabase/server";
 import { PenTool, Layers, Hash, CheckCircle, XCircle } from "lucide-react";
 import { DesignActions } from "./design-actions";
 
 export const revalidate = 60;
 
 async function getData() {
+  const supabase = await createClient();
   const [{ data: parts }, { data: rounds }] = await Promise.all([
     supabase
       .from("hrd_survey_parts")

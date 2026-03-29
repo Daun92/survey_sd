@@ -1,16 +1,12 @@
-import { supabase } from "@/lib/supabase";
+import { createClient } from "@/lib/supabase/server";
+import { formatDateTime } from "@/lib/utils";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, Download, Users, FileText } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
-function formatDateTime(dateStr: string) {
-  const d = new Date(dateStr);
-  return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, "0")}.${String(d.getDate()).padStart(2, "0")} ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
-}
-
-async function getResponseDetail(surveyId: string) {
+async function getResponseDetail(supabase: Awaited<ReturnType<typeof createClient>>, surveyId: string) {
   const [{ data: survey, error: surveyError }, { data: questions }, { data: submissions }] =
     await Promise.all([
       supabase
@@ -47,8 +43,9 @@ export default async function ResponseDetailPage({
 }: {
   params: Promise<{ surveyId: string }>;
 }) {
+  const supabase = await createClient();
   const { surveyId } = await params;
-  const data = await getResponseDetail(surveyId);
+  const data = await getResponseDetail(supabase, surveyId);
 
   if (!data) return notFound();
 

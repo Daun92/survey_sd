@@ -1,4 +1,4 @@
-import { supabase } from '@/lib/supabase'
+import { createClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
 import SurveyForm from './survey-form'
 
@@ -21,6 +21,8 @@ interface SurveySection {
 
 async function getSurveyByToken(token: string) {
   try {
+    const supabase = await createClient()
+
     // 설문 기본 정보
     const { data: survey, error } = await supabase
       .from('edu_surveys')

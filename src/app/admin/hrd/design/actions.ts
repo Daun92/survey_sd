@@ -1,6 +1,6 @@
 "use server";
 
-import { supabase } from "@/lib/supabase";
+import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import type { HrdAnswerType, ConditionalLogic, ValidationRule, AnswerOption } from "@/types/hrd-survey";
 
@@ -13,6 +13,7 @@ export async function addPart(data: {
   description?: string;
   sort_order: number;
 }) {
+  const supabase = await createClient();
   const { error } = await supabase.from("hrd_survey_parts").insert({
     round_id: data.round_id,
     part_code: data.part_code,
@@ -35,6 +36,7 @@ export async function updatePart(
     is_active?: boolean;
   }
 ) {
+  const supabase = await createClient();
   const { error } = await supabase
     .from("hrd_survey_parts")
     .update(data)
@@ -45,6 +47,7 @@ export async function updatePart(
 }
 
 export async function deletePart(id: string) {
+  const supabase = await createClient();
   const { error } = await supabase
     .from("hrd_survey_parts")
     .delete()
@@ -74,6 +77,7 @@ export async function addItem(data: {
   conditional_logic?: ConditionalLogic;
   is_benchmark_item?: boolean;
 }) {
+  const supabase = await createClient();
   const { error } = await supabase.from("hrd_survey_items").insert({
     part_id: data.part_id,
     round_id: data.round_id,
@@ -116,6 +120,7 @@ export async function updateItem(
     is_benchmark_item?: boolean;
   }
 ) {
+  const supabase = await createClient();
   const { error } = await supabase
     .from("hrd_survey_items")
     .update({ ...data, updated_at: new Date().toISOString() })
@@ -126,6 +131,7 @@ export async function updateItem(
 }
 
 export async function deleteItem(id: string) {
+  const supabase = await createClient();
   const { error } = await supabase
     .from("hrd_survey_items")
     .delete()
@@ -136,6 +142,7 @@ export async function deleteItem(id: string) {
 }
 
 export async function reorderItems(items: { id: string; sort_order: number }[]) {
+  const supabase = await createClient();
   const updates = items.map((item) =>
     supabase
       .from("hrd_survey_items")

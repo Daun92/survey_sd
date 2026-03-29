@@ -1,6 +1,6 @@
 "use server";
 
-import { supabase } from "@/lib/supabase";
+import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import {
   updateSurveySchema,
@@ -15,6 +15,7 @@ import {
 // ─── Survey actions ───
 
 export async function updateSurvey(surveyId: string, data: UpdateSurveyInput) {
+  const supabase = await createClient();
   const parsed = updateSurveySchema.safeParse(data);
   if (!parsed.success) {
     throw new Error("입력값 오류: " + parsed.error.issues[0].message);
@@ -34,6 +35,7 @@ export async function updateSurveySettings(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   settings: Record<string, any>
 ) {
+  const supabase = await createClient();
   // 기존 settings를 merge
   const { data: current } = await supabase
     .from("edu_surveys")
@@ -53,6 +55,7 @@ export async function updateSurveySettings(
 }
 
 export async function duplicateSurvey(surveyId: string) {
+  const supabase = await createClient();
   // 원본 설문 조회
   const { data: original, error: fetchError } = await supabase
     .from("edu_surveys")
@@ -102,6 +105,7 @@ export async function duplicateSurvey(surveyId: string) {
 }
 
 export async function deleteSurvey(surveyId: string) {
+  const supabase = await createClient();
   // Delete questions first
   const { error: qError } = await supabase
     .from("edu_questions")
@@ -122,6 +126,7 @@ export async function deleteSurvey(surveyId: string) {
 // ─── Question actions ───
 
 export async function addQuestion(surveyId: string, data: AddQuestionInput) {
+  const supabase = await createClient();
   const parsed = addQuestionSchema.safeParse(data);
   if (!parsed.success) {
     throw new Error("입력값 오류: " + parsed.error.issues[0].message);
@@ -158,6 +163,7 @@ export async function updateQuestion(
   surveyId: string,
   data: UpdateQuestionInput
 ) {
+  const supabase = await createClient();
   const parsed = updateQuestionSchema.safeParse(data);
   if (!parsed.success) {
     throw new Error("입력값 오류: " + parsed.error.issues[0].message);
@@ -191,6 +197,7 @@ export async function updateQuestion(
 }
 
 export async function deleteQuestion(questionId: string, surveyId: string) {
+  const supabase = await createClient();
   const { error } = await supabase
     .from("edu_questions")
     .delete()
@@ -204,6 +211,7 @@ export async function reorderQuestions(
   surveyId: string,
   orderedIds: { id: string; sort_order: number }[]
 ) {
+  const supabase = await createClient();
   const parsed = reorderQuestionsSchema.safeParse(orderedIds);
   if (!parsed.success) {
     throw new Error("입력값 오류: " + parsed.error.issues[0].message);
@@ -229,6 +237,7 @@ export async function renameSection(
   oldName: string,
   newName: string
 ) {
+  const supabase = await createClient();
   const trimmed = newName.trim();
   if (!trimmed) throw new Error("섹션 이름을 입력해 주세요");
 
@@ -266,6 +275,7 @@ export async function updateSectionIntro(
   sectionName: string,
   intro: { title?: string; description?: string; color?: string; image_url?: string; image_size?: string }
 ) {
+  const supabase = await createClient();
   const { data: survey } = await supabase
     .from("edu_surveys")
     .select("settings")
@@ -286,6 +296,7 @@ export async function updateSectionIntro(
 }
 
 export async function deleteSection(surveyId: string, sectionName: string) {
+  const supabase = await createClient();
   const { count } = await supabase
     .from("edu_questions")
     .select("*", { count: "exact", head: true })
@@ -319,6 +330,7 @@ export async function updateQuestionSection(
   surveyId: string,
   newSection: string
 ) {
+  const supabase = await createClient();
   const { error } = await supabase
     .from("edu_questions")
     .update({ section: newSection })

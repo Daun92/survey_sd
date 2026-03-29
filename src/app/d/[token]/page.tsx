@@ -1,4 +1,4 @@
-import { supabase } from '@/lib/supabase'
+import { createClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
 import SurveyForm from '@/app/s/[token]/survey-form'
 
@@ -18,6 +18,8 @@ interface SurveySection {
 }
 
 async function getDistributionByToken(token: string) {
+  const supabase = await createClient()
+
   // 1. distribution 조회
   const { data: dist, error: distErr } = await supabase
     .from('distributions')

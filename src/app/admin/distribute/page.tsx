@@ -1,11 +1,11 @@
-import { supabase } from "@/lib/supabase";
+import { createClient } from "@/lib/supabase/server";
 import Link from "next/link";
 import { MessageSquare } from "lucide-react";
 import DistributeTabs from "./distribute-tabs";
 
 export const revalidate = 0;
 
-async function getSurveyData() {
+async function getSurveyData(supabase: Awaited<ReturnType<typeof createClient>>) {
   const { data: surveys } = await supabase
     .from("edu_surveys")
     .select(`
@@ -30,7 +30,7 @@ async function getSurveyData() {
   }));
 }
 
-async function getPersonalLinkBatches() {
+async function getPersonalLinkBatches(supabase: Awaited<ReturnType<typeof createClient>>) {
   const { data: batches } = await supabase
     .from("distribution_batches")
     .select(`
@@ -55,9 +55,10 @@ async function getPersonalLinkBatches() {
 }
 
 export default async function DistributePage() {
+  const supabase = await createClient();
   const [surveys, batches] = await Promise.all([
-    getSurveyData(),
-    getPersonalLinkBatches(),
+    getSurveyData(supabase),
+    getPersonalLinkBatches(supabase),
   ]);
 
   return (

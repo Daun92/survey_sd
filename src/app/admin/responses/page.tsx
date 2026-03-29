@@ -1,4 +1,5 @@
-import { supabase } from "@/lib/supabase";
+import { createClient } from "@/lib/supabase/server";
+import { formatDate } from "@/lib/utils";
 import Link from "next/link";
 import { Eye, MessageSquare, Inbox } from "lucide-react";
 
@@ -8,12 +9,6 @@ const statusLabels: Record<string, { label: string; className: string }> = {
   active: { label: "진행중", className: "bg-emerald-100 text-emerald-800" },
   closed: { label: "마감", className: "bg-rose-100 text-rose-800" },
 };
-
-function formatDate(dateStr: string | null) {
-  if (!dateStr) return "-";
-  const d = new Date(dateStr);
-  return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, "0")}.${String(d.getDate()).padStart(2, "0")}`;
-}
 
 interface SurveyWithResponses {
   id: string;
@@ -26,13 +21,14 @@ interface SurveyWithResponses {
   avg_score: number | null;
 }
 
-async function getSurveysWithResponses(): Promise<SurveyWithResponses[]> {
+async function getSurveysWithResponses(supabase: Awaited<ReturnType<typeof createClient>>): Promise<SurveyWithResponses[]> {
   // 설문 목록 + submission count를 관계 count로 가져옴 (answers JSONB 불필요)
   const [{ data: surveys }, { data: submissions }] = await Promise.all([
     supabase
       .from("edu_surveys")
       .select("id, title, status, session_id, sessions(name, capacity), edu_submissions(count)")
-      .order("created_at", { ascending: false }),
+      .order("created_at", { ascending: false })
+      .limit(500),
     supabase
       .from("edu_submissions")
       .select("survey_id, total_score"),
@@ -76,7 +72,8 @@ async function getSurveysWithResponses(): Promise<SurveyWithResponses[]> {
 }
 
 export default async function ResponsesPage() {
-  const surveys = await getSurveysWithResponses();
+  const supabase = await createClient();
+  const surveys = await getSurveysWithResponses(supabase);
 
   return (
     <div>

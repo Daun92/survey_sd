@@ -1,11 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
-import { supabase } from "@/lib/supabase";
+import { createClient } from "@/lib/supabase/server";
 import { requireAuthAPI } from "@/lib/auth";
 
 export async function POST(request: NextRequest) {
   // 인증 확인 (서버 클라이언트, 쿠키 기반)
   const auth = await requireAuthAPI();
   if (auth.error) return auth.error;
+
+  const supabase = await createClient();
 
   try {
     const formData = await request.formData();

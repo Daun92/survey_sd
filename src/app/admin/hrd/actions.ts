@@ -1,6 +1,6 @@
 "use server";
 
-import { supabase } from "@/lib/supabase";
+import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 
 // ─── Round actions ───
@@ -14,6 +14,7 @@ export async function createRound(data: {
   starts_at?: string;
   ends_at?: string;
 }) {
+  const supabase = await createClient();
   const { error } = await supabase.from("hrd_survey_rounds").insert({
     round_number: data.round_number,
     title: data.title,
@@ -41,6 +42,7 @@ export async function updateRound(
     status?: string;
   }
 ) {
+  const supabase = await createClient();
   const updateData: Record<string, unknown> = {
     updated_at: new Date().toISOString(),
   };
@@ -62,6 +64,7 @@ export async function updateRound(
 }
 
 export async function deleteRound(id: string) {
+  const supabase = await createClient();
   // draft 상태만 삭제 가능
   const { data: round } = await supabase
     .from("hrd_survey_rounds")
@@ -96,6 +99,7 @@ export async function addRespondent(data: {
   industry_code?: string;
   biz_reg_no?: string;
 }) {
+  const supabase = await createClient();
   const token = crypto.randomUUID().replace(/-/g, "").slice(0, 16);
 
   const { error } = await supabase.from("hrd_respondents").insert({
@@ -131,6 +135,7 @@ export async function updateRespondent(
     industry_code?: string;
   }
 ) {
+  const supabase = await createClient();
   const { error } = await supabase
     .from("hrd_respondents")
     .update({ ...data, updated_at: new Date().toISOString() })
@@ -141,6 +146,7 @@ export async function updateRespondent(
 }
 
 export async function deleteRespondent(id: string) {
+  const supabase = await createClient();
   const { error } = await supabase
     .from("hrd_respondents")
     .delete()
@@ -163,6 +169,7 @@ export async function importRespondents(
     biz_reg_no?: string;
   }>
 ) {
+  const supabase = await createClient();
   const insertData = rows.map((row) => ({
     round_id: roundId,
     company_name: row.company_name,

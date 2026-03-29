@@ -1,4 +1,5 @@
-import { supabase } from "@/lib/supabase";
+import { createClient } from "@/lib/supabase/server";
+import { formatDate } from "@/lib/utils";
 import Link from "next/link";
 import {
   FolderOpen,
@@ -20,19 +21,14 @@ const statusLabels: Record<string, { label: string; className: string }> = {
   },
 };
 
-function formatDate(dateStr: string | null) {
-  if (!dateStr) return "-";
-  const d = new Date(dateStr);
-  return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, "0")}.${String(d.getDate()).padStart(2, "0")}`;
-}
-
-async function getProjects() {
+async function getProjects(supabase: Awaited<ReturnType<typeof createClient>>) {
   const { data, error } = await supabase
     .from("projects")
     .select(
       "id, name, bris_code, project_type, status, am_name, start_date, end_date, created_at, customer_id, customers(id, company_name), courses(id, sessions(id))"
     )
-    .order("created_at", { ascending: false });
+    .order("created_at", { ascending: false })
+    .limit(500);
 
   if (error) {
     console.error("Error fetching projects:", error);
@@ -43,7 +39,8 @@ async function getProjects() {
 }
 
 export default async function ProjectsPage() {
-  const projects = await getProjects();
+  const supabase = await createClient();
+  const projects = await getProjects(supabase);
 
   return (
     <div>

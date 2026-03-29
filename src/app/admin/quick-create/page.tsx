@@ -1,10 +1,10 @@
-import { supabase } from "@/lib/supabase";
+import { createClient } from "@/lib/supabase/server";
 import { Zap } from "lucide-react";
 import { QuickCreateForm } from "./QuickCreateForm";
 
 export const dynamic = "force-dynamic";
 
-async function getFormData() {
+async function getFormData(supabase: Awaited<ReturnType<typeof createClient>>) {
   const [{ data: projects }, { data: customers }, { data: templates }] =
     await Promise.all([
       supabase
@@ -66,7 +66,8 @@ async function getFormData() {
 }
 
 export default async function QuickCreatePage() {
-  const { projects, customers, templates } = await getFormData();
+  const supabase = await createClient();
+  const { projects, customers, templates } = await getFormData(supabase);
 
   return (
     <div className="max-w-2xl">
