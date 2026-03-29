@@ -52,6 +52,55 @@ export async function updateSurveySettings(
   revalidatePath(`/admin/surveys/${surveyId}`);
 }
 
+export async function duplicateSurvey(surveyId: string) {
+  // 원본 설문 조회
+  const { data: original, error: fetchError } = await supabase
+    .from("edu_surveys")
+    .select("title, description, survey_type, education_type, settings, session_id, project_id")
+    .eq("id", surveyId)
+    .single();
+
+  if (fetchError || !original) throw new Error("원본 설문을 찾을 수 없습니다.");
+
+  // 새 url_token 생성
+  const urlToken = crypto.randomUUID().replace(/-/g, "").slice(0, 16);
+
+  // 설문 복제 (draft 상태로)
+  const { data: newSurvey, error: createError } = await supabase
+    .from("edu_surveys")
+    .insert({
+      title: `${original.title} (복제)`,
+      description: original.description,
+      survey_type: original.survey_type,
+      education_type: original.education_type,
+      settings: original.settings,
+      session_id: original.session_id,
+      project_id: original.project_id,
+      status: "draft",
+      url_token: urlToken,
+    })
+    .select("id")
+    .single();
+
+  if (createError || !newSurvey) throw new Error("설문 복제 실패: " + createError?.message);
+
+  // 문항 복제
+  const { data: questions } = await supabase
+    .from("edu_questions")
+    .select("question_text, question_type, question_code, section, is_required, sort_order, options, skip_logic, metadata")
+    .eq("survey_id", surveyId)
+    .order("sort_order", { ascending: true });
+
+  if (questions && questions.length > 0) {
+    const copied = questions.map((q) => ({ ...q, survey_id: newSurvey.id }));
+    const { error: insertError } = await supabase.from("edu_questions").insert(copied);
+    if (insertError) throw new Error("문항 복제 실패: " + insertError.message);
+  }
+
+  revalidatePath("/admin/surveys");
+  return newSurvey.id;
+}
+
 export async function deleteSurvey(surveyId: string) {
   // Delete questions first
   const { error: qError } = await supabase

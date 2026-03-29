@@ -8,6 +8,7 @@ import {
   Eye,
   Send,
   ChartColumn,
+  Copy,
   List,
   LayoutGrid,
   Calendar,
@@ -19,6 +20,7 @@ import {
   ChevronDown,
 } from "lucide-react";
 import { toggleSurveyStatus } from "./actions";
+import { duplicateSurvey } from "./[id]/actions";
 
 export function ViewToggle({
   view,
@@ -294,6 +296,7 @@ function ListView({ surveys }: { surveys: SurveyItem[] }) {
                           <Send size={15} />
                         </Link>
                       )}
+                      <DuplicateButton surveyId={survey.id} />
                       {survey.submission_count > 0 && (
                         <Link
                           href={`/admin/responses?survey=${survey.id}`}
@@ -361,5 +364,32 @@ function CardView({ surveys }: { surveys: SurveyItem[] }) {
         );
       })}
     </div>
+  );
+}
+
+function DuplicateButton({ surveyId }: { surveyId: string }) {
+  const [isPending, startTransition] = useTransition();
+  const router = useRouter();
+
+  return (
+    <button
+      onClick={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        startTransition(async () => {
+          try {
+            const newId = await duplicateSurvey(surveyId);
+            router.push(`/admin/surveys/${newId}`);
+          } catch (err) {
+            alert(err instanceof Error ? err.message : "복제 실패");
+          }
+        });
+      }}
+      disabled={isPending}
+      className="rounded p-1 text-stone-400 hover:text-teal-600 hover:bg-teal-50 transition-colors disabled:opacity-50"
+      title="설문 복제"
+    >
+      {isPending ? <Loader2 size={15} className="animate-spin" /> : <Copy size={15} />}
+    </button>
   );
 }

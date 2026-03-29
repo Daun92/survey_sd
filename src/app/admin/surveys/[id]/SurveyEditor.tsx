@@ -19,6 +19,7 @@ import { SurveyInfoEditor } from "./components/SurveyInfoEditor";
 import { SettingsPanel } from "./components/SettingsPanel";
 import { SortableQuestionRow } from "./components/SortableQuestionRow";
 import { DeleteSurveyButton } from "./components/DeleteSurveyButton";
+import { DuplicateSurveyButton } from "./components/DuplicateSurveyButton";
 import { RightPanel } from "./components/RightPanel";
 
 export default function SurveyEditor({ survey, questions, submissionCount }: EditorProps) {
@@ -149,7 +150,8 @@ export default function SurveyEditor({ survey, questions, submissionCount }: Edi
               <Layers size={14} className="text-stone-400" />
               <span className="text-sm text-stone-600"><strong className="text-stone-800">{sectionNames.length}</strong> 섹션</span>
             </div>
-            <div className="ml-auto">
+            <div className="ml-auto flex items-center gap-3">
+              <DuplicateSurveyButton surveyId={survey.id} />
               <DeleteSurveyButton surveyId={survey.id} />
             </div>
           </div>
