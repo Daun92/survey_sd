@@ -1,4 +1,4 @@
-import { supabase } from "@/lib/supabase";
+import { createClient } from "@/lib/supabase/server";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, Download, Users, FileText } from "lucide-react";
@@ -10,7 +10,7 @@ function formatDateTime(dateStr: string) {
   return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, "0")}.${String(d.getDate()).padStart(2, "0")} ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
 }
 
-async function getResponseDetail(surveyId: string) {
+async function getResponseDetail(supabase: Awaited<ReturnType<typeof createClient>>, surveyId: string) {
   const [{ data: survey, error: surveyError }, { data: questions }, { data: submissions }] =
     await Promise.all([
       supabase
@@ -47,8 +47,9 @@ export default async function ResponseDetailPage({
 }: {
   params: Promise<{ surveyId: string }>;
 }) {
+  const supabase = await createClient();
   const { surveyId } = await params;
-  const data = await getResponseDetail(surveyId);
+  const data = await getResponseDetail(supabase, surveyId);
 
   if (!data) return notFound();
 

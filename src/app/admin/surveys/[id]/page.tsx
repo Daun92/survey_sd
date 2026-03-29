@@ -1,4 +1,4 @@
-import { supabase } from "@/lib/supabase";
+import { createClient } from "@/lib/supabase/server";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
@@ -18,7 +18,7 @@ function formatDate(dateStr: string | null) {
   return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, "0")}.${String(d.getDate()).padStart(2, "0")}`;
 }
 
-async function getSurveyDetail(id: string) {
+async function getSurveyDetail(supabase: Awaited<ReturnType<typeof createClient>>, id: string) {
   const [
     { data: survey, error: surveyError },
     { data: questions },
@@ -79,8 +79,9 @@ export default async function SurveyDetailPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
+  const supabase = await createClient();
   const { id } = await params;
-  const data = await getSurveyDetail(id);
+  const data = await getSurveyDetail(supabase, id);
 
   if (!data) {
     notFound();

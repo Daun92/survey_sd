@@ -1,11 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabase'
+import { createClient } from '@/lib/supabase/server'
 import { submitSurveySchema } from '@/lib/validations/submission'
 
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const supabase = await createClient()
+
   try {
     const { id: token } = await params
     const body = await request.json()
@@ -71,10 +73,11 @@ export async function POST(
       }
     }
 
-    // total_score 계산 (숫자형 응답 합산)
+    // total_score 계산 (숫자형 응답 합산 — 문자열 숫자도 포함)
     const totalScore = Object.values(answers).reduce((sum: number, val) => {
+      if (val === null || val === undefined || val === '') return sum
       const num = Number(val)
-      return !isNaN(num) && typeof val === 'number' ? sum + num : sum
+      return !isNaN(num) ? sum + num : sum
     }, 0)
 
     // 응답 저장

@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { supabase } from "@/lib/supabase";
+import { createClient } from "@/lib/supabase/server";
 import {
   Settings2,
   Globe,
@@ -14,7 +14,7 @@ import { getUserProfile, canAccessSettings } from "@/lib/auth";
 
 export const revalidate = 300;
 
-async function getSettingsData() {
+async function getSettingsData(supabase: Awaited<ReturnType<typeof createClient>>) {
   const [{ data: appSettings }, { data: serviceTypes }] = await Promise.all([
     supabase.from("app_settings").select("*"),
     supabase
@@ -30,12 +30,13 @@ async function getSettingsData() {
 }
 
 export default async function SettingsPage() {
+  const supabase = await createClient();
   const profile = await getUserProfile();
   if (!canAccessSettings(profile)) {
     redirect("/admin?error=unauthorized");
   }
 
-  const { appSettings, serviceTypes } = await getSettingsData();
+  const { appSettings, serviceTypes } = await getSettingsData(supabase);
 
   return (
     <div>

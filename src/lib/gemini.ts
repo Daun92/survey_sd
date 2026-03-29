@@ -69,6 +69,27 @@ export async function callGemini(
   return text
 }
 
+/**
+ * Gemini 응답에서 JSON을 안전하게 파싱
+ * - 마크다운 코드블록(```json ... ```) 감싸기 대응
+ * - 파싱 실패 시 명확한 에러 메시지
+ */
+function safeParseJSON<T>(raw: string): T {
+  let cleaned = raw.trim()
+  // ```json ... ``` 또는 ``` ... ``` 블록 제거
+  const fenceMatch = cleaned.match(/^```(?:json)?\s*\n?([\s\S]*?)\n?\s*```$/m)
+  if (fenceMatch) {
+    cleaned = fenceMatch[1].trim()
+  }
+  try {
+    return JSON.parse(cleaned) as T
+  } catch (e) {
+    throw new Error(
+      `Gemini 응답 JSON 파싱 실패: ${e instanceof Error ? e.message : String(e)}\n원본(앞 200자): ${raw.slice(0, 200)}`
+    )
+  }
+}
+
 // ============================================================
 //  1. 리포트 코멘트 생성
 // ============================================================
@@ -121,7 +142,7 @@ ${data.questionScores.map((q) => `- [${q.section}] ${q.text}: ${q.avg.toFixed(2)
   const result = await callGemini(apiKey, REPORT_COMMENT_SYSTEM, [{ text: userPrompt }], {
     temperature: 0.4,
   })
-  return JSON.parse(result)
+  return safeParseJSON<ReportComment>(result)
 }
 
 // ============================================================
@@ -159,7 +180,7 @@ ${responses.map((r, i) => `${i + 1}. ${r}`).join('\n')}`
   const result = await callGemini(apiKey, OPEN_RESPONSE_SYSTEM, [{ text: userPrompt }], {
     temperature: 0.5,
   })
-  return JSON.parse(result)
+  return safeParseJSON<OpenResponseAnalysis>(result)
 }
 
 // ============================================================
@@ -276,5 +297,5 @@ export async function generateSurveyQuestions(
     temperature: 0.5,
     maxTokens: 8192,
   })
-  return JSON.parse(result)
+  return safeParseJSON<GeneratedSurvey>(result)
 }

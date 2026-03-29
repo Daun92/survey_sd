@@ -1,4 +1,4 @@
-import { supabase } from "@/lib/supabase";
+import { createClient } from "@/lib/supabase/server";
 import Link from "next/link";
 import {
   FolderOpen,
@@ -26,7 +26,7 @@ function formatDate(dateStr: string | null) {
   return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, "0")}.${String(d.getDate()).padStart(2, "0")}`;
 }
 
-async function getProjects() {
+async function getProjects(supabase: Awaited<ReturnType<typeof createClient>>) {
   const { data, error } = await supabase
     .from("projects")
     .select(
@@ -43,7 +43,8 @@ async function getProjects() {
 }
 
 export default async function ProjectsPage() {
-  const projects = await getProjects();
+  const supabase = await createClient();
+  const projects = await getProjects(supabase);
 
   return (
     <div>

@@ -1,4 +1,4 @@
-import { supabase } from "@/lib/supabase";
+import { createClient } from "@/lib/supabase/server";
 import Link from "next/link";
 import {
   ClipboardList,
@@ -25,6 +25,7 @@ export const revalidate = 30;
 // ─── 데이터 조회 ───
 
 async function getDashboardData() {
+  const supabase = await createClient();
   const now = new Date();
   const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
   const twoWeeksAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);

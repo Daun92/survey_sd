@@ -1,4 +1,4 @@
-import { supabase } from "@/lib/supabase";
+import { createClient } from "@/lib/supabase/server";
 import Link from "next/link";
 import {
   BarChart3,
@@ -39,6 +39,7 @@ function formatDate(dateStr: string) {
 
 async function getSurveyReport(surveyId: string) {
   // 1단계: survey 존재 확인 (빠름)
+  const supabase = await createClient();
   const { data: survey } = await supabase
     .from("edu_surveys")
     .select("id, title, status, created_at")
@@ -146,6 +147,7 @@ async function getSurveyReport(surveyId: string) {
 }
 
 async function getSurveyList() {
+  const supabase = await createClient();
   const { data: surveys } = await supabase
     .from("edu_surveys")
     .select("id, title, status, created_at, edu_submissions(count)")

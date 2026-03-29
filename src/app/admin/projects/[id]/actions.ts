@@ -1,10 +1,11 @@
 "use server";
 
-import { supabase } from "@/lib/supabase";
+import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 export async function updateProject(id: string, formData: FormData) {
+  const supabase = await createClient();
   const name = formData.get("name") as string;
   const bris_code = formData.get("bris_code") as string;
   const project_type = formData.get("project_type") as string;
@@ -41,6 +42,7 @@ export async function updateProject(id: string, formData: FormData) {
 }
 
 export async function deleteProject(id: string) {
+  const supabase = await createClient();
   const { error } = await supabase.from("projects").delete().eq("id", id);
 
   if (error) {

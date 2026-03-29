@@ -1,10 +1,11 @@
 "use server";
 
-import { supabase } from "@/lib/supabase";
+import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 
 // ── 템플릿 settings 조회 ──
 export async function getTemplateSettings(templateId: string) {
+  const supabase = await createClient();
   const { data } = await supabase
     .from("cs_survey_templates")
     .select("settings")
@@ -15,6 +16,7 @@ export async function getTemplateSettings(templateId: string) {
 
 // ── 템플릿 복제 ──
 export async function duplicateTemplate(templateId: string) {
+  const supabase = await createClient();
   // 원본 템플릿 조회
   const { data: original } = await supabase
     .from("cs_survey_templates")
@@ -59,6 +61,7 @@ export async function duplicateTemplate(templateId: string) {
 
 // ── 프로젝트 설문을 템플릿으로 저장 ──
 export async function createTemplateFromSurvey(surveyId: string, name: string) {
+  const supabase = await createClient();
   // 설문 조회
   const { data: survey } = await supabase
     .from("edu_surveys")
@@ -112,6 +115,7 @@ export async function createTemplateFromSurvey(surveyId: string, name: string) {
 
 // ── 템플릿 삭제 (시스템 템플릿은 불가) ──
 export async function deleteTemplate(templateId: string) {
+  const supabase = await createClient();
   const { data: template } = await supabase
     .from("cs_survey_templates")
     .select("is_system")
@@ -131,6 +135,7 @@ export async function deleteTemplate(templateId: string) {
 
 // ── 템플릿 보관 (비활성화) ──
 export async function archiveTemplate(templateId: string) {
+  const supabase = await createClient();
   const { data: template } = await supabase
     .from("cs_survey_templates")
     .select("is_system")
@@ -146,12 +151,14 @@ export async function archiveTemplate(templateId: string) {
 
 // ── 템플릿 복원 (활성화) ──
 export async function restoreTemplate(templateId: string) {
+  const supabase = await createClient();
   await supabase.from("cs_survey_templates").update({ is_active: true }).eq("id", templateId);
   revalidatePath("/admin/cs-templates");
 }
 
 // ── 템플릿 이름/설명 수정 ──
 export async function updateTemplate(templateId: string, data: { name?: string; description?: string }) {
+  const supabase = await createClient();
   const { error } = await supabase
     .from("cs_survey_templates")
     .update(data)
@@ -174,6 +181,7 @@ export async function addTemplateQuestion(templateId: string, data: {
   skip_logic?: unknown;
   metadata?: unknown;
 }) {
+  const supabase = await createClient();
   const { skip_logic, metadata, ...rest } = data;
   const insertData: Record<string, unknown> = {
     template_id: templateId,
@@ -192,6 +200,7 @@ export async function addTemplateQuestion(templateId: string, data: {
 
 // ── 템플릿 문항 수정 ──
 export async function updateTemplateQuestion(questionId: string, templateId: string, data: Record<string, unknown>) {
+  const supabase = await createClient();
   const updateData: Record<string, unknown> = {};
   const fields = ["question_no", "question_text", "question_type", "response_options", "section_label", "is_required"];
   for (const key of fields) {
@@ -207,6 +216,7 @@ export async function updateTemplateQuestion(questionId: string, templateId: str
 
 // ── 템플릿 문항 삭제 ──
 export async function deleteTemplateQuestion(questionId: string, templateId: string) {
+  const supabase = await createClient();
   const { error } = await supabase.from("cs_survey_questions").delete().eq("id", questionId);
   if (error) throw new Error("문항 삭제 실패: " + error.message);
   revalidatePath(`/admin/cs-templates/${templateId}`);
@@ -218,6 +228,7 @@ export async function updateTemplateSettings(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   settings: Record<string, any>
 ) {
+  const supabase = await createClient();
   const { data: current } = await supabase
     .from("cs_survey_templates")
     .select("settings")
@@ -240,6 +251,7 @@ export async function reorderTemplateQuestions(
   templateId: string,
   orderedIds: { id: string; sort_order: number }[]
 ) {
+  const supabase = await createClient();
   const promises = orderedIds.map(({ id, sort_order }) =>
     supabase.from("cs_survey_questions").update({ sort_order }).eq("id", id)
   );
@@ -255,6 +267,7 @@ export async function updateQuestionSectionLabel(
   templateId: string,
   newSection: string
 ) {
+  const supabase = await createClient();
   const { error } = await supabase
     .from("cs_survey_questions")
     .update({ section_label: newSection })
@@ -269,6 +282,7 @@ export async function renameTemplateSection(
   oldName: string,
   newName: string
 ) {
+  const supabase = await createClient();
   const trimmed = newName.trim();
   if (!trimmed) throw new Error("섹션 이름을 입력해 주세요");
 
@@ -306,6 +320,7 @@ export async function updateTemplateSectionIntro(
   sectionName: string,
   intro: { title?: string; description?: string; color?: string; image_url?: string; image_size?: string }
 ) {
+  const supabase = await createClient();
   const { data: template } = await supabase
     .from("cs_survey_templates")
     .select("settings")
@@ -326,6 +341,7 @@ export async function updateTemplateSectionIntro(
 
 // ── 빈 섹션 삭제 ──
 export async function deleteTemplateSection(templateId: string, sectionName: string) {
+  const supabase = await createClient();
   const { count } = await supabase
     .from("cs_survey_questions")
     .select("*", { count: "exact", head: true })

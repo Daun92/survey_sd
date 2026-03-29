@@ -1,4 +1,4 @@
-import { supabase } from "@/lib/supabase";
+import { createClient } from "@/lib/supabase/server";
 import Link from "next/link";
 import {
   ListChecks,
@@ -11,6 +11,7 @@ import { TemplateActions } from "./template-actions";
 export const revalidate = 300;
 
 async function getTemplatesWithQuestionCounts() {
+  const supabase = await createClient();
   const { data: templates } = await supabase
     .from("cs_survey_templates")
     .select("id, division, division_label, name, description, is_active, is_system, created_at, cs_survey_questions(count)")
@@ -33,6 +34,7 @@ async function getTemplatesWithQuestionCounts() {
 }
 
 async function getSurveys() {
+  const supabase = await createClient();
   const { data } = await supabase
     .from("edu_surveys")
     .select("id, title, edu_questions(count)")

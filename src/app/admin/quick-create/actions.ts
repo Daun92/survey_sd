@@ -1,6 +1,6 @@
 "use server";
 
-import { supabase } from "@/lib/supabase";
+import { createClient } from "@/lib/supabase/server";
 import { requireAuth } from "@/lib/auth";
 
 interface QuickCreateInput {
@@ -33,6 +33,7 @@ function parseResponseOptions(raw: string | null): string[] | null {
 }
 
 export async function quickCreateSurvey(formData: FormData): Promise<QuickCreateResult> {
+  const supabase = await createClient();
   const input: QuickCreateInput = {
     surveyTitle: formData.get("surveyTitle") as string,
     projectId: formData.get("projectId") as string,

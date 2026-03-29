@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabase'
+import { createClient } from '@/lib/supabase/server'
 
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ token: string }> }
 ) {
+  const supabase = await createClient();
+
   try {
     const { token } = await params
     const { status } = await request.json()

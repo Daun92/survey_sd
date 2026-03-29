@@ -1,4 +1,4 @@
-import { supabase } from "@/lib/supabase";
+import { createClient } from "@/lib/supabase/server";
 import { Building2, FileText } from "lucide-react";
 
 export const revalidate = 60;
@@ -22,6 +22,7 @@ function formatDate(dateStr: string | null) {
 }
 
 async function getData() {
+  const supabase = await createClient();
   const { data: reports } = await supabase
     .from("hrd_consulting_reports")
     .select(

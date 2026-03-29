@@ -1,4 +1,4 @@
-import { supabase } from "@/lib/supabase";
+import { createClient } from "@/lib/supabase/server";
 import Link from "next/link";
 import { Eye, MessageSquare, Inbox } from "lucide-react";
 
@@ -26,7 +26,7 @@ interface SurveyWithResponses {
   avg_score: number | null;
 }
 
-async function getSurveysWithResponses(): Promise<SurveyWithResponses[]> {
+async function getSurveysWithResponses(supabase: Awaited<ReturnType<typeof createClient>>): Promise<SurveyWithResponses[]> {
   // 설문 목록 + submission count를 관계 count로 가져옴 (answers JSONB 불필요)
   const [{ data: surveys }, { data: submissions }] = await Promise.all([
     supabase
@@ -76,7 +76,8 @@ async function getSurveysWithResponses(): Promise<SurveyWithResponses[]> {
 }
 
 export default async function ResponsesPage() {
-  const surveys = await getSurveysWithResponses();
+  const supabase = await createClient();
+  const surveys = await getSurveysWithResponses(supabase);
 
   return (
     <div>

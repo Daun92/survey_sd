@@ -1,4 +1,4 @@
-import { supabase } from "@/lib/supabase";
+import { createClient } from "@/lib/supabase/server";
 import {
   FileChartColumnIncreasing,
   BarChart3,
@@ -9,6 +9,7 @@ import {
 export const revalidate = 60;
 
 async function getData() {
+  const supabase = await createClient();
   const { data: rounds } = await supabase
     .from("hrd_survey_rounds")
     .select("id, title, year, round_number")

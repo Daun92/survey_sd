@@ -1,4 +1,4 @@
-import { supabase } from "@/lib/supabase";
+import { createClient } from "@/lib/supabase/server";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, ListChecks, Calendar } from "lucide-react";
@@ -25,6 +25,7 @@ function formatDate(dateStr: string | null) {
 }
 
 async function getTemplateDetail(id: string) {
+  const supabase = await createClient();
   const [{ data: template, error }, { data: questions }] = await Promise.all([
     supabase
       .from("cs_survey_templates")

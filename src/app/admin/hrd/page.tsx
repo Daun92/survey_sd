@@ -1,4 +1,4 @@
-import { supabase } from "@/lib/supabase";
+import { createClient } from "@/lib/supabase/server";
 import {
   FileSearch,
   Calendar,
@@ -28,6 +28,7 @@ function formatDate(dateStr: string | null) {
 }
 
 async function getData() {
+  const supabase = await createClient();
   const { data: rounds } = await supabase
     .from("hrd_survey_rounds")
     .select(

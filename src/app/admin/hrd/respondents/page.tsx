@@ -1,4 +1,4 @@
-import { supabase } from "@/lib/supabase";
+import { createClient } from "@/lib/supabase/server";
 import { Users } from "lucide-react";
 import { RespondentActions } from "./respondent-actions";
 
@@ -18,6 +18,7 @@ function formatDate(dateStr: string | null) {
 }
 
 async function getData() {
+  const supabase = await createClient();
   const [{ data: respondents }, { data: rounds }] = await Promise.all([
     supabase
       .from("hrd_respondents")
