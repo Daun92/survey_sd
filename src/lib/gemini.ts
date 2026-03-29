@@ -33,7 +33,7 @@ export async function callGemini(
 ): Promise<string> {
   const { temperature = 0.4, maxTokens = 8192 } = options
 
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${apiKey}`
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`
 
   const body = {
     system_instruction: { parts: [{ text: systemPrompt }] },
@@ -47,7 +47,10 @@ export async function callGemini(
 
   const res = await fetch(url, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      'x-goog-api-key': apiKey,
+    },
     body: JSON.stringify(body),
   })
 
