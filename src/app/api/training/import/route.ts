@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { withAuth } from "@/lib/api-utils";
 import ExcelJS from "exceljs";
 
 // POST /api/training/import — 교육 실시 여부 취합 Excel 임포트
-export async function POST(request: NextRequest) {
+export const POST = withAuth({ type: "role", minRole: "creator" }, async (request: NextRequest) => {
   const formData = await request.formData();
   const file = formData.get("file") as File;
   const year = parseInt(formData.get("year") as string) || new Date().getFullYear();
@@ -182,4 +183,4 @@ export async function POST(request: NextRequest) {
   });
 
   return NextResponse.json({ success, failed, errors: errors.slice(0, 10) });
-}
+});

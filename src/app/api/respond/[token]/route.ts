@@ -1,12 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { withAuth } from "@/lib/api-utils";
 
 // GET /api/respond/:token — 설문 로드
-export async function GET(
-  _request: NextRequest,
-  { params }: { params: Promise<{ token: string }> }
-) {
-  const { token } = await params;
+export const GET = withAuth({ type: "public" }, async (request: NextRequest, ctx) => {
+  const token = ctx.params?.token;
+  if (!token) return NextResponse.json({ error: "Token이 필요합니다" }, { status: 400 });
 
   const distribution = await prisma.distribution.findUnique({
     where: { responseToken: token },
@@ -62,14 +61,12 @@ export async function GET(
     })),
     customer: distribution.customer,
   });
-}
+});
 
 // POST /api/respond/:token — 응답 제출
-export async function POST(
-  request: NextRequest,
-  { params }: { params: Promise<{ token: string }> }
-) {
-  const { token } = await params;
+export const POST = withAuth({ type: "public" }, async (request: NextRequest, ctx) => {
+  const token = ctx.params?.token;
+  if (!token) return NextResponse.json({ error: "Token이 필요합니다" }, { status: 400 });
   const body = await request.json();
   const { answers } = body as { answers: Array<{ questionId: number; value: string }> };
 
@@ -135,4 +132,4 @@ export async function POST(
     }
     return NextResponse.json({ error: "제출 중 오류가 발생했습니다" }, { status: 500 });
   }
-}
+});

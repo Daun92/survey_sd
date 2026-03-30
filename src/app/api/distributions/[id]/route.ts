@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { withAuth } from "@/lib/api-utils";
 
 // GET /api/distributions/:id
-export async function GET(
-  _request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  const { id } = await params;
+export const GET = withAuth({ type: "auth" }, async (request: NextRequest, ctx) => {
+  const id = ctx.params?.id;
+  if (!id) return NextResponse.json({ error: "ID가 필요합니다" }, { status: 400 });
+
   const distribution = await prisma.distribution.findUnique({
     where: { id: parseInt(id) },
     include: {
@@ -20,14 +20,13 @@ export async function GET(
     return NextResponse.json({ error: "배포를 찾을 수 없습니다" }, { status: 404 });
   }
   return NextResponse.json(distribution);
-}
+});
 
 // PUT /api/distributions/:id — 상태 변경
-export async function PUT(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  const { id } = await params;
+export const PUT = withAuth({ type: "role", minRole: "creator" }, async (request: NextRequest, ctx) => {
+  const id = ctx.params?.id;
+  if (!id) return NextResponse.json({ error: "ID가 필요합니다" }, { status: 400 });
+
   const body = await request.json();
 
   const distribution = await prisma.distribution.update({
@@ -39,14 +38,13 @@ export async function PUT(
   });
 
   return NextResponse.json(distribution);
-}
+});
 
 // DELETE /api/distributions/:id
-export async function DELETE(
-  _request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  const { id } = await params;
+export const DELETE = withAuth({ type: "role", minRole: "admin" }, async (request: NextRequest, ctx) => {
+  const id = ctx.params?.id;
+  if (!id) return NextResponse.json({ error: "ID가 필요합니다" }, { status: 400 });
+
   await prisma.distribution.delete({ where: { id: parseInt(id) } });
   return NextResponse.json({ success: true });
-}
+});

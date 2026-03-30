@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { withAuth } from "@/lib/api-utils";
 
 type StepStatus = "pending" | "in_progress" | "completed";
 
@@ -12,7 +13,7 @@ interface WorkflowStep {
 }
 
 // GET /api/workflow/status — 워크플로우 단계별 상태
-export async function GET(request: NextRequest) {
+export const GET = withAuth({ type: "auth" }, async (request: NextRequest) => {
   const { searchParams } = request.nextUrl;
   const year = parseInt(searchParams.get("year") || String(new Date().getFullYear()));
   const month = parseInt(searchParams.get("month") || String(new Date().getMonth() + 1));
@@ -111,4 +112,4 @@ export async function GET(request: NextRequest) {
   ];
 
   return NextResponse.json({ year, month, steps });
-}
+});

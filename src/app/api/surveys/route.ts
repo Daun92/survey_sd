@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { withAuth } from "@/lib/api-utils";
+import { createSurveySchema } from "@/lib/validations/survey";
 
 // GET /api/surveys — 설문 목록
-export async function GET(request: NextRequest) {
+export const GET = withAuth({ type: "auth" }, async (request: NextRequest) => {
   const { searchParams } = request.nextUrl;
   const year = searchParams.get("year");
   const month = searchParams.get("month");
@@ -33,29 +35,30 @@ export async function GET(request: NextRequest) {
   });
 
   return NextResponse.json(result);
-}
+});
 
 // POST /api/surveys — 설문 생성 (템플릿에서 복제 가능)
-export async function POST(request: NextRequest) {
+export const POST = withAuth({ type: "role", minRole: "creator" }, async (request: NextRequest) => {
   const body = await request.json();
+  const data = createSurveySchema.parse(body);
 
   const survey = await prisma.survey.create({
     data: {
-      title: body.title,
-      serviceTypeId: body.serviceTypeId,
-      surveyYear: body.surveyYear,
-      surveyMonth: body.surveyMonth,
-      trainingMonth: body.trainingMonth ?? null,
-      internalLabel: body.internalLabel || null,
+      title: data.title,
+      serviceTypeId: data.serviceTypeId,
+      surveyYear: data.surveyYear,
+      surveyMonth: data.surveyMonth,
+      trainingMonth: data.trainingMonth ?? null,
+      internalLabel: data.internalLabel || null,
       status: "draft",
-      description: body.description || null,
+      description: data.description || null,
     },
   });
 
   // 템플릿에서 문항 복제
-  if (body.templateId) {
+  if (data.templateId) {
     const template = await prisma.questionTemplate.findUnique({
-      where: { id: body.templateId },
+      where: { id: data.templateId },
     });
     if (template) {
       let questions: Array<{
@@ -86,9 +89,9 @@ export async function POST(request: NextRequest) {
   }
 
   // 이전 설문에서 복제
-  if (body.cloneFromSurveyId) {
+  if (data.cloneFromSurveyId) {
     const sourceQuestions = await prisma.surveyQuestion.findMany({
-      where: { surveyId: body.cloneFromSurveyId },
+      where: { surveyId: data.cloneFromSurveyId },
       orderBy: { questionOrder: "asc" },
     });
     await prisma.surveyQuestion.createMany({
@@ -110,4 +113,4 @@ export async function POST(request: NextRequest) {
   });
 
   return NextResponse.json(result, { status: 201 });
-}
+});

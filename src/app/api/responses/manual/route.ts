@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { withAuth } from "@/lib/api-utils";
 
 // POST /api/responses/manual — 수동 응답 입력
-export async function POST(request: NextRequest) {
+export const POST = withAuth({ type: "role", minRole: "creator" }, async (request: NextRequest) => {
   const body = await request.json();
   const { surveyId, customerId, answers } = body as {
     surveyId: number;
@@ -51,4 +52,4 @@ export async function POST(request: NextRequest) {
   }
 
   return NextResponse.json({ success: true, responseId: response.id }, { status: 201 });
-}
+});

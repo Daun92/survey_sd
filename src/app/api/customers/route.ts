@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { withAuth } from "@/lib/api-utils";
+import { createCustomerSchema } from "@/lib/validations/customer";
 
 // GET /api/customers — 고객사 목록 조회
-export async function GET(request: NextRequest) {
+export const GET = withAuth({ type: "auth" }, async (request: NextRequest) => {
   const { searchParams } = request.nextUrl;
   const search = searchParams.get("search") || "";
   const serviceTypeId = searchParams.get("serviceTypeId");
@@ -39,27 +41,28 @@ export async function GET(request: NextRequest) {
   ]);
 
   return NextResponse.json({ customers, total, page, limit });
-}
+});
 
 // POST /api/customers — 고객사 신규 등록
-export async function POST(request: NextRequest) {
+export const POST = withAuth({ type: "role", minRole: "creator" }, async (request: NextRequest) => {
   const body = await request.json();
+  const data = createCustomerSchema.parse(body);
 
   const customer = await prisma.customer.create({
     data: {
-      companyName: body.companyName,
-      contactName: body.contactName || null,
-      contactTitle: body.contactTitle || null,
-      email: body.email || null,
-      phone: body.phone || null,
-      serviceTypeId: body.serviceTypeId,
-      salesRep: body.salesRep || null,
-      salesTeam: body.salesTeam || null,
-      ecoScore: body.ecoScore || null,
-      notes: body.notes || null,
+      companyName: data.companyName,
+      contactName: data.contactName || null,
+      contactTitle: data.contactTitle || null,
+      email: data.email || null,
+      phone: data.phone || null,
+      serviceTypeId: data.serviceTypeId,
+      salesRep: data.salesRep || null,
+      salesTeam: data.salesTeam || null,
+      ecoScore: data.ecoScore || null,
+      notes: data.notes || null,
     },
     include: { serviceType: true },
   });
 
   return NextResponse.json(customer, { status: 201 });
-}
+});

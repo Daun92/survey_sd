@@ -1,8 +1,9 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { withAuth } from "@/lib/api-utils";
 
 // GET /api/dashboard — 대시보드 요약 통계
-export async function GET() {
+export const GET = withAuth({ type: "auth" }, async (request: NextRequest) => {
   const now = new Date();
   const year = now.getFullYear();
   const month = now.getMonth() + 1;
@@ -47,4 +48,4 @@ export async function GET() {
     year,
     month,
   });
-}
+});

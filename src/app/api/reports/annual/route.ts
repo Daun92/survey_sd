@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { withAuth } from "@/lib/api-utils";
 
 // GET /api/reports/annual — 연간 집계
-export async function GET(request: NextRequest) {
+export const GET = withAuth({ type: "auth" }, async (request: NextRequest) => {
   const { searchParams } = request.nextUrl;
   const year = parseInt(searchParams.get("year") || String(new Date().getFullYear()));
 
@@ -107,4 +108,4 @@ export async function GET(request: NextRequest) {
     monthlyStats,
     serviceTypeStats,
   });
-}
+});

@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { withAuth } from "@/lib/api-utils";
 
-export async function PUT(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  const { id } = await params;
+export const PUT = withAuth({ type: "role", minRole: "creator" }, async (request: NextRequest, ctx) => {
+  const id = ctx.params?.id;
+  if (!id) return NextResponse.json({ error: "ID가 필요합니다" }, { status: 400 });
+
   const body = await request.json();
 
   const interview = await prisma.interview.update({
@@ -23,13 +23,12 @@ export async function PUT(
   });
 
   return NextResponse.json(interview);
-}
+});
 
-export async function DELETE(
-  _request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  const { id } = await params;
+export const DELETE = withAuth({ type: "role", minRole: "admin" }, async (request: NextRequest, ctx) => {
+  const id = ctx.params?.id;
+  if (!id) return NextResponse.json({ error: "ID가 필요합니다" }, { status: 400 });
+
   await prisma.interview.delete({ where: { id: parseInt(id) } });
   return NextResponse.json({ success: true });
-}
+});

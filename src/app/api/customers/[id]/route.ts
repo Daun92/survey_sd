@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { withAuth } from "@/lib/api-utils";
+import { updateCustomerSchema } from "@/lib/validations/customer";
 
 // GET /api/customers/:id
-export async function GET(
-  _request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  const { id } = await params;
+export const GET = withAuth({ type: "auth" }, async (request: NextRequest, ctx) => {
+  const id = ctx.params?.id;
+  if (!id) return NextResponse.json({ error: "ID가 필요합니다" }, { status: 400 });
+
   const customer = await prisma.customer.findUnique({
     where: { id: parseInt(id) },
     include: { serviceType: true },
@@ -16,46 +17,45 @@ export async function GET(
     return NextResponse.json({ error: "고객사를 찾을 수 없습니다" }, { status: 404 });
   }
   return NextResponse.json(customer);
-}
+});
 
 // PUT /api/customers/:id
-export async function PUT(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  const { id } = await params;
+export const PUT = withAuth({ type: "role", minRole: "creator" }, async (request: NextRequest, ctx) => {
+  const id = ctx.params?.id;
+  if (!id) return NextResponse.json({ error: "ID가 필요합니다" }, { status: 400 });
+
   const body = await request.json();
+  const data = updateCustomerSchema.parse(body);
 
   const customer = await prisma.customer.update({
     where: { id: parseInt(id) },
     data: {
-      companyName: body.companyName,
-      contactName: body.contactName ?? undefined,
-      contactTitle: body.contactTitle ?? undefined,
-      email: body.email ?? undefined,
-      phone: body.phone ?? undefined,
-      serviceTypeId: body.serviceTypeId ?? undefined,
-      salesRep: body.salesRep ?? undefined,
-      salesTeam: body.salesTeam ?? undefined,
-      ecoScore: body.ecoScore ?? undefined,
-      notes: body.notes ?? undefined,
+      companyName: data.companyName,
+      contactName: data.contactName ?? undefined,
+      contactTitle: data.contactTitle ?? undefined,
+      email: data.email ?? undefined,
+      phone: data.phone ?? undefined,
+      serviceTypeId: data.serviceTypeId ?? undefined,
+      salesRep: data.salesRep ?? undefined,
+      salesTeam: data.salesTeam ?? undefined,
+      ecoScore: data.ecoScore ?? undefined,
+      notes: data.notes ?? undefined,
     },
     include: { serviceType: true },
   });
 
   return NextResponse.json(customer);
-}
+});
 
 // DELETE /api/customers/:id (soft delete)
-export async function DELETE(
-  _request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  const { id } = await params;
+export const DELETE = withAuth({ type: "role", minRole: "admin" }, async (request: NextRequest, ctx) => {
+  const id = ctx.params?.id;
+  if (!id) return NextResponse.json({ error: "ID가 필요합니다" }, { status: 400 });
+
   await prisma.customer.update({
     where: { id: parseInt(id) },
     data: { isActive: false },
   });
 
   return NextResponse.json({ success: true });
-}
+});

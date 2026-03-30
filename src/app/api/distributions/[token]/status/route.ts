@@ -1,14 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { withAuth } from '@/lib/api-utils'
 
-export async function PATCH(
-  request: NextRequest,
-  { params }: { params: Promise<{ token: string }> }
-) {
+export const PATCH = withAuth({ type: "public" }, async (request: NextRequest, ctx) => {
   const supabase = await createClient();
 
   try {
-    const { token } = await params
+    const token = ctx.params?.token
+    if (!token) return NextResponse.json({ error: 'Token이 필요합니다' }, { status: 400 })
     const { status } = await request.json()
 
     if (!['opened', 'started'].includes(status)) {
@@ -33,4 +32,4 @@ export async function PATCH(
   } catch {
     return NextResponse.json({ error: '서버 오류' }, { status: 500 })
   }
-}
+});

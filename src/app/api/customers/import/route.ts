@@ -40,8 +40,10 @@ function normalizeColumnName(raw: string): string {
   return raw.toString().trim().replace(/\s+/g, "");
 }
 
+import { withAuth } from "@/lib/api-utils";
+
 // POST /api/customers/import
-export async function POST(request: NextRequest) {
+export const POST = withAuth({ type: "role", minRole: "creator" }, async (request: NextRequest) => {
   const formData = await request.formData();
   const file = formData.get("file") as File;
 
@@ -207,4 +209,4 @@ export async function POST(request: NextRequest) {
   });
 
   return NextResponse.json({ success, failed, errors: errors.slice(0, 10) });
-}
+});

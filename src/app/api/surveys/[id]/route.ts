@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { withAuth } from "@/lib/api-utils";
+import { updateSurveyApiSchema } from "@/lib/validations/survey";
 
 // GET /api/surveys/:id
-export async function GET(
-  _request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  const { id } = await params;
+export const GET = withAuth({ type: "auth" }, async (request: NextRequest, ctx) => {
+  const id = ctx.params?.id;
+  if (!id) return NextResponse.json({ error: "ID가 필요합니다" }, { status: 400 });
+
   const survey = await prisma.survey.findUnique({
     where: { id: parseInt(id) },
     include: {
@@ -20,40 +21,39 @@ export async function GET(
     return NextResponse.json({ error: "설문을 찾을 수 없습니다" }, { status: 404 });
   }
   return NextResponse.json(survey);
-}
+});
 
 // PUT /api/surveys/:id
-export async function PUT(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  const { id } = await params;
+export const PUT = withAuth({ type: "role", minRole: "creator" }, async (request: NextRequest, ctx) => {
+  const id = ctx.params?.id;
+  if (!id) return NextResponse.json({ error: "ID가 필요합니다" }, { status: 400 });
+
   const body = await request.json();
+  const data = updateSurveyApiSchema.parse(body);
 
   const survey = await prisma.survey.update({
     where: { id: parseInt(id) },
     data: {
-      title: body.title ?? undefined,
-      status: body.status ?? undefined,
-      description: body.description ?? undefined,
-      trainingMonth: body.trainingMonth ?? undefined,
-      internalLabel: body.internalLabel !== undefined ? (body.internalLabel || null) : undefined,
-      showProjectName: body.showProjectName !== undefined
-        ? (body.showProjectName === true || body.showProjectName === "true")
+      title: data.title ?? undefined,
+      status: data.status ?? undefined,
+      description: data.description ?? undefined,
+      trainingMonth: data.trainingMonth ?? undefined,
+      internalLabel: data.internalLabel !== undefined ? (data.internalLabel || null) : undefined,
+      showProjectName: data.showProjectName !== undefined
+        ? (data.showProjectName === true || data.showProjectName === "true")
         : undefined,
     },
     include: { serviceType: true },
   });
 
   return NextResponse.json(survey);
-}
+});
 
 // DELETE /api/surveys/:id
-export async function DELETE(
-  _request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  const { id } = await params;
+export const DELETE = withAuth({ type: "role", minRole: "admin" }, async (request: NextRequest, ctx) => {
+  const id = ctx.params?.id;
+  if (!id) return NextResponse.json({ error: "ID가 필요합니다" }, { status: 400 });
+
   await prisma.survey.delete({ where: { id: parseInt(id) } });
   return NextResponse.json({ success: true });
-}
+});

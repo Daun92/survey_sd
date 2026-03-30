@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { withAuth } from "@/lib/api-utils";
 
 // GET /api/training/target-list — 교육 실시한 고객사 = 설문/인터뷰 대상
-export async function GET(request: NextRequest) {
+export const GET = withAuth({ type: "auth" }, async (request: NextRequest) => {
   const { searchParams } = request.nextUrl;
   const year = parseInt(searchParams.get("year") || String(new Date().getFullYear()));
   const month = parseInt(searchParams.get("month") || String(new Date().getMonth() + 1));
@@ -35,4 +36,4 @@ export async function GET(request: NextRequest) {
     })),
     total: records.length,
   });
-}
+});

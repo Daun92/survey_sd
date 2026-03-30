@@ -1,8 +1,9 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { withAuth } from "@/lib/api-utils";
 import ExcelJS from "exceljs";
 
-export async function GET() {
+export const GET = withAuth({ type: "auth" }, async (request: NextRequest) => {
   const customers = await prisma.customer.findMany({
     where: { isActive: true },
     include: { serviceType: true },
@@ -57,4 +58,4 @@ export async function GET() {
       "Content-Disposition": `attachment; filename="customers_${new Date().toISOString().slice(0, 10)}.xlsx"`,
     },
   });
-}
+});

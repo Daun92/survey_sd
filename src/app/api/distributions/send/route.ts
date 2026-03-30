@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { withAuth } from "@/lib/api-utils";
 import { sendSurveyEmail } from "@/lib/email";
 
 // POST /api/distributions/send — 이메일 발송
-export async function POST(request: NextRequest) {
+export const POST = withAuth({ type: "role", minRole: "creator" }, async (request: NextRequest) => {
   const body = await request.json();
   const { distributionIds, surveyId } = body as {
     distributionIds?: number[];
@@ -76,4 +77,4 @@ export async function POST(request: NextRequest) {
   }
 
   return NextResponse.json({ sent, failed, noEmail, errors: errors.slice(0, 20) });
-}
+});

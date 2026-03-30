@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { withAuth } from "@/lib/api-utils";
 
 // GET /api/training — 월별 교육실시여부 조회
-export async function GET(request: NextRequest) {
+export const GET = withAuth({ type: "auth" }, async (request: NextRequest) => {
   const { searchParams } = request.nextUrl;
   const year = parseInt(searchParams.get("year") || String(new Date().getFullYear()));
   const month = parseInt(searchParams.get("month") || String(new Date().getMonth() + 1));
@@ -35,10 +36,10 @@ export async function GET(request: NextRequest) {
       byVerifier: Object.fromEntries(byVerifier),
     },
   });
-}
+});
 
 // POST /api/training — 수동 등록
-export async function POST(request: NextRequest) {
+export const POST = withAuth({ type: "role", minRole: "creator" }, async (request: NextRequest) => {
   const body = await request.json();
 
   const record = await prisma.trainingRecord.upsert({
@@ -71,4 +72,4 @@ export async function POST(request: NextRequest) {
   });
 
   return NextResponse.json(record, { status: 201 });
-}
+});

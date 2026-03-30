@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { withAuth } from "@/lib/api-utils";
 
 // GET /api/interviews
-export async function GET(request: NextRequest) {
+export const GET = withAuth({ type: "auth" }, async (request: NextRequest) => {
   const { searchParams } = request.nextUrl;
   const surveyId = searchParams.get("surveyId");
   const year = searchParams.get("year");
@@ -25,10 +26,10 @@ export async function GET(request: NextRequest) {
   });
 
   return NextResponse.json(interviews);
-}
+});
 
 // POST /api/interviews
-export async function POST(request: NextRequest) {
+export const POST = withAuth({ type: "role", minRole: "creator" }, async (request: NextRequest) => {
   const body = await request.json();
 
   const interview = await prisma.interview.create({
@@ -50,4 +51,4 @@ export async function POST(request: NextRequest) {
   });
 
   return NextResponse.json(interview, { status: 201 });
-}
+});

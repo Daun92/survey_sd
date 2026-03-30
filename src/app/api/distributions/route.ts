@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { withAuth } from "@/lib/api-utils";
 import { v4 as uuidv4 } from "uuid";
 
 // GET /api/distributions — 배포 목록 조회
-export async function GET(request: NextRequest) {
+export const GET = withAuth({ type: "auth" }, async (request: NextRequest) => {
   const { searchParams } = request.nextUrl;
   const surveyId = searchParams.get("surveyId");
   const status = searchParams.get("status");
@@ -32,10 +33,10 @@ export async function GET(request: NextRequest) {
     distributions,
     summary: { total, sent, responded, responseRate },
   });
-}
+});
 
 // POST /api/distributions — 대량 배포 생성
-export async function POST(request: NextRequest) {
+export const POST = withAuth({ type: "role", minRole: "creator" }, async (request: NextRequest) => {
   const body = await request.json();
   const { surveyId, customerIds, channel = "email", projectNames } = body as {
     surveyId: number;
@@ -118,4 +119,4 @@ export async function POST(request: NextRequest) {
     { created: created.count, distributions, skipped: customerIds.length - newCustomerIds.length },
     { status: 201 }
   );
-}
+});

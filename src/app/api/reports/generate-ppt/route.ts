@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { withAuth } from "@/lib/api-utils";
 import { generatePpt } from "@/lib/ppt-generator";
 
-export async function GET(request: NextRequest) {
+export const GET = withAuth({ type: "auth" }, async (request: NextRequest) => {
   const { searchParams } = request.nextUrl;
   const surveyId = searchParams.get("surveyId");
   const year = parseInt(searchParams.get("year") || String(new Date().getFullYear()));
@@ -125,4 +126,4 @@ export async function GET(request: NextRequest) {
       "Content-Disposition": `attachment; filename*=UTF-8''${encodeURIComponent(fileName)}`,
     },
   });
-}
+});

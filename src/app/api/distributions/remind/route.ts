@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { withAuth } from "@/lib/api-utils";
 import { sendReminderEmail } from "@/lib/email";
 
 // POST /api/distributions/remind — 미응답자 리마인더 발송
-export async function POST(request: NextRequest) {
+export const POST = withAuth({ type: "role", minRole: "creator" }, async (request: NextRequest) => {
   const body = await request.json();
   const { distributionIds, surveyId } = body as {
     distributionIds?: number[];
@@ -65,4 +66,4 @@ export async function POST(request: NextRequest) {
   }
 
   return NextResponse.json({ sent, failed, total: distributions.length });
-}
+});

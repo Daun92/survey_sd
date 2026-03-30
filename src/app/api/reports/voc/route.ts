@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { withAuth } from "@/lib/api-utils";
 
 // GET /api/reports/voc — 주관식(텍스트) 응답 조회
-export async function GET(request: NextRequest) {
+export const GET = withAuth({ type: "auth" }, async (request: NextRequest) => {
   const { searchParams } = request.nextUrl;
   const surveyId = searchParams.get("surveyId");
   const year = searchParams.get("year");
@@ -62,4 +63,4 @@ export async function GET(request: NextRequest) {
       improvement: improvement.length,
     },
   });
-}
+});
