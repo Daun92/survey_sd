@@ -21,13 +21,21 @@ const statusLabels: Record<string, { label: string; className: string }> = {
   },
 };
 
+const educationTypeLabels: Record<string, string> = {
+  classroom: "집합",
+  remote: "원격",
+  consulting: "컨설팅",
+  recruitment: "채용",
+  public: "공공",
+};
+
 function formatDate(dateStr: string | null) {
   if (!dateStr) return "-";
   const d = new Date(dateStr);
   return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, "0")}.${String(d.getDate()).padStart(2, "0")}`;
 }
 
-async function getSurveys(statusFilter?: string, query?: string) {
+async function getSurveys(statusFilter?: string, query?: string, eduTypeFilter?: string) {
   let q = supabase
     .from("edu_surveys")
     .select(`
@@ -35,7 +43,7 @@ async function getSurveys(statusFilter?: string, query?: string) {
       starts_at, ends_at, created_at,
       edu_submissions(count),
       sessions (
-        name,
+        name, session_number,
         courses (
           name,
           projects (
@@ -49,6 +57,10 @@ async function getSurveys(statusFilter?: string, query?: string) {
 
   if (statusFilter && statusFilter !== "all") {
     q = q.eq("status", statusFilter);
+  }
+
+  if (eduTypeFilter && eduTypeFilter !== "all") {
+    q = q.eq("education_type", eduTypeFilter);
   }
 
   const { data: surveys, error } = await q;
@@ -66,11 +78,13 @@ async function getSurveys(statusFilter?: string, query?: string) {
       title: s.title,
       status: s.status,
       survey_type: s.survey_type,
+      education_type: s.education_type,
       url_token: s.url_token,
       created_at: s.created_at,
       project_name: project?.name ?? null,
       customer_name: customer?.company_name ?? null,
       session_name: session?.name ?? null,
+      session_number: session?.session_number ?? null,
       submission_count:
         (s.edu_submissions as unknown as { count: number }[])?.[0]?.count ?? 0,
     };
@@ -105,14 +119,15 @@ async function getStatusCounts() {
 export default async function SurveysPage({
   searchParams,
 }: {
-  searchParams: Promise<{ status?: string; q?: string }>;
+  searchParams: Promise<{ status?: string; q?: string; edu_type?: string }>;
 }) {
   const params = await searchParams;
   const statusFilter = params.status || "all";
   const query = params.q || "";
+  const eduTypeFilter = params.edu_type || "all";
 
   const [surveys, counts] = await Promise.all([
-    getSurveys(statusFilter, query),
+    getSurveys(statusFilter, query, eduTypeFilter),
     getStatusCounts(),
   ]);
 
@@ -141,52 +156,91 @@ export default async function SurveysPage({
         </Link>
       </div>
 
-      {/* 상태 필터 탭 + 검색 */}
-      <div className="flex items-center justify-between mb-4 gap-4">
-        <div className="flex items-center gap-1">
-          {tabs.map((tab) => {
-            const isActive = statusFilter === tab.key;
-            const href =
-              tab.key === "all"
-                ? `/admin/surveys${query ? `?q=${query}` : ""}`
-                : `/admin/surveys?status=${tab.key}${query ? `&q=${query}` : ""}`;
+      {/* 상태 필터 탭 + 교육유형 필터 + 검색 */}
+      <div className="flex flex-col gap-3 mb-4">
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-1">
+            {tabs.map((tab) => {
+              const isActive = statusFilter === tab.key;
+              const params = new URLSearchParams();
+              if (tab.key !== "all") params.set("status", tab.key);
+              if (query) params.set("q", query);
+              if (eduTypeFilter !== "all") params.set("edu_type", eduTypeFilter);
+              const href = `/admin/surveys${params.toString() ? `?${params}` : ""}`;
+              return (
+                <Link
+                  key={tab.key}
+                  href={href}
+                  className={`inline-flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-sm font-medium transition-colors ${
+                    isActive
+                      ? "bg-stone-900 text-white"
+                      : "text-stone-500 hover:bg-stone-100 hover:text-stone-700"
+                  }`}
+                >
+                  {tab.label}
+                  <span
+                    className={`text-xs ${isActive ? "text-stone-400" : "text-stone-400"}`}
+                  >
+                    {tab.count}
+                  </span>
+                </Link>
+              );
+            })}
+          </div>
+
+          <form action="/admin/surveys" method="get" className="relative">
+            {statusFilter !== "all" && (
+              <input type="hidden" name="status" value={statusFilter} />
+            )}
+            {eduTypeFilter !== "all" && (
+              <input type="hidden" name="edu_type" value={eduTypeFilter} />
+            )}
+            <Search
+              size={14}
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-400"
+            />
+            <input
+              type="text"
+              name="q"
+              defaultValue={query}
+              placeholder="설문 검색..."
+              className="w-56 rounded-lg border border-stone-200 bg-white pl-9 pr-3 py-2 text-sm text-stone-700 placeholder-stone-400 focus:border-teal-500 focus:ring-1 focus:ring-teal-500 outline-none"
+            />
+          </form>
+        </div>
+
+        {/* 교육유형 필터 */}
+        <div className="flex items-center gap-1.5">
+          <span className="text-xs font-medium text-stone-500 mr-1">교육유형:</span>
+          {[
+            { key: "all", label: "전체" },
+            { key: "classroom", label: "집합" },
+            { key: "remote", label: "원격" },
+            { key: "consulting", label: "컨설팅" },
+            { key: "recruitment", label: "채용" },
+            { key: "public", label: "공공" },
+          ].map((et) => {
+            const isActive = eduTypeFilter === et.key;
+            const params = new URLSearchParams();
+            if (statusFilter !== "all") params.set("status", statusFilter);
+            if (query) params.set("q", query);
+            if (et.key !== "all") params.set("edu_type", et.key);
+            const href = `/admin/surveys${params.toString() ? `?${params}` : ""}`;
             return (
               <Link
-                key={tab.key}
+                key={et.key}
                 href={href}
-                className={`inline-flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-sm font-medium transition-colors ${
+                className={`inline-flex items-center rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
                   isActive
-                    ? "bg-stone-900 text-white"
-                    : "text-stone-500 hover:bg-stone-100 hover:text-stone-700"
+                    ? "bg-teal-600 text-white"
+                    : "bg-stone-100 text-stone-600 hover:bg-stone-200"
                 }`}
               >
-                {tab.label}
-                <span
-                  className={`text-xs ${isActive ? "text-stone-400" : "text-stone-400"}`}
-                >
-                  {tab.count}
-                </span>
+                {et.label}
               </Link>
             );
           })}
         </div>
-
-        <form action="/admin/surveys" method="get" className="relative">
-          {statusFilter !== "all" && (
-            <input type="hidden" name="status" value={statusFilter} />
-          )}
-          <Search
-            size={14}
-            className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-400"
-          />
-          <input
-            type="text"
-            name="q"
-            defaultValue={query}
-            placeholder="설문 검색..."
-            className="w-56 rounded-lg border border-stone-200 bg-white pl-9 pr-3 py-2 text-sm text-stone-700 placeholder-stone-400 focus:border-teal-500 focus:ring-1 focus:ring-teal-500 outline-none"
-          />
-        </form>
       </div>
 
       {surveys.length === 0 ? (
@@ -213,7 +267,10 @@ export default async function SurveysPage({
                     설문명
                   </th>
                   <th className="text-left px-5 h-9 text-xs font-medium text-stone-500">
-                    유형
+                    차수/세션
+                  </th>
+                  <th className="text-left px-5 h-9 text-xs font-medium text-stone-500">
+                    교육유형
                   </th>
                   <th className="text-left px-5 h-9 text-xs font-medium text-stone-500">
                     고객사 / 프로젝트
@@ -248,12 +305,31 @@ export default async function SurveysPage({
                         >
                           {survey.title}
                         </Link>
-                      </td>
-                      <td className="px-5 h-12">
                         {survey.survey_type && (
-                          <span className="inline-flex items-center rounded-md bg-teal-50 px-2 py-0.5 text-[11px] font-medium text-teal-700">
+                          <span className="inline-flex items-center rounded-md bg-teal-50 px-1.5 py-0.5 text-[10px] font-medium text-teal-700 ml-1.5">
                             {survey.survey_type}
                           </span>
+                        )}
+                      </td>
+                      <td className="px-5 h-12">
+                        {survey.session_name || survey.session_number ? (
+                          <div className="text-sm text-stone-700">
+                            {survey.session_name || `${survey.session_number}차`}
+                            {survey.session_number && survey.session_name && (
+                              <span className="text-[11px] text-stone-400 ml-1">({survey.session_number}차)</span>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="text-xs text-stone-400">-</span>
+                        )}
+                      </td>
+                      <td className="px-5 h-12">
+                        {survey.education_type ? (
+                          <span className="inline-flex items-center rounded-md bg-blue-50 px-2 py-0.5 text-[11px] font-medium text-blue-700">
+                            {educationTypeLabels[survey.education_type] ?? survey.education_type}
+                          </span>
+                        ) : (
+                          <span className="text-xs text-stone-400">-</span>
                         )}
                       </td>
                       <td className="px-5 h-12">

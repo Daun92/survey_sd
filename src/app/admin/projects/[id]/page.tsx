@@ -15,6 +15,7 @@ import {
   Plus,
 } from "lucide-react";
 import { ProjectActions } from "./ProjectActions";
+import { SessionEditor } from "./SessionEditor";
 
 export const dynamic = "force-dynamic";
 
@@ -41,6 +42,14 @@ const sessionStatusLabels: Record<string, { label: string; className: string }> 
   in_progress: { label: "진행중", className: "bg-emerald-100 text-emerald-800" },
   completed: { label: "완료", className: "bg-rose-100 text-rose-800" },
   cancelled: { label: "취소", className: "bg-red-100 text-red-800" },
+};
+
+const educationTypeLabels: Record<string, string> = {
+  classroom: "집합",
+  remote: "원격",
+  consulting: "컨설팅",
+  recruitment: "채용",
+  public: "공공",
 };
 
 function formatDate(dateStr: string | null) {
@@ -247,11 +256,7 @@ export default async function ProjectDetailPage({
                       </span>
                       {course.education_type && (
                         <span className="inline-flex items-center rounded-md bg-teal-50 px-2 py-0.5 text-xs font-medium text-teal-700">
-                          {course.education_type === "classroom"
-                            ? "집합"
-                            : course.education_type === "online"
-                              ? "온라인"
-                              : course.education_type}
+                          {educationTypeLabels[course.education_type] ?? course.education_type}
                         </span>
                       )}
                     </div>
@@ -279,36 +284,66 @@ export default async function ProjectDetailPage({
                           const sStatus =
                             sessionStatusLabels[session.status] ??
                             sessionStatusLabels.scheduled;
+                          const linkedSurveys = surveys.filter(
+                            (sv: { session_id: string | null }) => sv.session_id === session.id
+                          );
                           return (
-                            <div
-                              key={session.id}
-                              className="flex items-center gap-4 px-5 py-3 border-b border-stone-100 last:border-0"
-                            >
-                              <span className="text-xs font-mono text-stone-400 shrink-0 w-12">
-                                #{session.session_number}
-                              </span>
-                              <div className="flex-1 min-w-0">
-                                <p className="text-sm text-stone-800">
-                                  {session.name || `세션 ${session.session_number}`}
-                                </p>
-                                <div className="flex items-center gap-3 mt-0.5">
-                                  <span className="text-xs text-stone-400">
-                                    {formatDate(session.start_date)} ~{" "}
-                                    {formatDate(session.end_date)}
-                                  </span>
-                                  {session.capacity && (
-                                    <span className="flex items-center gap-1 text-xs text-stone-400">
-                                      <Users size={11} />
-                                      {session.capacity}명
-                                    </span>
-                                  )}
-                                </div>
-                              </div>
-                              <span
-                                className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium shrink-0 ${sStatus.className}`}
+                            <div key={session.id}>
+                              <div
+                                className="group flex items-center gap-4 px-5 py-3 border-b border-stone-100"
                               >
-                                {sStatus.label}
-                              </span>
+                                <span className="text-xs font-mono text-stone-400 shrink-0 w-12">
+                                  #{session.session_number}
+                                </span>
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-sm text-stone-800">
+                                    {session.name || `세션 ${session.session_number}`}
+                                  </p>
+                                  <div className="flex items-center gap-3 mt-0.5">
+                                    <span className="text-xs text-stone-400">
+                                      {formatDate(session.start_date)} ~{" "}
+                                      {formatDate(session.end_date)}
+                                    </span>
+                                    {session.capacity && (
+                                      <span className="flex items-center gap-1 text-xs text-stone-400">
+                                        <Users size={11} />
+                                        {session.capacity}명
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                                <span
+                                  className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium shrink-0 ${sStatus.className}`}
+                                >
+                                  {sStatus.label}
+                                </span>
+                                <SessionEditor session={session} projectId={project.id} />
+                              </div>
+                              {/* 연결된 설문 표시 */}
+                              {linkedSurveys.length > 0 && (
+                                <div className="bg-stone-50/40">
+                                  {linkedSurveys.map((sv: {
+                                    id: string;
+                                    title: string;
+                                    status: string;
+                                  }) => {
+                                    const svStatus = surveyStatusLabels[sv.status] ?? surveyStatusLabels.draft;
+                                    return (
+                                      <Link
+                                        key={sv.id}
+                                        href={`/admin/surveys/${sv.id}`}
+                                        className="flex items-center gap-3 pl-[4.5rem] pr-5 py-2 border-b border-stone-100 last:border-0 hover:bg-stone-50 transition-colors"
+                                      >
+                                        <ClipboardList size={13} className="text-teal-500 shrink-0" />
+                                        <span className="text-xs text-stone-700 flex-1 truncate">{sv.title}</span>
+                                        <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium shrink-0 ${svStatus.className}`}>
+                                          {svStatus.label}
+                                        </span>
+                                      </Link>
+                                    );
+                                  })}
+                                </div>
+                              )}
                             </div>
                           );
                         }

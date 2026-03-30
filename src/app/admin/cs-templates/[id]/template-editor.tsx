@@ -107,34 +107,55 @@ export function TemplateEditor({ templateId, templateName, templateDescription, 
         />
       )}
 
-      {/* 문항별 수정/삭제 */}
-      {questions.map((q) => (
-        editingQId === q.id ? (
-          <QuestionEditForm
-            key={q.id}
-            templateId={templateId}
-            question={q}
-            nextSortOrder={q.sort_order}
-            onDone={() => { setEditingQId(null); router.refresh(); }}
-            onCancel={() => setEditingQId(null)}
-          />
-        ) : (
-          <div key={q.id} className="group flex items-start gap-3 px-4 py-3 border-b border-stone-100 last:border-0 hover:bg-stone-50/50">
-            <span className="text-xs font-mono text-stone-400 mt-0.5 shrink-0 w-12">{q.question_no}</span>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm text-stone-800 leading-relaxed">{q.question_text}</p>
-              {q.response_options && <p className="text-xs text-stone-400 mt-0.5">{q.response_options}</p>}
+      {/* 문항별 수정/삭제 (섹션별 그룹) */}
+      {(() => {
+        const sections: Record<string, Question[]> = {};
+        questions.forEach((q) => {
+          const sec = q.section_label || "기타";
+          if (!sections[sec]) sections[sec] = [];
+          sections[sec].push(q);
+        });
+        return Object.entries(sections).map(([sectionName, sectionQuestions]) => (
+          <div key={sectionName}>
+            <div className="px-4 py-2 bg-stone-50/80 border-b border-stone-100">
+              <span className="text-[11px] font-semibold text-stone-500 uppercase tracking-wide">{sectionName}</span>
+              <span className="text-[11px] text-stone-400 ml-1.5">({sectionQuestions.length})</span>
             </div>
-            <span className="inline-flex rounded bg-stone-100 px-1.5 py-0.5 text-[11px] font-medium text-stone-600 shrink-0">
-              {questionTypeLabels[q.question_type] ?? q.question_type}
-            </span>
-            <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
-              <button onClick={() => setEditingQId(q.id)} className="rounded p-1 text-stone-400 hover:text-teal-600 hover:bg-teal-50"><Pencil size={13} /></button>
-              <QuestionDeleteButton questionId={q.id} templateId={templateId} onDeleted={() => router.refresh()} />
-            </div>
+            {sectionQuestions.map((q) => (
+              editingQId === q.id ? (
+                <QuestionEditForm
+                  key={q.id}
+                  templateId={templateId}
+                  question={q}
+                  nextSortOrder={q.sort_order}
+                  onDone={() => { setEditingQId(null); router.refresh(); }}
+                  onCancel={() => setEditingQId(null)}
+                />
+              ) : (
+                <div key={q.id} className="group flex items-start gap-3 px-4 py-3 border-b border-stone-100 last:border-0 hover:bg-stone-50/50">
+                  <span className="text-xs font-mono text-stone-400 mt-0.5 shrink-0 w-12">{q.question_no}</span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm text-stone-800 leading-relaxed">{q.question_text}</p>
+                    {q.response_options && <p className="text-xs text-stone-400 mt-0.5">{q.response_options}</p>}
+                  </div>
+                  {q.section_label && (
+                    <span className="inline-flex rounded bg-teal-50 px-1.5 py-0.5 text-[11px] font-medium text-teal-700 shrink-0">
+                      {q.section_label}
+                    </span>
+                  )}
+                  <span className="inline-flex rounded bg-stone-100 px-1.5 py-0.5 text-[11px] font-medium text-stone-600 shrink-0">
+                    {questionTypeLabels[q.question_type] ?? q.question_type}
+                  </span>
+                  <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                    <button onClick={() => setEditingQId(q.id)} className="rounded p-1 text-stone-400 hover:text-teal-600 hover:bg-teal-50"><Pencil size={13} /></button>
+                    <QuestionDeleteButton questionId={q.id} templateId={templateId} onDeleted={() => router.refresh()} />
+                  </div>
+                </div>
+              )
+            ))}
           </div>
-        )
-      ))}
+        ));
+      })()}
     </div>
   );
 }
@@ -163,15 +184,15 @@ function QuestionEditForm({ templateId, question, nextSortOrder, onDone, onCance
       if (isEdit && question) {
         await updateTemplateQuestion(question.id, templateId, {
           question_no: questionNo, question_text: questionText,
-          question_type: questionType, response_options: responseOptions || undefined,
-          section_label: sectionLabel || undefined,
+          question_type: questionType, response_options: responseOptions.trim() || null,
+          section_label: sectionLabel.trim() || null,
         });
       } else {
         await addTemplateQuestion(templateId, {
           question_no: questionNo || `Q${nextSortOrder + 1}`,
           question_text: questionText, question_type: questionType,
-          response_options: responseOptions || undefined,
-          section_label: sectionLabel || undefined,
+          response_options: responseOptions.trim() || null,
+          section_label: sectionLabel.trim() || null,
           sort_order: nextSortOrder,
         });
       }

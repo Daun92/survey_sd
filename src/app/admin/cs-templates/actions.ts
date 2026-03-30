@@ -153,8 +153,8 @@ export async function addTemplateQuestion(templateId: string, data: {
   question_no: string;
   question_text: string;
   question_type: string;
-  response_options?: string;
-  section_label?: string;
+  response_options?: string | null;
+  section_label?: string | null;
   page_type?: string;
   sort_order: number;
 }) {
@@ -170,8 +170,8 @@ export async function updateTemplateQuestion(questionId: string, templateId: str
   question_no?: string;
   question_text?: string;
   question_type?: string;
-  response_options?: string;
-  section_label?: string;
+  response_options?: string | null;
+  section_label?: string | null;
 }) {
   const updateData: Record<string, unknown> = {};
   if (data.question_no !== undefined) updateData.question_no = data.question_no;

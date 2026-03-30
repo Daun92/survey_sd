@@ -40,6 +40,32 @@ export async function updateProject(id: string, formData: FormData) {
   revalidatePath("/admin/projects");
 }
 
+export async function updateSession(sessionId: string, projectId: string, data: {
+  name?: string;
+  start_date?: string | null;
+  end_date?: string | null;
+  capacity?: number | null;
+  status?: string;
+}) {
+  const updateData: Record<string, unknown> = {};
+  if (data.name !== undefined) updateData.name = data.name || null;
+  if (data.start_date !== undefined) updateData.start_date = data.start_date || null;
+  if (data.end_date !== undefined) updateData.end_date = data.end_date || null;
+  if (data.capacity !== undefined) updateData.capacity = data.capacity;
+  if (data.status !== undefined) updateData.status = data.status;
+
+  const { error } = await supabase
+    .from("sessions")
+    .update(updateData)
+    .eq("id", sessionId);
+
+  if (error) {
+    throw new Error("세션 수정 실패: " + error.message);
+  }
+
+  revalidatePath(`/admin/projects/${projectId}`);
+}
+
 export async function deleteProject(id: string) {
   const { error } = await supabase.from("projects").delete().eq("id", id);
 
