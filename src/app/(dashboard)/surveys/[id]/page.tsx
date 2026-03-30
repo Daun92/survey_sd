@@ -14,7 +14,8 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
-import { ArrowLeft, Plus, Trash2, GripVertical, Save } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, GripVertical, Save, Wand2 } from "lucide-react";
+import WizardPanel, { type ExportedQuestion } from "@/components/survey/wizard-panel";
 
 interface Question {
   id: number;
@@ -33,6 +34,7 @@ interface Survey {
   surveyMonth: number;
   status: string;
   showProjectName: boolean;
+  internalLabel: string | null;
   description: string | null;
   serviceType: { id: number; name: string };
   questions: Question[];
@@ -59,6 +61,7 @@ export default function SurveyEditPage({ params }: { params: Promise<{ id: strin
   const [survey, setSurvey] = useState<Survey | null>(null);
   const [questions, setQuestions] = useState<Question[]>([]);
   const [hasChanges, setHasChanges] = useState(false);
+  const [wizardOpen, setWizardOpen] = useState(false);
 
   const fetchSurvey = useCallback(async () => {
     const res = await fetch(`/api/surveys/${id}`);
@@ -157,6 +160,22 @@ export default function SurveyEditPage({ params }: { params: Promise<{ id: strin
     fetchSurvey();
   }
 
+  function handleWizardApply(exported: ExportedQuestion[]) {
+    // Replace all questions with wizard output (all as new, negative IDs)
+    const newQuestions: Question[] = exported.map((q, idx) => ({
+      id: -(Date.now() + idx),
+      questionOrder: q.questionOrder,
+      questionText: q.questionText,
+      questionType: q.questionType,
+      category: q.category,
+      isRequired: q.isRequired,
+      optionsJson: q.optionsJson,
+    }));
+    setQuestions(newQuestions);
+    setHasChanges(true);
+    toast.success(`마법사에서 ${exported.length}개 문항이 적용되었습니다. "문항 저장"을 눌러 확정하세요.`);
+  }
+
   if (!survey) return null;
 
   return (
@@ -176,6 +195,10 @@ export default function SurveyEditPage({ params }: { params: Promise<{ id: strin
             <Badge variant="outline">{survey.status}</Badge>
           </div>
         </div>
+        <Button variant="outline" onClick={() => setWizardOpen(true)}>
+          <Wand2 className="mr-2 h-4 w-4" />
+          설문 마법사
+        </Button>
         {hasChanges && (
           <Button onClick={saveQuestions}>
             <Save className="mr-2 h-4 w-4" />
@@ -202,6 +225,20 @@ export default function SurveyEditPage({ params }: { params: Promise<{ id: strin
                 }}
               />
             </div>
+            <div className="space-y-2">
+              <Label>내부 구분 태그</Label>
+              <Input
+                defaultValue={survey.internalLabel || ""}
+                onBlur={(e) => {
+                  if (e.target.value !== (survey.internalLabel || "")) {
+                    updateSurveyInfo("internalLabel", e.target.value);
+                  }
+                }}
+                placeholder="예: A사 리더십 1기"
+              />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>상태</Label>
               <Select
@@ -354,6 +391,16 @@ export default function SurveyEditPage({ params }: { params: Promise<{ id: strin
           )}
         </CardContent>
       </Card>
+
+      {/* 설문 설계 마법사 */}
+      <WizardPanel
+        open={wizardOpen}
+        onOpenChange={setWizardOpen}
+        serviceTypeId={survey.serviceType.id}
+        serviceTypeName={survey.serviceType.name}
+        existingQuestionCount={questions.length}
+        onApply={handleWizardApply}
+      />
     </div>
   );
 }

@@ -46,6 +46,7 @@ export async function POST(request: NextRequest) {
       surveyYear: body.surveyYear,
       surveyMonth: body.surveyMonth,
       trainingMonth: body.trainingMonth ?? null,
+      internalLabel: body.internalLabel || null,
       status: "draft",
       description: body.description || null,
     },

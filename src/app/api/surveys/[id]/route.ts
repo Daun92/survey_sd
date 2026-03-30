@@ -37,6 +37,7 @@ export async function PUT(
       status: body.status ?? undefined,
       description: body.description ?? undefined,
       trainingMonth: body.trainingMonth ?? undefined,
+      internalLabel: body.internalLabel !== undefined ? (body.internalLabel || null) : undefined,
       showProjectName: body.showProjectName !== undefined
         ? (body.showProjectName === true || body.showProjectName === "true")
         : undefined,
