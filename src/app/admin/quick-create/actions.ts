@@ -68,6 +68,27 @@ export async function quickCreateSurvey(formData: FormData): Promise<QuickCreate
       return { success: false, error: "설문 생성 권한이 없습니다. 관리자에게 creator 역할을 요청하세요." };
     }
 
+    // ── 과정구분 → service_type_id 조회 ──
+    const divisionToNameEn: Record<string, string> = {
+      classroom: "in_person",
+      remote: "remote",
+      content_dev: "content_dev",
+      smart: "smart_training",
+      hrm: "hrm",
+      hr_consulting: "hr_consulting",
+    };
+    const serviceNameEn = divisionToNameEn[input.educationType] || "in_person";
+
+    const { data: serviceType } = await supabase
+      .from("service_types")
+      .select("id")
+      .eq("name_en", serviceNameEn)
+      .single();
+
+    if (!serviceType) {
+      return { success: false, error: `서비스 유형을 찾을 수 없습니다: ${input.educationType}` };
+    }
+
     let projectId: string;
     let projectName: string;
     let customerName: string = "";
@@ -100,12 +121,13 @@ export async function quickCreateSurvey(formData: FormData): Promise<QuickCreate
         return { success: false, error: "프로젝트명과 고객사를 입력해주세요." };
       }
 
-      // Find or create customer
+      // Find or create customer (company_name + service_type_id가 UNIQUE)
       let customerId: number;
       const { data: existingCustomer } = await supabase
         .from("customers")
         .select("id")
         .eq("company_name", input.customerName)
+        .eq("service_type_id", serviceType.id)
         .single();
 
       if (existingCustomer) {
@@ -113,13 +135,16 @@ export async function quickCreateSurvey(formData: FormData): Promise<QuickCreate
       } else {
         const { data: newCustomer, error: customerError } = await supabase
           .from("customers")
-          .insert({ company_name: input.customerName })
+          .insert({
+            company_name: input.customerName,
+            service_type_id: serviceType.id,
+          })
           .select("id")
           .single();
 
         if (customerError || !newCustomer) {
           console.error("[quick-create] 고객사 생성 실패:", customerError);
-          return { success: false, error: "고객사 생성 실패: " + (customerError?.message || "RLS 정책에 의해 차단되었을 수 있습니다") };
+          return { success: false, error: "고객사 생성 실패: " + (customerError?.message || "알 수 없는 오류") };
         }
         customerId = newCustomer.id;
       }
