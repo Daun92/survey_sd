@@ -68,25 +68,41 @@ export async function quickCreateSurvey(formData: FormData): Promise<QuickCreate
       return { success: false, error: "설문 생성 권한이 없습니다. 관리자에게 creator 역할을 요청하세요." };
     }
 
-    // ── 과정구분 → service_type_id 조회 ──
-    const divisionToNameEn: Record<string, string> = {
-      classroom: "in_person",
-      remote: "remote",
-      content_dev: "content_dev",
-      smart: "smart_training",
-      hrm: "hrm",
-      hr_consulting: "hr_consulting",
+    // ── 과정구분 → service_type_id 조회 (유연 매핑) ──
+    const divisionMap: Record<string, { nameEn: string; nameKr: string }> = {
+      classroom:     { nameEn: "in_person",      nameKr: "집체" },
+      remote:        { nameEn: "remote",         nameKr: "원격교육" },
+      content_dev:   { nameEn: "smart_training", nameKr: "스마트훈련" },
+      smart:         { nameEn: "smart_training", nameKr: "스마트훈련" },
+      hrm:           { nameEn: "hrm",            nameKr: "HRM" },
+      hr_consulting: { nameEn: "hr_consulting",  nameKr: "HR컨설팅" },
     };
-    const serviceNameEn = divisionToNameEn[input.educationType] || "in_person";
+    const mapping = divisionMap[input.educationType] || divisionMap.classroom;
 
-    const { data: serviceType } = await supabase
+    // 전체 service_types 조회 후 유연 매칭
+    const { data: allServiceTypes, error: stError } = await supabase
       .from("service_types")
-      .select("id")
-      .eq("name_en", serviceNameEn)
-      .single();
+      .select("id, name, name_en");
 
-    if (!serviceType) {
-      return { success: false, error: `서비스 유형을 찾을 수 없습니다: ${input.educationType}` };
+    if (stError) {
+      console.error("[quick-create] service_types 조회 에러:", stError);
+    }
+    console.log("[quick-create] service_types 테이블:", JSON.stringify(allServiceTypes));
+
+    let serviceTypeId: number | null = null;
+    if (allServiceTypes && allServiceTypes.length > 0) {
+      // 1차: name_en 매칭
+      const byEn = allServiceTypes.find((st) => st.name_en === mapping.nameEn);
+      // 2차: name(한글) 매칭
+      const byKr = !byEn ? allServiceTypes.find((st) => st.name === mapping.nameKr) : null;
+      // 3차: 첫 번째 타입 폴백
+      const matched = byEn || byKr || allServiceTypes[0];
+      serviceTypeId = matched.id;
+    }
+
+    if (!serviceTypeId) {
+      console.error("[quick-create] service_types 비어있음, educationType:", input.educationType);
+      return { success: false, error: "서비스 유형 데이터가 없습니다. 관리자에게 문의하세요." };
     }
 
     let projectId: string;
@@ -127,7 +143,7 @@ export async function quickCreateSurvey(formData: FormData): Promise<QuickCreate
         .from("customers")
         .select("id")
         .eq("company_name", input.customerName)
-        .eq("service_type_id", serviceType.id)
+        .eq("service_type_id", serviceTypeId)
         .single();
 
       if (existingCustomer) {
@@ -137,7 +153,7 @@ export async function quickCreateSurvey(formData: FormData): Promise<QuickCreate
           .from("customers")
           .insert({
             company_name: input.customerName,
-            service_type_id: serviceType.id,
+            service_type_id: serviceTypeId,
           })
           .select("id")
           .single();
