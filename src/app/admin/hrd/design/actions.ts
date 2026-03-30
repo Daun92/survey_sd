@@ -143,13 +143,15 @@ export async function deleteItem(id: string) {
 
 export async function reorderItems(items: { id: string; sort_order: number }[]) {
   const supabase = await createClient();
-  const updates = items.map((item) =>
-    supabase
-      .from("hrd_survey_items")
-      .update({ sort_order: item.sort_order })
-      .eq("id", item.id)
-  );
 
-  await Promise.all(updates);
+  // 단일 upsert로 일괄 순서 변경 (기존 Promise.all 안티패턴 대체)
+  const { error } = await supabase
+    .from("hrd_survey_items")
+    .upsert(
+      items.map(({ id, sort_order }) => ({ id, sort_order })),
+      { onConflict: "id", ignoreDuplicates: false }
+    );
+
+  if (error) throw new Error("순서 변경 실패: " + error.message);
   revalidatePath("/admin/hrd/design");
 }

@@ -216,17 +216,16 @@ export async function reorderQuestions(
   if (!parsed.success) {
     throw new Error("입력값 오류: " + parsed.error.issues[0].message);
   }
-  // Update each question's sort_order
-  const promises = orderedIds.map(({ id, sort_order }) =>
-    supabase
-      .from("edu_questions")
-      .update({ sort_order })
-      .eq("id", id)
-  );
 
-  const results = await Promise.all(promises);
-  const failed = results.find((r) => r.error);
-  if (failed?.error) throw new Error("순서 변경 실패: " + failed.error.message);
+  // 단일 upsert로 일괄 순서 변경 (기존 Promise.all 안티패턴 대체)
+  const { error } = await supabase
+    .from("edu_questions")
+    .upsert(
+      orderedIds.map(({ id, sort_order }) => ({ id, sort_order })),
+      { onConflict: "id", ignoreDuplicates: false }
+    );
+
+  if (error) throw new Error("순서 변경 실패: " + error.message);
   revalidatePath(`/admin/surveys/${surveyId}`);
 }
 
