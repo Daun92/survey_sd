@@ -222,7 +222,8 @@ export default function RespondentClient({
                 </div>
                 <div>
                   <label className="text-sm font-medium text-stone-700 mb-1 block">고객사</label>
-                  <Select
+                  <select
+                    className="w-full rounded-md border border-stone-200 bg-white px-3 py-2 text-sm"
                     value={form.customer_id}
                     onChange={(e) => setForm({ ...form, customer_id: e.target.value })}
                   >
@@ -230,7 +231,7 @@ export default function RespondentClient({
                     {customers.map((c) => (
                       <option key={c.id} value={c.id}>{c.company_name}</option>
                     ))}
-                  </Select>
+                  </select>
                 </div>
                 <div>
                   <label className="text-sm font-medium text-stone-700 mb-1 block">부서</label>
@@ -281,16 +282,16 @@ export default function RespondentClient({
             className="pl-9"
           />
         </div>
-        <Select
+        <select
           value={filterCustomer}
           onChange={(e) => setFilterCustomer(e.target.value)}
-          className="w-48"
+          className="w-48 rounded-md border border-stone-200 bg-white px-3 py-2 text-sm"
         >
           <option value="">전체 고객사</option>
           {customers.map((c) => (
             <option key={c.id} value={c.id}>{c.company_name}</option>
           ))}
-        </Select>
+        </select>
         <div className="flex items-center text-sm text-stone-500">
           총 {filtered.length}명
         </div>

@@ -435,14 +435,15 @@ export default function DistributeTabs({ surveys, batches: initialBatches }: { s
         <Card>
           <CardContent className="p-5">
             <label className="text-sm font-medium text-stone-700 mb-2 block">설문 선택</label>
-            <Select
+            <select
+              className="w-full rounded-md border border-stone-200 bg-white px-3 py-2 text-sm text-stone-800"
               value={selectedSurveyId}
               onChange={(e) => setSelectedSurveyId(e.target.value)}
             >
               {surveys.map((s) => (
                 <option key={s.id} value={s.id}>{s.title}</option>
               ))}
-            </Select>
+            </select>
           </CardContent>
         </Card>
 
