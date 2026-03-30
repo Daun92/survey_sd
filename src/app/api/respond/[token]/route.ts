@@ -50,6 +50,7 @@ export async function GET(
       surveyYear: distribution.survey.surveyYear,
       surveyMonth: distribution.survey.surveyMonth,
     },
+    projectName: distribution.survey.showProjectName ? distribution.projectName : null,
     questions: distribution.survey.questions.map((q) => ({
       id: q.id,
       order: q.questionOrder,

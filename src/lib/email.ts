@@ -29,12 +29,16 @@ interface SendSurveyEmailParams {
   contactName: string | null;
   surveyTitle: string;
   serviceType: string;
+  projectName?: string | null;
   respondUrl: string;
 }
 
 export async function sendSurveyEmail(params: SendSurveyEmailParams) {
-  const { to, customerName, contactName, surveyTitle, serviceType, respondUrl } = params;
+  const { to, customerName, contactName, surveyTitle, serviceType, projectName, respondUrl } = params;
   const greeting = contactName ? `${contactName}님` : `${customerName} 담당자님`;
+  const projectLine = projectName
+    ? `<strong>${projectName}</strong> 관련 `
+    : "";
 
   const html = `
 <!DOCTYPE html>
@@ -50,7 +54,7 @@ export async function sendSurveyEmail(params: SendSurveyEmailParams) {
         안녕하세요, <strong>${greeting}</strong>.
       </p>
       <p style="font-size:14px;color:#52525b;line-height:1.7;">
-        <strong>${serviceType}</strong> 서비스에 대한 만족도 설문입니다.<br>
+        ${projectLine}<strong>${serviceType}</strong> 서비스에 대한 만족도 설문입니다.<br>
         아래 버튼을 클릭하여 설문에 참여해 주시면 감사하겠습니다.
       </p>
       <p style="font-size:13px;color:#71717a;">소요 시간: 약 3분</p>

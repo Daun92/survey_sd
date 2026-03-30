@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
@@ -31,6 +32,7 @@ interface Survey {
   surveyYear: number;
   surveyMonth: number;
   status: string;
+  showProjectName: boolean;
   description: string | null;
   serviceType: { id: number; name: string };
   questions: Question[];
@@ -216,6 +218,19 @@ export default function SurveyEditPage({ params }: { params: Promise<{ id: strin
                 </SelectContent>
               </Select>
             </div>
+          </div>
+          <Separator />
+          <div className="flex items-center justify-between">
+            <div className="space-y-0.5">
+              <Label>응답자에게 프로젝트명 표시</Label>
+              <p className="text-xs text-muted-foreground">
+                이메일 및 설문 시작 화면에 교육과정/프로젝트명을 노출합니다
+              </p>
+            </div>
+            <Switch
+              checked={survey.showProjectName}
+              onCheckedChange={(checked) => updateSurveyInfo("showProjectName", String(checked))}
+            />
           </div>
         </CardContent>
       </Card>

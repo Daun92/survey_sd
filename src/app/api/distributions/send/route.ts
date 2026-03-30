@@ -52,6 +52,7 @@ export async function POST(request: NextRequest) {
         contactName: dist.customer.contactName,
         surveyTitle: dist.survey.title,
         serviceType: dist.survey.serviceType.name,
+        projectName: dist.survey.showProjectName ? dist.projectName : null,
         respondUrl: `${baseUrl}/respond/${dist.responseToken}`,
       });
 

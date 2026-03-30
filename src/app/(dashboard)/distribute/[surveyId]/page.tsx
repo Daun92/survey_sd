@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import {
-  ArrowLeft, Plus, Send, Copy, RefreshCw, Mail, CheckCircle2, Clock, Eye,
+  ArrowLeft, Plus, Send, Copy, RefreshCw, Mail, CheckCircle2, Clock, Eye, FolderOpen, List,
 } from "lucide-react";
 
 interface Distribution {
@@ -25,6 +25,7 @@ interface Distribution {
   surveyId: number;
   customerId: number;
   channel: string;
+  projectName: string | null;
   sentAt: string | null;
   responseToken: string;
   status: string;
@@ -48,6 +49,7 @@ interface Target {
   phone: string | null;
   serviceType: string;
   serviceTypeId: number;
+  trainingName: string | null;
 }
 
 interface Summary {
@@ -75,6 +77,7 @@ export default function DistributeSurveyPage({ params }: { params: Promise<{ sur
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [statusFilter, setStatusFilter] = useState("all");
+  const [viewMode, setViewMode] = useState<"list" | "project">("list");
   const [survey, setSurvey] = useState<{ title: string; surveyYear: number; surveyMonth: number } | null>(null);
 
   const fetchDistributions = useCallback(async () => {
@@ -111,6 +114,14 @@ export default function DistributeSurveyPage({ params }: { params: Promise<{ sur
       return;
     }
 
+    // 선택된 대상의 trainingName을 projectNames 매핑으로 전달
+    const projectNames: Record<number, string> = {};
+    for (const t of targets) {
+      if (selectedIds.has(t.customerId) && t.trainingName) {
+        projectNames[t.customerId] = t.trainingName;
+      }
+    }
+
     const res = await fetch("/api/distributions", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -118,6 +129,7 @@ export default function DistributeSurveyPage({ params }: { params: Promise<{ sur
         surveyId: parseInt(surveyId),
         customerIds: Array.from(selectedIds),
         channel: "email",
+        projectNames: Object.keys(projectNames).length > 0 ? projectNames : undefined,
       }),
     });
 
@@ -232,67 +244,173 @@ export default function DistributeSurveyPage({ params }: { params: Promise<{ sur
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="text-sm">배포 목록</CardTitle>
-          <Select value={statusFilter} onValueChange={(v) => v && setStatusFilter(v)}>
-            <SelectTrigger className="w-32"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">전체</SelectItem>
-              <SelectItem value="pending">대기</SelectItem>
-              <SelectItem value="sent">발송</SelectItem>
-              <SelectItem value="opened">열람</SelectItem>
-              <SelectItem value="responded">응답완료</SelectItem>
-            </SelectContent>
-          </Select>
+          <div className="flex items-center gap-2">
+            <div className="flex rounded-md border">
+              <Button
+                variant={viewMode === "list" ? "secondary" : "ghost"}
+                size="sm"
+                className="h-8 rounded-r-none"
+                onClick={() => setViewMode("list")}
+              >
+                <List className="h-3.5 w-3.5 mr-1" />
+                목록
+              </Button>
+              <Button
+                variant={viewMode === "project" ? "secondary" : "ghost"}
+                size="sm"
+                className="h-8 rounded-l-none"
+                onClick={() => setViewMode("project")}
+              >
+                <FolderOpen className="h-3.5 w-3.5 mr-1" />
+                프로젝트별
+              </Button>
+            </div>
+            <Select value={statusFilter} onValueChange={(v) => v && setStatusFilter(v)}>
+              <SelectTrigger className="w-32"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">전체</SelectItem>
+                <SelectItem value="pending">대기</SelectItem>
+                <SelectItem value="sent">발송</SelectItem>
+                <SelectItem value="opened">열람</SelectItem>
+                <SelectItem value="responded">응답완료</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </CardHeader>
         <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>고객사</TableHead>
-                <TableHead>담당자</TableHead>
-                <TableHead>이메일</TableHead>
-                <TableHead>상태</TableHead>
-                <TableHead>발송일</TableHead>
-                <TableHead className="w-28">작업</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filtered.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
-                    {distributions.length === 0
-                      ? "배포 대상이 없습니다. '대상자 추가'를 클릭하세요."
-                      : "해당 상태의 배포가 없습니다."}
-                  </TableCell>
-                </TableRow>
-              ) : (
-                filtered.map((d) => {
-                  const sc = statusConfig[d.status] || statusConfig.pending;
-                  const StatusIcon = sc.icon;
+          {viewMode === "project" ? (
+            // 프로젝트별 그룹핑 뷰
+            <div className="divide-y">
+              {(() => {
+                const groups = new Map<string, Distribution[]>();
+                for (const d of filtered) {
+                  const key = d.projectName || "(프로젝트 미지정)";
+                  if (!groups.has(key)) groups.set(key, []);
+                  groups.get(key)!.push(d);
+                }
+                if (groups.size === 0) {
                   return (
-                    <TableRow key={d.id}>
-                      <TableCell className="font-medium">{d.customer.companyName}</TableCell>
-                      <TableCell>{d.customer.contactName}</TableCell>
-                      <TableCell className="text-sm">{d.customer.email || "-"}</TableCell>
-                      <TableCell>
-                        <span className={`inline-flex items-center gap-1 text-sm ${sc.className}`}>
-                          <StatusIcon className="h-3.5 w-3.5" />
-                          {sc.label}
-                        </span>
-                      </TableCell>
-                      <TableCell className="text-xs text-muted-foreground">
-                        {d.sentAt ? new Date(d.sentAt).toLocaleDateString("ko-KR") : "-"}
-                      </TableCell>
-                      <TableCell>
-                        <Button variant="ghost" size="sm" onClick={() => copyLink(d.responseToken)}>
-                          <Copy className="h-3.5 w-3.5" />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
+                    <div className="text-center py-8 text-muted-foreground">
+                      {distributions.length === 0
+                        ? "배포 대상이 없습니다. '대상자 추가'를 클릭하세요."
+                        : "해당 상태의 배포가 없습니다."}
+                    </div>
                   );
-                })
-              )}
-            </TableBody>
-          </Table>
+                }
+                return [...groups.entries()].map(([project, dists]) => {
+                  const respondedCount = dists.filter((d) => d.status === "responded").length;
+                  return (
+                    <div key={project} className="p-4">
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-2">
+                          <FolderOpen className="h-4 w-4 text-muted-foreground" />
+                          <span className="font-medium text-sm">{project}</span>
+                          <Badge variant="secondary" className="text-xs">
+                            {dists.length}건
+                          </Badge>
+                        </div>
+                        <span className="text-xs text-muted-foreground">
+                          응답 {respondedCount}/{dists.length}
+                        </span>
+                      </div>
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>고객사</TableHead>
+                            <TableHead>담당자</TableHead>
+                            <TableHead>이메일</TableHead>
+                            <TableHead>상태</TableHead>
+                            <TableHead>발송일</TableHead>
+                            <TableHead className="w-28">작업</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {dists.map((d) => {
+                            const sc = statusConfig[d.status] || statusConfig.pending;
+                            const StatusIcon = sc.icon;
+                            return (
+                              <TableRow key={d.id}>
+                                <TableCell className="font-medium">{d.customer.companyName}</TableCell>
+                                <TableCell>{d.customer.contactName}</TableCell>
+                                <TableCell className="text-sm">{d.customer.email || "-"}</TableCell>
+                                <TableCell>
+                                  <span className={`inline-flex items-center gap-1 text-sm ${sc.className}`}>
+                                    <StatusIcon className="h-3.5 w-3.5" />
+                                    {sc.label}
+                                  </span>
+                                </TableCell>
+                                <TableCell className="text-xs text-muted-foreground">
+                                  {d.sentAt ? new Date(d.sentAt).toLocaleDateString("ko-KR") : "-"}
+                                </TableCell>
+                                <TableCell>
+                                  <Button variant="ghost" size="sm" onClick={() => copyLink(d.responseToken)}>
+                                    <Copy className="h-3.5 w-3.5" />
+                                  </Button>
+                                </TableCell>
+                              </TableRow>
+                            );
+                          })}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  );
+                });
+              })()}
+            </div>
+          ) : (
+            // 기본 목록 뷰
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>고객사</TableHead>
+                  <TableHead>프로젝트</TableHead>
+                  <TableHead>담당자</TableHead>
+                  <TableHead>이메일</TableHead>
+                  <TableHead>상태</TableHead>
+                  <TableHead>발송일</TableHead>
+                  <TableHead className="w-28">작업</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filtered.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                      {distributions.length === 0
+                        ? "배포 대상이 없습니다. '대상자 추가'를 클릭하세요."
+                        : "해당 상태의 배포가 없습니다."}
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  filtered.map((d) => {
+                    const sc = statusConfig[d.status] || statusConfig.pending;
+                    const StatusIcon = sc.icon;
+                    return (
+                      <TableRow key={d.id}>
+                        <TableCell className="font-medium">{d.customer.companyName}</TableCell>
+                        <TableCell className="text-xs text-muted-foreground">{d.projectName || "-"}</TableCell>
+                        <TableCell>{d.customer.contactName}</TableCell>
+                        <TableCell className="text-sm">{d.customer.email || "-"}</TableCell>
+                        <TableCell>
+                          <span className={`inline-flex items-center gap-1 text-sm ${sc.className}`}>
+                            <StatusIcon className="h-3.5 w-3.5" />
+                            {sc.label}
+                          </span>
+                        </TableCell>
+                        <TableCell className="text-xs text-muted-foreground">
+                          {d.sentAt ? new Date(d.sentAt).toLocaleDateString("ko-KR") : "-"}
+                        </TableCell>
+                        <TableCell>
+                          <Button variant="ghost" size="sm" onClick={() => copyLink(d.responseToken)}>
+                            <Copy className="h-3.5 w-3.5" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })
+                )}
+              </TableBody>
+            </Table>
+          )}
         </CardContent>
       </Card>
 
@@ -340,7 +458,7 @@ export default function DistributeSurveyPage({ params }: { params: Promise<{ sur
                         />
                       </TableHead>
                       <TableHead>회사명</TableHead>
-                      <TableHead>서비스유형</TableHead>
+                      <TableHead>프로젝트/교육과정</TableHead>
                       <TableHead>담당자</TableHead>
                       <TableHead>이메일</TableHead>
                     </TableRow>
@@ -361,7 +479,9 @@ export default function DistributeSurveyPage({ params }: { params: Promise<{ sur
                           />
                         </TableCell>
                         <TableCell className="font-medium">{t.companyName}</TableCell>
-                        <TableCell><Badge variant="secondary">{t.serviceType}</Badge></TableCell>
+                        <TableCell>
+                          <span className="text-xs">{t.trainingName || <span className="text-muted-foreground">-</span>}</span>
+                        </TableCell>
                         <TableCell>{t.contactName}</TableCell>
                         <TableCell className="text-sm">{t.email || <span className="text-muted-foreground">없음</span>}</TableCell>
                       </TableRow>

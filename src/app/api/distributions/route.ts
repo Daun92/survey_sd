@@ -37,10 +37,11 @@ export async function GET(request: NextRequest) {
 // POST /api/distributions — 대량 배포 생성
 export async function POST(request: NextRequest) {
   const body = await request.json();
-  const { surveyId, customerIds, channel = "email" } = body as {
+  const { surveyId, customerIds, channel = "email", projectNames } = body as {
     surveyId: number;
     customerIds: number[];
     channel: string;
+    projectNames?: Record<number, string>; // customerId → projectName 매핑 (선택)
   };
 
   if (!surveyId || !customerIds?.length) {
@@ -65,12 +66,36 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  // projectNames가 없으면 TrainingRecord에서 자동 매핑
+  let resolvedProjectNames: Record<number, string> = projectNames || {};
+  if (!projectNames) {
+    const survey = await prisma.survey.findUnique({ where: { id: surveyId } });
+    if (survey) {
+      const trainingMonth = survey.trainingMonth ?? (survey.surveyMonth === 1 ? 12 : survey.surveyMonth - 1);
+      const trainingYear = survey.surveyMonth === 1 ? survey.surveyYear - 1 : survey.surveyYear;
+      const records = await prisma.trainingRecord.findMany({
+        where: {
+          customerId: { in: newCustomerIds },
+          trainingYear,
+          trainingMonth,
+          hasTraining: true,
+        },
+        select: { customerId: true, trainingName: true },
+      });
+      resolvedProjectNames = {};
+      for (const r of records) {
+        if (r.trainingName) resolvedProjectNames[r.customerId] = r.trainingName;
+      }
+    }
+  }
+
   // 대량 생성
   const created = await prisma.distribution.createMany({
     data: newCustomerIds.map((customerId) => ({
       surveyId,
       customerId,
       channel,
+      projectName: resolvedProjectNames[customerId] || null,
       responseToken: uuidv4(),
       status: "pending",
     })),

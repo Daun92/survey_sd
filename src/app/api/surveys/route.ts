@@ -19,12 +19,20 @@ export async function GET(request: NextRequest) {
     where,
     include: {
       serviceType: true,
+      distributions: { select: { projectName: true }, where: { projectName: { not: null } } },
       _count: { select: { questions: true, distributions: true, responses: true } },
     },
     orderBy: [{ surveyYear: "desc" }, { surveyMonth: "desc" }],
   });
 
-  return NextResponse.json(surveys);
+  // 프로젝트명 요약 추가
+  const result = surveys.map((s) => {
+    const projectNames = [...new Set(s.distributions.map((d) => d.projectName).filter(Boolean))];
+    const { distributions: _d, ...rest } = s;
+    return { ...rest, projectNames };
+  });
+
+  return NextResponse.json(result);
 }
 
 // POST /api/surveys — 설문 생성 (템플릿에서 복제 가능)

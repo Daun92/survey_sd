@@ -15,7 +15,7 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { Plus, FileText } from "lucide-react";
+import { Plus, FileText, FolderOpen } from "lucide-react";
 
 interface ServiceType { id: number; name: string }
 interface Template { id: number; templateName: string; serviceTypeId: number; serviceType: ServiceType }
@@ -26,6 +26,7 @@ interface Survey {
   surveyMonth: number;
   status: string;
   serviceType: ServiceType;
+  projectNames: string[];
   _count: { questions: number; distributions: number; responses: number };
 }
 
@@ -163,6 +164,15 @@ export default function SurveysPage() {
                     <Badge variant="secondary">{s.serviceType.name}</Badge>
                     <span>{s.surveyYear}년 {s.surveyMonth}월</span>
                   </div>
+                  {s.projectNames.length > 0 && (
+                    <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                      <FolderOpen className="h-3 w-3" />
+                      <span>
+                        {s.projectNames[0]}
+                        {s.projectNames.length > 1 && ` 외 ${s.projectNames.length - 1}건`}
+                      </span>
+                    </div>
+                  )}
                   <div className="grid grid-cols-3 gap-2 text-center text-xs">
                     <div>
                       <div className="font-semibold text-lg">{s._count.questions}</div>

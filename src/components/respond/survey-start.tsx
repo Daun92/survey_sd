@@ -10,6 +10,7 @@ interface SurveyStartProps {
     surveyYear: number;
     surveyMonth: number;
   };
+  projectName?: string | null;
   customer: {
     companyName: string;
     contactName: string | null;
@@ -20,6 +21,7 @@ interface SurveyStartProps {
 
 export function SurveyStart({
   survey,
+  projectName,
   customer,
   questionCount,
   onStart,
@@ -74,6 +76,7 @@ export function SurveyStart({
           >
             {customer.companyName}
             {customer.contactName && ` ${customer.contactName}님`}의{" "}
+            {projectName ? `${projectName} ` : ""}
             {survey.serviceType} 서비스에 대한 설문입니다.
             <br />
             솔직한 답변 부탁드립니다.

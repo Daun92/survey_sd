@@ -26,6 +26,7 @@ interface SurveyData {
     surveyYear: number;
     surveyMonth: number;
   };
+  projectName: string | null;
   questions: Question[];
   customer: { companyName: string; contactName: string | null };
 }
@@ -188,6 +189,7 @@ export default function RespondPage({
     return (
       <SurveyStart
         survey={data.survey}
+        projectName={data.projectName}
         customer={data.customer}
         questionCount={data.questions.length}
         onStart={goNext}

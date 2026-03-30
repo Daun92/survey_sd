@@ -59,16 +59,17 @@ model Customer {
 // 설문 (Surveys)
 // ============================
 model Survey {
-  id            Int      @id @default(autoincrement())
-  title         String
-  serviceTypeId Int      @map("service_type_id")
-  surveyYear    Int      @map("survey_year")
-  surveyMonth   Int      @map("survey_month")
-  trainingMonth Int?     @map("training_month") // 교육 실시 월
-  status        String   @default("draft") // draft, distributing, collecting, closed, reported
-  description   String?
-  createdAt     DateTime @default(now()) @map("created_at")
-  updatedAt     DateTime @updatedAt @map("updated_at")
+  id              Int      @id @default(autoincrement())
+  title           String
+  serviceTypeId   Int      @map("service_type_id")
+  surveyYear      Int      @map("survey_year")
+  surveyMonth     Int      @map("survey_month")
+  trainingMonth   Int?     @map("training_month") // 교육 실시 월
+  showProjectName Boolean  @default(true) @map("show_project_name") // 응답자에게 프로젝트명 노출 여부
+  status          String   @default("draft") // draft, distributing, collecting, closed, reported
+  description     String?
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
 
   serviceType   ServiceType     @relation(fields: [serviceTypeId], references: [id])
   questions     SurveyQuestion[]
@@ -145,6 +146,7 @@ model Distribution {
   surveyId      Int       @map("survey_id")
   customerId    Int       @map("customer_id")
   channel       String    // email, sms, both
+  projectName   String?   @map("project_name") // 교육과정/프로젝트명 (TrainingRecord.trainingName에서 자동 매핑)
   sentAt        DateTime? @map("sent_at")
   responseToken String    @unique @map("response_token")
   status        String    @default("pending") // pending, sent, delivered, opened, responded, bounced
