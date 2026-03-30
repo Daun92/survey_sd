@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo, useRef, useEffect } from "react";
-import { quickCreateSurvey, type QuickCreateResult } from "./actions";
+import { quickCreateSurvey, type QuickCreateResult, type QuickCreateResponse } from "./actions";
 import Link from "next/link";
 import {
   Loader2,
@@ -156,7 +156,11 @@ export function QuickCreateForm({ projects, customers, templates }: Props) {
     setError(null);
     try {
       const res = await quickCreateSurvey(formData);
-      setResult(res);
+      if (res.success) {
+        setResult(res.data);
+      } else {
+        setError(res.error);
+      }
     } catch (e) {
       setError(
         e instanceof Error ? e.message : "생성 중 오류가 발생했습니다."
