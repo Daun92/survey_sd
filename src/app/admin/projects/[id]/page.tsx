@@ -62,7 +62,7 @@ async function getProjectDetail(supabase: Awaited<ReturnType<typeof createClient
       .order("name", { ascending: true }),
     supabase
       .from("edu_surveys")
-      .select("id, title, status, url_token, starts_at, ends_at, session_id")
+      .select("id, title, status, url_token, starts_at, ends_at, session_id, sessions(session_number, name, courses(name))")
       .eq("project_id", id)
       .order("created_at", { ascending: false }),
   ]);
@@ -363,9 +363,20 @@ export default async function ProjectDetailPage({
                 starts_at: string | null;
                 ends_at: string | null;
                 session_id: string | null;
+                sessions: {
+                  session_number: number;
+                  name: string | null;
+                  courses: { name: string }[];
+                }[];
               }) => {
                 const sStatus =
                   surveyStatusLabels[survey.status] ?? surveyStatusLabels.draft;
+                const session = Array.isArray(survey.sessions) ? survey.sessions[0] : null;
+                const courseArr = session?.courses;
+                const courseName = Array.isArray(courseArr) ? courseArr[0]?.name : null;
+                const sessionLabel = session
+                  ? `${courseName ? courseName + " / " : ""}제${session.session_number}차${session.name ? " · " + session.name : ""}`
+                  : null;
                 return (
                   <Link
                     key={survey.id}
@@ -380,6 +391,12 @@ export default async function ProjectDetailPage({
                         {survey.title}
                       </p>
                       <div className="flex items-center gap-3 mt-0.5">
+                        {sessionLabel && (
+                          <span className="inline-flex items-center gap-1 rounded-md bg-indigo-50 px-1.5 py-0.5 text-[11px] font-medium text-indigo-600">
+                            <BookOpen size={10} />
+                            {sessionLabel}
+                          </span>
+                        )}
                         <span className="text-xs text-stone-400">
                           {formatDate(survey.starts_at)} ~{" "}
                           {formatDate(survey.ends_at)}
