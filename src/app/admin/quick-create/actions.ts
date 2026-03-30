@@ -68,42 +68,18 @@ export async function quickCreateSurvey(formData: FormData): Promise<QuickCreate
       return { success: false, error: "설문 생성 권한이 없습니다. 관리자에게 creator 역할을 요청하세요." };
     }
 
-    // ── 과정구분 → service_type_id 조회 (유연 매핑) ──
-    const divisionMap: Record<string, { nameEn: string; nameKr: string }> = {
-      classroom:     { nameEn: "in_person",      nameKr: "집체" },
-      remote:        { nameEn: "remote",         nameKr: "원격교육" },
-      content_dev:   { nameEn: "smart_training", nameKr: "스마트훈련" },
-      smart:         { nameEn: "smart_training", nameKr: "스마트훈련" },
-      hrm:           { nameEn: "hrm",            nameKr: "HRM" },
-      hr_consulting: { nameEn: "hr_consulting",  nameKr: "HR컨설팅" },
+    // ── 과정구분 → service_type_id 매핑 ──
+    // service_types 테이블이 DB에 없으므로 Prisma seed 기준 ID 직접 매핑
+    // (1:집체, 2:원격교육, 3:HRM, 4:스마트훈련, 5:HR컨설팅)
+    const divisionToServiceTypeId: Record<string, number> = {
+      classroom: 1,
+      remote: 2,
+      hrm: 3,
+      content_dev: 4,
+      smart: 4,
+      hr_consulting: 5,
     };
-    const mapping = divisionMap[input.educationType] || divisionMap.classroom;
-
-    // 전체 service_types 조회 후 유연 매칭
-    const { data: allServiceTypes, error: stError } = await supabase
-      .from("service_types")
-      .select("id, name, name_en");
-
-    if (stError) {
-      console.error("[quick-create] service_types 조회 에러:", stError);
-    }
-    console.log("[quick-create] service_types 테이블:", JSON.stringify(allServiceTypes));
-
-    let serviceTypeId: number | null = null;
-    if (allServiceTypes && allServiceTypes.length > 0) {
-      // 1차: name_en 매칭
-      const byEn = allServiceTypes.find((st) => st.name_en === mapping.nameEn);
-      // 2차: name(한글) 매칭
-      const byKr = !byEn ? allServiceTypes.find((st) => st.name === mapping.nameKr) : null;
-      // 3차: 첫 번째 타입 폴백
-      const matched = byEn || byKr || allServiceTypes[0];
-      serviceTypeId = matched.id;
-    }
-
-    if (!serviceTypeId) {
-      console.error("[quick-create] service_types 비어있음, educationType:", input.educationType);
-      return { success: false, error: "서비스 유형 데이터가 없습니다. 관리자에게 문의하세요." };
-    }
+    const serviceTypeId = divisionToServiceTypeId[input.educationType] ?? 1;
 
     let projectId: string;
     let projectName: string;
