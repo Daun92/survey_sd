@@ -15,7 +15,7 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { Plus, FileText, FolderOpen } from "lucide-react";
+import { Plus, FileText, FolderOpen, Tag } from "lucide-react";
 
 interface ServiceType { id: number; name: string }
 interface Template { id: number; templateName: string; serviceTypeId: number; serviceType: ServiceType }
@@ -25,6 +25,7 @@ interface Survey {
   surveyYear: number;
   surveyMonth: number;
   status: string;
+  internalLabel: string | null;
   serviceType: ServiceType;
   projectNames: string[];
   _count: { questions: number; distributions: number; responses: number };
@@ -46,6 +47,7 @@ export default function SurveysPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [form, setForm] = useState({
     title: "",
+    internalLabel: "",
     serviceTypeId: 0,
     surveyYear: now.getFullYear(),
     surveyMonth: now.getMonth() + 1,
@@ -66,6 +68,7 @@ export default function SurveysPage() {
   function openNew() {
     setForm({
       title: `${now.getFullYear()}년 ${now.getMonth() + 1}월 만족도 설문`,
+      internalLabel: "",
       serviceTypeId: 0,
       surveyYear: now.getFullYear(),
       surveyMonth: now.getMonth() + 1,
@@ -98,6 +101,7 @@ export default function SurveysPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         title: form.title,
+        internalLabel: form.internalLabel || undefined,
         serviceTypeId: form.serviceTypeId,
         surveyYear: form.surveyYear,
         surveyMonth: form.surveyMonth,
@@ -164,6 +168,12 @@ export default function SurveysPage() {
                     <Badge variant="secondary">{s.serviceType.name}</Badge>
                     <span>{s.surveyYear}년 {s.surveyMonth}월</span>
                   </div>
+                  {s.internalLabel && (
+                    <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                      <Tag className="h-3 w-3" />
+                      <span>{s.internalLabel}</span>
+                    </div>
+                  )}
                   {s.projectNames.length > 0 && (
                     <div className="flex items-center gap-1 text-xs text-muted-foreground">
                       <FolderOpen className="h-3 w-3" />
@@ -266,6 +276,14 @@ export default function SurveysPage() {
               <Input
                 value={form.title}
                 onChange={(e) => setForm({ ...form, title: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>내부 구분 태그 <span className="text-muted-foreground font-normal">(선택)</span></Label>
+              <Input
+                value={form.internalLabel}
+                onChange={(e) => setForm({ ...form, internalLabel: e.target.value })}
+                placeholder="예: A사 리더십 1기, B사 신입교육 3월반"
               />
             </div>
             <div className="space-y-2">

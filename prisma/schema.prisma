@@ -66,6 +66,7 @@ model Survey {
   surveyMonth     Int      @map("survey_month")
   trainingMonth   Int?     @map("training_month") // 교육 실시 월
   showProjectName Boolean  @default(true) @map("show_project_name") // 응답자에게 프로젝트명 노출 여부
+  internalLabel   String?  @map("internal_label") // 관리자 내부 구분 태그 (응답자 미노출)
   status          String   @default("draft") // draft, distributing, collecting, closed, reported
   description     String?
   createdAt       DateTime @default(now()) @map("created_at")
