@@ -3,7 +3,7 @@ import Link from "next/link";
 import { MessageSquare } from "lucide-react";
 import DistributeClient from "./distribute-client";
 
-export const revalidate = 60;
+export const dynamic = "force-dynamic";
 
 async function getSurveyData() {
   const { data: surveys } = await supabase
@@ -30,12 +30,24 @@ async function getSurveyData() {
   }));
 }
 
+async function getDistributionData() {
+  const { data: distributions } = await supabase
+    .from("distributions")
+    .select("*, distribution_batches(title)")
+    .order("created_at", { ascending: false });
+
+  return distributions ?? [];
+}
+
 export default async function DistributePage() {
-  const surveys = await getSurveyData();
+  const [surveys, distributions] = await Promise.all([
+    getSurveyData(),
+    getDistributionData(),
+  ]);
 
   return (
     <div>
-      <DistributeClient surveys={surveys} />
+      <DistributeClient surveys={surveys} distributions={distributions} />
       {/* 워크플로우 다음 단계 */}
       <div className="mt-6 rounded-xl border border-stone-200 bg-white shadow-sm p-5 flex items-center justify-between">
         <div>

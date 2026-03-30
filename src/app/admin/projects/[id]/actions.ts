@@ -41,7 +41,7 @@ export async function updateProject(id: string, formData: FormData) {
 }
 
 export async function updateSession(sessionId: string, projectId: string, data: {
-  name?: string;
+  name?: string | null;
   start_date?: string | null;
   end_date?: string | null;
   capacity?: number | null;
