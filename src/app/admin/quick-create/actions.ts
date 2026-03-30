@@ -13,6 +13,20 @@ interface QuickCreateInput {
   endDate: string;
   distributeDate: string;
   templateId: string;
+  sessionId: string; // 기존 세션에 연결할 경우
+}
+
+// ── 프로젝트의 과정/세션 목록 조회 (빠른 생성에서 사용) ──
+export async function getProjectSessions(projectId: string) {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("courses")
+    .select("id, name, education_type, sessions(id, session_number, name, start_date, end_date)")
+    .eq("project_id", projectId)
+    .order("name", { ascending: true });
+
+  if (error) throw new Error("세션 조회 실패: " + error.message);
+  return data ?? [];
 }
 
 export interface QuickCreateResult {
@@ -52,6 +66,7 @@ export async function quickCreateSurvey(formData: FormData): Promise<QuickCreate
       endDate: formData.get("endDate") as string,
       distributeDate: formData.get("distributeDate") as string,
       templateId: formData.get("templateId") as string,
+      sessionId: formData.get("sessionId") as string,
     };
 
     if (!input.surveyTitle || !input.startDate || !input.endDate) {
@@ -164,38 +179,55 @@ export async function quickCreateSurvey(formData: FormData): Promise<QuickCreate
       customerName = input.customerName;
     }
 
-    // ── Create course ──
-    const { data: course, error: courseError } = await supabase
-      .from("courses")
-      .insert({
-        project_id: projectId,
-        name: projectName,
-        education_type: input.educationType || "classroom",
-      })
-      .select("id")
-      .single();
+    let sessionId: string;
 
-    if (courseError || !course) {
-      console.error("[quick-create] 과정 생성 실패:", courseError);
-      return { success: false, error: "과정 생성 실패: " + (courseError?.message || "알 수 없는 오류") };
-    }
+    if (input.sessionId) {
+      // ── 기존 세션 사용 ──
+      const { data: existingSession } = await supabase
+        .from("sessions")
+        .select("id")
+        .eq("id", input.sessionId)
+        .single();
 
-    // ── Create session ──
-    const { data: session, error: sessionError } = await supabase
-      .from("sessions")
-      .insert({
-        course_id: course.id,
-        session_number: 1,
-        name: "1차수",
-        start_date: input.startDate,
-        end_date: input.endDate,
-      })
-      .select("id")
-      .single();
+      if (!existingSession) {
+        return { success: false, error: "선택한 세션을 찾을 수 없습니다." };
+      }
+      sessionId = existingSession.id;
+    } else {
+      // ── Create course ──
+      const { data: course, error: courseError } = await supabase
+        .from("courses")
+        .insert({
+          project_id: projectId,
+          name: projectName,
+          education_type: input.educationType || "classroom",
+        })
+        .select("id")
+        .single();
 
-    if (sessionError || !session) {
-      console.error("[quick-create] 차수 생성 실패:", sessionError);
-      return { success: false, error: "차수 생성 실패: " + (sessionError?.message || "알 수 없는 오류") };
+      if (courseError || !course) {
+        console.error("[quick-create] 과정 생성 실패:", courseError);
+        return { success: false, error: "과정 생성 실패: " + (courseError?.message || "알 수 없는 오류") };
+      }
+
+      // ── Create session ──
+      const { data: session, error: sessionError } = await supabase
+        .from("sessions")
+        .insert({
+          course_id: course.id,
+          session_number: 1,
+          name: "1차수",
+          start_date: input.startDate,
+          end_date: input.endDate,
+        })
+        .select("id")
+        .single();
+
+      if (sessionError || !session) {
+        console.error("[quick-create] 차수 생성 실패:", sessionError);
+        return { success: false, error: "차수 생성 실패: " + (sessionError?.message || "알 수 없는 오류") };
+      }
+      sessionId = session.id;
     }
 
     // ── Create survey ──
@@ -206,7 +238,7 @@ export async function quickCreateSurvey(formData: FormData): Promise<QuickCreate
     const { data: survey, error: surveyError } = await supabase
       .from("edu_surveys")
       .insert({
-        session_id: session.id,
+        session_id: sessionId,
         project_id: projectId,
         title: input.surveyTitle,
         survey_type: "s2_edu_post",
