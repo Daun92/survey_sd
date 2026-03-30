@@ -329,7 +329,16 @@ export async function updateTemplateSectionIntro(
 
   const settings = (template?.settings as Record<string, unknown>) ?? {};
   const intros = (settings.section_intros as Record<string, unknown>) ?? {};
-  intros[sectionName] = intro;
+
+  // 기존 인트로와 merge하고 undefined 값 제거
+  const existing = (intros[sectionName] as Record<string, unknown>) ?? {};
+  const merged: Record<string, unknown> = { ...existing };
+  for (const [key, value] of Object.entries(intro)) {
+    if (value !== undefined) {
+      merged[key] = value;
+    }
+  }
+  intros[sectionName] = merged;
 
   const { error } = await supabase
     .from("cs_survey_templates")

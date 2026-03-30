@@ -27,7 +27,7 @@ import type { UserProfile } from "@/lib/auth";
 const eduMenuItems = [
   { href: "/admin", label: "대시보드", icon: LayoutDashboard },
   { href: "/admin/surveys", label: "설문 관리", icon: ClipboardList },
-  { href: "/admin/cs-templates", label: "문항 템플릿", icon: BookOpen },
+  { href: "/admin/cs-templates", label: "설문 템플릿", icon: BookOpen },
   { href: "/admin/responses", label: "응답 및 리포트", icon: ChartColumn },
   { href: "/admin/distribute", label: "배부 관리", icon: Send },
   { href: "/admin/email-templates", label: "메일 템플릿", icon: Mail },
