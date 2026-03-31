@@ -55,6 +55,7 @@ interface SurveyData {
     require_consent?: boolean
     hero_image_url?: string
     show_meta_info?: boolean
+    show_ending_stats?: boolean
     respondent_fields?: RespondentFieldConfig[]
     section_intros?: Record<string, {
       title?: string
@@ -75,22 +76,24 @@ const DEFAULT_RESPONDENT_FIELDS: RespondentFieldConfig[] = [
 
 type Step = 'landing' | 'questions' | 'ending'
 
-const INTRO_STYLE_MAP: Record<string, { bg: string; border: string; color: string; bar: string }> = {
-  neutral: { bg: '#fafaf9', border: '#e7e5e4', color: '#44403c', bar: '#a8a29e' },
-  brand:   { bg: '#f0fdfa', border: '#ccfbf1', color: '#0d9488', bar: '#14b8a6' },
-  warm:    { bg: '#faf5f0', border: '#e8ddd0', color: '#92400e', bar: '#d97706' },
-  cool:    { bg: '#f0f5fa', border: '#d0dde8', color: '#1e40af', bar: '#3b82f6' },
+const INTRO_STYLE_MAP: Record<string, { bg: string; border: string; borderLeft: string; color: string; bar: string }> = {
+  neutral:     { bg: '#fafaf9',  border: '#e7e5e4', borderLeft: '#a8a29e', color: '#44403c', bar: '#a8a29e' },
+  brand:       { bg: '#f0fdfa',  border: '#ccfbf1', borderLeft: '#14b8a6', color: '#0d9488', bar: '#14b8a6' },
+  warm:        { bg: '#faf5f0',  border: '#e8ddd0', borderLeft: '#d97706', color: '#92400e', bar: '#d97706' },
+  cool:        { bg: '#f0f5fa',  border: '#d0dde8', borderLeft: '#3b82f6', color: '#1e40af', bar: '#3b82f6' },
+  rose:        { bg: '#fff1f2',  border: '#fecdd3', borderLeft: '#f43f5e', color: '#9f1239', bar: '#f43f5e' },
+  violet:      { bg: '#f5f3ff',  border: '#ddd6fe', borderLeft: '#8b5cf6', color: '#5b21b6', bar: '#8b5cf6' },
+  green:       { bg: '#f0fdf4',  border: '#bbf7d0', borderLeft: '#22c55e', color: '#166534', bar: '#22c55e' },
+  transparent: { bg: 'transparent', border: 'transparent', borderLeft: 'transparent', color: '#1c1917', bar: 'transparent' },
   // 하위 호환: 이전 색상명도 지원
-  teal:    { bg: '#f0fdfa', border: '#ccfbf1', color: '#0d9488', bar: '#14b8a6' },
-  blue:    { bg: '#f0f5fa', border: '#d0dde8', color: '#1e40af', bar: '#3b82f6' },
-  amber:   { bg: '#faf5f0', border: '#e8ddd0', color: '#92400e', bar: '#d97706' },
-  rose:    { bg: '#fafaf9', border: '#e7e5e4', color: '#44403c', bar: '#a8a29e' },
-  violet:  { bg: '#fafaf9', border: '#e7e5e4', color: '#44403c', bar: '#a8a29e' },
+  teal:        { bg: '#f0fdfa',  border: '#ccfbf1', borderLeft: '#14b8a6', color: '#0d9488', bar: '#14b8a6' },
+  blue:        { bg: '#f0f5fa',  border: '#d0dde8', borderLeft: '#3b82f6', color: '#1e40af', bar: '#3b82f6' },
+  amber:       { bg: '#faf5f0',  border: '#e8ddd0', borderLeft: '#d97706', color: '#92400e', bar: '#d97706' },
 }
 
 const likertLabels: Record<number, string> = { 5: '매우 만족', 4: '만족', 3: '보통', 2: '불만족', 1: '매우 불만족' }
 
-function shouldShowQuestion(q: SurveyQuestion, answers: Record<string, number | string>): boolean {
+function shouldShowQuestion(q: SurveyQuestion, answers: Record<string, number | string | number[]>): boolean {
   if (!q.skip_logic?.show_when) return true
   const { question_id, operator, value } = q.skip_logic.show_when
   const answer = answers[question_id]
@@ -127,7 +130,7 @@ export default function SurveyForm({ survey, groupToken, distributionToken, pref
   prefillRespondent?: PrefillRespondent
 }) {
   const [step, setStep] = useState<Step>('landing')
-  const [answers, setAnswers] = useState<Record<string, number | string>>({})
+  const [answers, setAnswers] = useState<Record<string, number | string | number[]>>({})
   const [respondentInfo, setRespondentInfo] = useState<Record<string, string>>(() => {
     const initial: Record<string, string> = {}
     if (prefillRespondent?.name) initial.name = prefillRespondent.name
@@ -169,6 +172,20 @@ export default function SurveyForm({ survey, groupToken, distributionToken, pref
     setAnswers((prev) => ({ ...prev, [questionId]: value }))
   }
 
+  const handleMultipleChoiceToggle = (questionId: string, optionIndex: number) => {
+    setAnswers((prev) => {
+      const current = prev[questionId]
+      const arr = Array.isArray(current) ? [...current] : []
+      const idx = arr.indexOf(optionIndex)
+      if (idx >= 0) {
+        arr.splice(idx, 1)
+      } else {
+        arr.push(optionIndex)
+      }
+      return { ...prev, [questionId]: arr }
+    })
+  }
+
   const getSectionIntro = (sectionIdx: number) => {
     const sectionName = survey.sections[sectionIdx]?.name
     if (!sectionName || !survey.settings.section_intros) return null
@@ -201,7 +218,9 @@ export default function SurveyForm({ survey, groupToken, distributionToken, pref
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          answers,
+          answers: Object.fromEntries(
+            Object.entries(answers).map(([k, v]) => [k, Array.isArray(v) ? v.join(',') : v])
+          ),
           respondent_name: prefillRespondent?.name || respondentInfo.name || null,
           respondent_department: respondentInfo.department || null,
           respondent_position: respondentInfo.position || null,
@@ -261,9 +280,6 @@ export default function SurveyForm({ survey, groupToken, distributionToken, pref
           <h1 className="text-[20px] font-bold text-stone-900 text-center leading-tight tracking-tight">
             {String(survey.title ?? '')}
           </h1>
-          {survey.sessionName && (
-            <p className="text-[13px] text-stone-500 mt-1.5">{String(survey.sessionName ?? '')}</p>
-          )}
         </div>
 
         {/* Welcome Message */}
@@ -393,9 +409,10 @@ export default function SurveyForm({ survey, groupToken, distributionToken, pref
               {survey.settings.thank_you_message || '소중한 의견에 감사드립니다.\n응답 내용은 서비스 품질 개선에 활용됩니다.'}
             </p>
           </div>
+          {survey.settings.show_ending_stats !== false && (
           <div className="flex items-center gap-6 pt-2">
             <div className="flex flex-col items-center gap-1">
-              <span className="text-xl font-bold text-stone-800">{answeredLikert + Object.entries(answers).filter(([, v]) => typeof v === 'string' && v.length > 0).length}</span>
+              <span className="text-xl font-bold text-stone-800">{answeredLikert + Object.entries(answers).filter(([, v]) => (typeof v === 'string' && v.length > 0) || (Array.isArray(v) && v.length > 0)).length}</span>
               <span className="text-[11px] text-stone-400">응답 문항</span>
             </div>
             <div className="w-px h-10 bg-stone-200" />
@@ -404,6 +421,7 @@ export default function SurveyForm({ survey, groupToken, distributionToken, pref
               <span className="text-[11px] text-stone-400">소요 시간</span>
             </div>
           </div>
+          )}
         </div>
         <div className="absolute bottom-8 flex flex-col items-center gap-2">
           <Image src="/logo_exc.png" alt="EXPERT" width={80} height={16} className="h-4 w-auto opacity-30" />
@@ -438,7 +456,13 @@ export default function SurveyForm({ survey, groupToken, distributionToken, pref
   const validateCurrentSection = (): boolean => {
     if (!currentSection) return true
     const visibleQuestions = currentSection.questions.filter((q) => shouldShowQuestion(q, answers))
-    const unanswered = visibleQuestions.find((q) => q.required && answers[q.id] === undefined)
+    const unanswered = visibleQuestions.find((q) => {
+      if (!q.required) return false
+      const val = answers[q.id]
+      if (val === undefined) return true
+      if (Array.isArray(val) && val.length === 0) return true
+      return false
+    })
     if (unanswered) {
       showToast(`"${String(unanswered.text).slice(0, 30)}..." 문항에 응답해 주세요`)
       setTimeout(() => {
@@ -519,73 +543,78 @@ export default function SurveyForm({ survey, groupToken, distributionToken, pref
         }
 
         const colors = INTRO_STYLE_MAP[intro.color || 'brand'] || INTRO_STYLE_MAP.brand
+        const isTransparent = intro.color === 'transparent'
+        const size = intro.image_size || 'original'
         return (
           <div
             data-testid="section-banner"
-            className="mx-6 mt-4 mb-2 shadow-sm"
+            className="mx-6 mt-4 mb-2"
             style={{
               backgroundColor: colors.bg,
-              border: `1px solid ${colors.border}`,
-              borderLeft: `4px solid ${colors.bar}`,
-              borderRadius: '8px',
+              border: isTransparent ? 'none' : `1px solid ${colors.border}`,
+              borderLeft: isTransparent ? 'none' : `4px solid ${colors.bar}`,
+              borderRadius: '10px',
+              overflow: 'hidden',
+              boxShadow: isTransparent ? 'none' : '0 1px 3px rgba(0,0,0,0.04)',
             }}
           >
-            <div style={{ padding: '14px 16px' }}>
-              {intro.image_url && (() => {
-                const size = intro.image_size || 'original'
-                const imgStyle: Record<string, string> = {
-                  height: 'auto',
-                  maxHeight: '200px',
-                  display: 'block',
-                  borderRadius: '6px',
-                }
-                if (size === 'original') {
-                  imgStyle.width = 'auto'
-                  imgStyle.maxWidth = '100%'
-                  imgStyle.margin = '0 auto 10px'
-                } else if (size === 'full') {
-                  imgStyle.width = '100%'
-                  imgStyle.marginBottom = '10px'
-                } else if (size === 'medium') {
-                  imgStyle.width = '60%'
-                  imgStyle.margin = '0 auto 10px'
-                } else if (size === 'small') {
-                  imgStyle.width = '40%'
-                  imgStyle.margin = '0 auto 10px'
-                }
-                return (
-                  <div style={{ textAlign: 'center' }}>
-                    <img src={intro.image_url} alt="" style={imgStyle} />
+            {/* full 크기: 배너 상단 full-bleed (padding 없이 가득) */}
+            {intro.image_url && size === 'full' && (
+              <img
+                src={intro.image_url}
+                alt=""
+                style={{ display: 'block', width: '100%', height: 'auto' }}
+              />
+            )}
+            {/* 텍스트 + non-full 이미지 영역 */}
+            {(intro.title || intro.description || (intro.image_url && size !== 'full')) && (
+              <div style={{ padding: '14px 16px' }}>
+                {/* full 이외 크기: 패딩 안에서 실제 이미지 크기 반영 */}
+                {intro.image_url && size !== 'full' && (
+                  <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '10px' }}>
+                    <img
+                      src={intro.image_url}
+                      alt=""
+                      style={{
+                        display: 'block',
+                        height: 'auto',
+                        ...(size === 'small'
+                          ? { width: '38%' }
+                          : size === 'medium'
+                          ? { width: '58%' }
+                          : { width: 'auto', maxWidth: '100%' }),
+                      }}
+                    />
                   </div>
-                )
-              })()}
-              {intro.title && (
-                <p
-                  style={{
-                    fontSize: '15px',
-                    fontWeight: 700,
-                    color: colors.color,
-                    margin: 0,
-                    lineHeight: 1.4,
-                  }}
-                >
-                  {intro.title}
-                </p>
-              )}
-              {intro.description && (
-                <p
-                  style={{
-                    fontSize: '13px',
-                    color: '#57534e',
-                    marginTop: '4px',
-                    lineHeight: 1.6,
-                    whiteSpace: 'pre-line',
-                  }}
-                >
-                  {intro.description}
-                </p>
-              )}
-            </div>
+                )}
+                {intro.title && (
+                  <p
+                    style={{
+                      fontSize: '15px',
+                      fontWeight: 700,
+                      color: colors.color,
+                      margin: 0,
+                      lineHeight: 1.4,
+                    }}
+                  >
+                    {intro.title}
+                  </p>
+                )}
+                {intro.description && (
+                  <p
+                    style={{
+                      fontSize: '13px',
+                      color: '#57534e',
+                      marginTop: intro.title ? '4px' : 0,
+                      lineHeight: 1.6,
+                      whiteSpace: 'pre-line',
+                    }}
+                  >
+                    {intro.description}
+                  </p>
+                )}
+              </div>
+            )}
           </div>
         )
       })()}
@@ -662,7 +691,7 @@ export default function SurveyForm({ survey, groupToken, distributionToken, pref
               </div>
             )}
 
-            {(question.type === 'single_choice' || question.type === 'multiple_choice') && question.options && (
+            {question.type === 'single_choice' && question.options && (
               <div className="space-y-1.5">
                 {question.options.map((opt, i) => (
                   <button
@@ -680,6 +709,43 @@ export default function SurveyForm({ survey, groupToken, distributionToken, pref
                 ))}
               </div>
             )}
+
+            {question.type === 'multiple_choice' && question.options && (() => {
+              const selected = Array.isArray(answers[question.id]) ? (answers[question.id] as number[]) : []
+              return (
+                <div className="space-y-1.5">
+                  {question.options.map((opt, i) => {
+                    const optIdx = i + 1
+                    const isSelected = selected.includes(optIdx)
+                    return (
+                      <button
+                        key={i}
+                        type="button"
+                        onClick={() => handleMultipleChoiceToggle(question.id, optIdx)}
+                        className={`w-full min-h-[44px] flex items-center gap-3 px-4 rounded-xl border-[1.5px] text-sm text-left transition-all ${
+                          isSelected
+                            ? 'bg-teal-600 text-white border-teal-600 shadow-sm'
+                            : 'bg-white text-stone-600 border-stone-200 hover:border-teal-300 hover:bg-teal-50'
+                        }`}
+                      >
+                        <span className={`flex-shrink-0 w-4.5 h-4.5 rounded border-[1.5px] flex items-center justify-center text-[10px] ${
+                          isSelected ? 'bg-white/20 border-white/40' : 'border-stone-300'
+                        }`}>
+                          {isSelected && '✓'}
+                        </span>
+                        {String(opt)}
+                      </button>
+                    )
+                  })}
+                  {selected.length > 0 && (
+                    <p className="text-xs text-teal-600 pl-1">{selected.length}개 선택됨 (복수 선택 가능)</p>
+                  )}
+                  {selected.length === 0 && (
+                    <p className="text-xs text-stone-400 pl-1">복수 선택 가능</p>
+                  )}
+                </div>
+              )
+            })()}
 
             {question.type === 'text' && (
               <Textarea
