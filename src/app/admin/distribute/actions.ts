@@ -162,6 +162,144 @@ export async function createDistributionBatch(input: CreateBatchInput) {
   }
 }
 
+// ─── 기존 배치에 대상자 추가 ───
+
+export async function addToDistributionBatch(input: {
+  batchId: string
+  surveyId: string
+  rows: CreateBatchInput["rows"]
+}) {
+  const { batchId, surveyId, rows } = input
+  const supabase = createAdminClient()
+
+  // 1. 배치 존재 확인
+  const { data: batch, error: batchErr } = await supabase
+    .from("distribution_batches")
+    .select("id, survey_id, total_count")
+    .eq("id", batchId)
+    .single()
+
+  if (batchErr || !batch) {
+    return { error: "배부 배치를 찾을 수 없습니다" }
+  }
+  if (batch.survey_id !== surveyId) {
+    return { error: "설문 ID가 일치하지 않습니다" }
+  }
+
+  // 2. 고유 회사명 추출 → organizations upsert
+  const uniqueCompanies = [...new Set(rows.map((r) => r.company).filter(Boolean))]
+  const orgMap = new Map<string, string>()
+
+  for (const companyName of uniqueCompanies) {
+    const { data: existing } = await supabase
+      .from("organizations")
+      .select("id")
+      .eq("name", companyName)
+      .limit(1)
+      .single()
+
+    if (existing) {
+      orgMap.set(companyName, existing.id)
+    } else {
+      const { data: created } = await supabase
+        .from("organizations")
+        .insert({ name: companyName })
+        .select("id")
+        .single()
+      if (created) orgMap.set(companyName, created.id)
+    }
+  }
+
+  // 3. 응답자 upsert
+  const respondentIds: string[] = []
+
+  for (const row of rows) {
+    const orgId = orgMap.get(row.company) ?? null
+    let respondentId: string | null = null
+
+    if (row.email) {
+      const { data: existing } = await supabase
+        .from("respondents")
+        .select("id")
+        .eq("email", row.email)
+        .limit(1)
+        .single()
+
+      if (existing) {
+        respondentId = existing.id
+        await supabase
+          .from("respondents")
+          .update({
+            name: row.name,
+            organization_id: orgId,
+            phone: row.phoneNormalized || null,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", respondentId)
+      }
+    }
+
+    if (!respondentId) {
+      const { data: created } = await supabase
+        .from("respondents")
+        .insert({
+          name: row.name,
+          email: row.email || null,
+          phone: row.phoneNormalized || null,
+          organization_id: orgId,
+        })
+        .select("id")
+        .single()
+      respondentId = created?.id ?? null
+    }
+
+    if (respondentId) {
+      respondentIds.push(respondentId)
+    }
+  }
+
+  // 4. distributions 추가 생성
+  const distributionInserts = rows.map((row, idx) => ({
+    batch_id: batchId,
+    survey_id: surveyId,
+    respondent_id: respondentIds[idx] ?? null,
+    recipient_email: row.email || null,
+    recipient_name: row.name,
+    channel: "personal_link",
+    status: "pending",
+  }))
+
+  const { data: distributions, error: distErr } = await supabase
+    .from("distributions")
+    .insert(distributionInserts)
+    .select("id, recipient_name, recipient_email, unique_token")
+
+  if (distErr || !distributions) {
+    return { error: "추가 링크 생성 실패: " + (distErr?.message ?? "") }
+  }
+
+  // 5. 배치 total_count 업데이트
+  await supabase
+    .from("distribution_batches")
+    .update({ total_count: batch.total_count + distributions.length })
+    .eq("id", batchId)
+
+  // 6. respondents의 last_cs_survey_sent_at 업데이트
+  const now = new Date().toISOString()
+  await supabase
+    .from("respondents")
+    .update({ last_cs_survey_sent_at: now })
+    .in("id", respondentIds)
+
+  const results: DistributionResult[] = distributions.map((d) => ({
+    name: d.recipient_name ?? "",
+    email: d.recipient_email ?? "",
+    uniqueToken: d.unique_token,
+  }))
+
+  return { batchId, distributions: results }
+}
+
 // ─── 메일 템플릿 목록 (클라이언트에서 사용) ───
 
 export async function getEmailTemplates() {
@@ -189,6 +327,8 @@ interface ScheduleEmailInput {
   scheduleType: "immediate" | "scheduled" | "trigger"
   scheduledAt?: string
   triggerRule?: { type: string; days: number }
+  customSubject?: string
+  customBodyHtml?: string
 }
 
 export async function scheduleEmailBatch(
@@ -251,8 +391,8 @@ export async function scheduleEmailBatch(
         template_id: template.id,
         recipient_email: d.recipient_email!,
         recipient_name: d.recipient_name ?? null,
-        subject: renderTemplate(template.subject, vars),
-        body_html: renderTemplate(template.body_html, vars),
+        subject: renderTemplate(input.customSubject ?? template.subject, vars),
+        body_html: renderTemplate(input.customBodyHtml ?? template.body_html, vars),
         schedule_type: input.scheduleType,
         scheduled_at:
           input.scheduleType === "scheduled" && input.scheduledAt
@@ -382,4 +522,50 @@ export async function deleteDistributionBatch(batchId: string) {
   }
 
   return { success: true }
+}
+
+// ─── 테스트 메일 발송 (큐 미사용, 직접 발송) ───
+
+export async function sendTestEmail(input: {
+  templateId: string
+  testEmail: string
+  customSubject?: string
+  customBodyHtml?: string
+}): Promise<{ success?: boolean; error?: string }> {
+  const supabase = createAdminClient()
+
+  const { data: template, error: tplErr } = await supabase
+    .from("email_templates")
+    .select("id, subject, body_html")
+    .eq("id", input.templateId)
+    .single()
+
+  if (tplErr || !template) {
+    return { error: "템플릿을 찾을 수 없습니다" }
+  }
+
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://survey.exc.co.kr"
+  const vars = getTemplateVariables({
+    recipientName: "홍길동",
+    companyName: "(주)엑셀루트",
+    courseName: "리더십 스킬 향상 과정",
+    surveyLink: `${baseUrl}/d/test-preview-link`,
+    educationEndDate: "2026-04-15",
+  })
+
+  const subject = `[테스트] ${renderTemplate(input.customSubject ?? template.subject, vars)}`
+  const bodyHtml = renderTemplate(input.customBodyHtml ?? template.body_html, vars)
+
+  const sender = getEmailSender()
+  const result = await sender.send({
+    to: input.testEmail,
+    toName: "테스트 수신자",
+    subject,
+    bodyHtml,
+  })
+
+  if (result.success) {
+    return { success: true }
+  }
+  return { error: result.error ?? "발송 실패" }
 }
