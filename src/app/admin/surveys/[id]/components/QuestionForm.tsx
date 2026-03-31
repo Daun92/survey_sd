@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Check, X, Plus, Loader2, Trash2 } from "lucide-react";
 import { addQuestion, updateQuestion, deleteQuestion } from "../actions";
 import { type Question, type SkipLogic, questionTypeOptions, needsOptions, parseOptions } from "./types";
@@ -30,6 +30,14 @@ export function QuestionForm({ surveyId, question, allQuestions, sectionNames, d
   const [customSection, setCustomSection] = useState(false);
   const [isRequired, setIsRequired] = useState(question?.is_required ?? true);
   const [options, setOptions] = useState<string[]>(question ? parseOptions(question.options) : ["옵션 1", "옵션 2"]);
+
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  useEffect(() => {
+    const el = textareaRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = el.scrollHeight + "px";
+  }, [questionText]);
 
   // Info block metadata
   const existingMeta = (question as any)?.metadata as Record<string, unknown> | undefined;
@@ -95,7 +103,7 @@ export function QuestionForm({ surveyId, question, allQuestions, sectionNames, d
       <p className="text-sm font-semibold text-stone-800">{isEdit ? "문항 수정" : "새 문항 추가"}</p>
       <div>
         <label className="block text-[13px] font-medium text-stone-600 mb-1">질문 내용 <span className="text-red-400">*</span></label>
-        <textarea value={questionText} onChange={(e) => setQuestionText(e.target.value)} rows={2} placeholder="질문 내용을 입력하세요" className="w-full rounded-lg border border-stone-300 px-3 py-2 text-sm focus:border-teal-500 focus:ring-1 focus:ring-teal-500 outline-none resize-none" />
+        <textarea ref={textareaRef} value={questionText} onChange={(e) => setQuestionText(e.target.value)} rows={2} placeholder="질문 내용을 입력하세요" className="w-full rounded-lg border border-stone-300 px-3 py-2 text-sm focus:border-teal-500 focus:ring-1 focus:ring-teal-500 outline-none resize-none overflow-hidden" style={{ minHeight: "3.5rem" }} />
       </div>
       <div className="grid grid-cols-2 gap-3">
         <div>
