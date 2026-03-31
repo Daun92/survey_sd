@@ -1,11 +1,11 @@
-import { supabase } from "@/lib/supabase";
+import { createClient } from "@/lib/supabase/server";
 import Link from "next/link";
 import { MessageSquare } from "lucide-react";
-import DistributeClient from "./distribute-client";
+import DistributeTabs from "./distribute-tabs";
 
-export const revalidate = 60;
+export const revalidate = 0;
 
-async function getSurveyData() {
+async function getSurveyData(supabase: Awaited<ReturnType<typeof createClient>>) {
   const { data: surveys } = await supabase
     .from("edu_surveys")
     .select(`
@@ -30,12 +30,40 @@ async function getSurveyData() {
   }));
 }
 
+async function getPersonalLinkBatches(supabase: Awaited<ReturnType<typeof createClient>>) {
+  const { data: batches } = await supabase
+    .from("distribution_batches")
+    .select(`
+      id, survey_id, channel, total_count, sent_count, opened_count, completed_count, created_at,
+      edu_surveys ( title, status )
+    `)
+    .eq("channel", "personal_link")
+    .order("created_at", { ascending: false });
+
+  return (batches ?? []).map((b: any) => ({
+    id: b.id,
+    surveyId: b.survey_id,
+    surveyTitle: b.edu_surveys?.title ?? "(삭제된 설문)",
+    surveyStatus: b.edu_surveys?.status ?? "unknown",
+    channel: b.channel,
+    totalCount: b.total_count,
+    sentCount: b.sent_count,
+    openedCount: b.opened_count,
+    completedCount: b.completed_count,
+    createdAt: b.created_at,
+  }));
+}
+
 export default async function DistributePage() {
-  const surveys = await getSurveyData();
+  const supabase = await createClient();
+  const [surveys, batches] = await Promise.all([
+    getSurveyData(supabase),
+    getPersonalLinkBatches(supabase),
+  ]);
 
   return (
     <div>
-      <DistributeClient surveys={surveys} />
+      <DistributeTabs surveys={surveys} batches={batches} />
       {/* 워크플로우 다음 단계 */}
       <div className="mt-6 rounded-xl border border-stone-200 bg-white shadow-sm p-5 flex items-center justify-between">
         <div>

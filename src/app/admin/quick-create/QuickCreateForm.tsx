@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo, useRef, useEffect } from "react";
-import { quickCreateSurvey, type QuickCreateResult } from "./actions";
+import { quickCreateSurvey, getProjectSessions, type QuickCreateResult, type QuickCreateResponse } from "./actions";
 import Link from "next/link";
 import {
   Loader2,
@@ -96,6 +96,13 @@ export function QuickCreateForm({ projects, customers, templates }: Props) {
   const [showCustomerDropdown, setShowCustomerDropdown] = useState(false);
   const customerDropdownRef = useRef<HTMLDivElement>(null);
 
+  // Session selector (기존 프로젝트 선택 시)
+  type CourseWithSessions = { id: string; name: string; education_type: string | null; sessions: { id: string; session_number: number; name: string | null; start_date: string | null; end_date: string | null }[] };
+  const [sessionMode, setSessionMode] = useState<"create" | "select">("create");
+  const [projectSessions, setProjectSessions] = useState<CourseWithSessions[]>([]);
+  const [selectedSessionId, setSelectedSessionId] = useState("");
+  const [loadingSessions, setLoadingSessions] = useState(false);
+
   // Schedule
   const [separateDistributeDate, setSeparateDistributeDate] = useState(false);
 
@@ -131,6 +138,21 @@ export function QuickCreateForm({ projects, customers, templates }: Props) {
     });
   }, [templates, educationType]);
 
+  // 프로젝트 선택 시 세션 목록 로드
+  useEffect(() => {
+    if (selectedProject && projectMode === "select") {
+      setLoadingSessions(true);
+      getProjectSessions(selectedProject.id)
+        .then((data) => setProjectSessions(data))
+        .catch(() => setProjectSessions([]))
+        .finally(() => setLoadingSessions(false));
+    } else {
+      setProjectSessions([]);
+      setSessionMode("create");
+      setSelectedSessionId("");
+    }
+  }, [selectedProject, projectMode]);
+
   // Close dropdowns on outside click
   useEffect(() => {
     function handleClick(e: MouseEvent) {
@@ -156,7 +178,11 @@ export function QuickCreateForm({ projects, customers, templates }: Props) {
     setError(null);
     try {
       const res = await quickCreateSurvey(formData);
-      setResult(res);
+      if (res.success) {
+        setResult(res.data);
+      } else {
+        setError(res.error);
+      }
     } catch (e) {
       setError(
         e instanceof Error ? e.message : "생성 중 오류가 발생했습니다."
@@ -524,6 +550,85 @@ export function QuickCreateForm({ projects, customers, templates }: Props) {
           </div>
         </div>
 
+        {/* ── Session Selector (기존 프로젝트 선택 시) ── */}
+        {selectedProject && projectSessions.length > 0 && (
+          <div className="rounded-xl border border-stone-200 bg-white shadow-sm p-5">
+            <div className="flex items-center gap-2 mb-4">
+              <ListChecks size={16} className="text-teal-600" />
+              <h2 className="text-sm font-semibold text-stone-800">세션 선택</h2>
+            </div>
+            <div className="space-y-3">
+              <div className="flex gap-3">
+                <label className="flex items-center gap-2 text-sm cursor-pointer">
+                  <input
+                    type="radio"
+                    name="_sessionMode"
+                    checked={sessionMode === "create"}
+                    onChange={() => { setSessionMode("create"); setSelectedSessionId(""); }}
+                    className="text-teal-600"
+                  />
+                  새 세션 자동 생성
+                </label>
+                <label className="flex items-center gap-2 text-sm cursor-pointer">
+                  <input
+                    type="radio"
+                    name="_sessionMode"
+                    checked={sessionMode === "select"}
+                    onChange={() => setSessionMode("select")}
+                    className="text-teal-600"
+                  />
+                  기존 세션에 설문 추가
+                </label>
+              </div>
+
+              {sessionMode === "select" && (
+                <div className="border border-stone-200 rounded-lg overflow-hidden">
+                  {loadingSessions ? (
+                    <div className="p-4 text-center text-sm text-stone-400">로딩 중...</div>
+                  ) : (
+                    projectSessions.map((course) => (
+                      <div key={course.id}>
+                        <div className="px-3 py-1.5 bg-stone-50 text-xs font-medium text-stone-500 border-b border-stone-100">
+                          {course.name}
+                          {course.education_type && (
+                            <span className="ml-1.5 text-teal-600">
+                              ({course.education_type === "classroom" ? "집합" : course.education_type === "remote" ? "원격" : course.education_type})
+                            </span>
+                          )}
+                        </div>
+                        {(Array.isArray(course.sessions) ? course.sessions : [])
+                          .sort((a: { session_number: number }, b: { session_number: number }) => a.session_number - b.session_number)
+                          .map((s: { id: string; session_number: number; name: string | null; start_date: string | null; end_date: string | null }) => (
+                          <label
+                            key={s.id}
+                            className={`flex items-center gap-3 px-3 py-2 text-sm cursor-pointer border-b border-stone-50 last:border-0 hover:bg-teal-50/50 transition-colors ${selectedSessionId === s.id ? "bg-teal-50" : ""}`}
+                          >
+                            <input
+                              type="radio"
+                              name="_sessionSelect"
+                              checked={selectedSessionId === s.id}
+                              onChange={() => setSelectedSessionId(s.id)}
+                              className="text-teal-600"
+                            />
+                            <span className="font-mono text-xs text-stone-400">#{s.session_number}</span>
+                            <span className="text-stone-700">{s.name || `${s.session_number}차수`}</span>
+                            {s.start_date && (
+                              <span className="text-xs text-stone-400 ml-auto">
+                                {s.start_date} ~ {s.end_date || ""}
+                              </span>
+                            )}
+                          </label>
+                        ))}
+                      </div>
+                    ))
+                  )}
+                </div>
+              )}
+            </div>
+            <input type="hidden" name="sessionId" value={sessionMode === "select" ? selectedSessionId : ""} />
+          </div>
+        )}
+
         {/* ── Section 2: 일정 ── */}
         <div className="rounded-xl border border-stone-200 bg-white shadow-sm p-5">
           <div className="flex items-center gap-2 mb-4">
@@ -593,11 +698,15 @@ export function QuickCreateForm({ projects, customers, templates }: Props) {
                     type="date"
                     className="w-full rounded-lg border border-stone-300 px-3 py-2 text-sm focus:border-teal-500 focus:ring-1 focus:ring-teal-500 outline-none"
                   />
-                  <p className="text-xs text-stone-400 mt-1.5">
-                    배포일까지 초안 상태로 유지되며, 해당 날짜에 활성화됩니다
-                  </p>
                 </div>
               )}
+
+              <div className="mt-3 rounded-lg bg-teal-50 px-3 py-2.5 text-xs text-teal-700 space-y-1">
+                <p className="font-medium">자동 설문 관리</p>
+                <p>• 배포 시작일(또는 배포 예정일)이 되면 설문이 자동으로 오픈됩니다</p>
+                <p>• 종료일이 지나면 설문이 자동으로 마감됩니다</p>
+                <p className="text-teal-600/70">설문 관리 페이지에서 수동 오픈/마감도 가능합니다</p>
+              </div>
             </div>
           </div>
         </div>

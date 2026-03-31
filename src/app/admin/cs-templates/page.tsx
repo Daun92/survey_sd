@@ -1,4 +1,5 @@
-import { supabase } from "@/lib/supabase";
+import { createClient } from "@/lib/supabase/server";
+import { formatDate } from "@/lib/utils";
 import Link from "next/link";
 import {
   ListChecks,
@@ -11,6 +12,7 @@ import { TemplateActions } from "./template-actions";
 export const revalidate = 300;
 
 async function getTemplatesWithQuestionCounts() {
+  const supabase = await createClient();
   const { data: templates } = await supabase
     .from("cs_survey_templates")
     .select("id, division, division_label, name, description, is_active, is_system, created_at, cs_survey_questions(count)")
@@ -33,6 +35,7 @@ async function getTemplatesWithQuestionCounts() {
 }
 
 async function getSurveys() {
+  const supabase = await createClient();
   const { data } = await supabase
     .from("edu_surveys")
     .select("id, title, edu_questions(count)")
@@ -44,11 +47,6 @@ async function getSurveys() {
     title: s.title,
     questionCount: (s.edu_questions as unknown as { count: number }[])?.[0]?.count ?? 0,
   }));
-}
-
-function formatDate(dateStr: string) {
-  const d = new Date(dateStr);
-  return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, "0")}.${String(d.getDate()).padStart(2, "0")}`;
 }
 
 export default async function CSTemplatesPage() {

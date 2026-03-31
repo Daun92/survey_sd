@@ -1,4 +1,4 @@
-import { supabase } from '@/lib/supabase'
+import { createClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
 import { HrdSurveyForm } from './survey-form'
 
@@ -8,6 +8,7 @@ export default async function HrdSurveyPage({
   params: Promise<{ token: string }>
 }) {
   const { token } = await params
+  const supabase = await createClient()
 
   // 응답자 정보 조회
   const { data: respondent } = await supabase

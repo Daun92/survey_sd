@@ -1,9 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabase'
+import { createClient } from '@/lib/supabase/server'
+import { requireRoleAPI } from '@/lib/auth'
 
 // GET: 설정값 조회
 export async function GET() {
+  const auth = await requireRoleAPI('admin')
+  if (auth.error) return auth.error
+
   try {
+    const supabase = await createClient()
     const { data } = await supabase.from('app_settings').select('key, value')
     const settings: Record<string, string> = {}
     for (const row of data ?? []) {
@@ -23,14 +28,17 @@ export async function GET() {
 
 // POST: 설정값 저장
 export async function POST(request: NextRequest) {
+  const auth = await requireRoleAPI('admin')
+  if (auth.error) return auth.error
+
   try {
+    const supabase = await createClient()
     const body = await request.json()
     const { key, value } = body
 
     if (!key) {
       return NextResponse.json({ error: 'key는 필수입니다' }, { status: 400 })
     }
-
 
     const { error } = await supabase
       .from('app_settings')

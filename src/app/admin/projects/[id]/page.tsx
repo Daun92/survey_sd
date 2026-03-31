@@ -1,4 +1,5 @@
-import { supabase } from "@/lib/supabase";
+import { createClient } from "@/lib/supabase/server";
+import { formatDate } from "@/lib/utils";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
@@ -15,6 +16,7 @@ import {
   Plus,
 } from "lucide-react";
 import { ProjectActions } from "./ProjectActions";
+import { SessionManager } from "./SessionManager";
 
 export const dynamic = "force-dynamic";
 
@@ -36,20 +38,8 @@ const surveyStatusLabels: Record<string, { label: string; className: string }> =
   },
 };
 
-const sessionStatusLabels: Record<string, { label: string; className: string }> = {
-  scheduled: { label: "예정", className: "bg-blue-100 text-blue-800" },
-  in_progress: { label: "진행중", className: "bg-emerald-100 text-emerald-800" },
-  completed: { label: "완료", className: "bg-rose-100 text-rose-800" },
-  cancelled: { label: "취소", className: "bg-red-100 text-red-800" },
-};
 
-function formatDate(dateStr: string | null) {
-  if (!dateStr) return "-";
-  const d = new Date(dateStr);
-  return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, "0")}.${String(d.getDate()).padStart(2, "0")}`;
-}
-
-async function getProjectDetail(id: string) {
+async function getProjectDetail(supabase: Awaited<ReturnType<typeof createClient>>, id: string) {
   const [
     { data: project, error: projectError },
     { data: courses },
@@ -67,12 +57,15 @@ async function getProjectDetail(id: string) {
       .order("name", { ascending: true }),
     supabase
       .from("edu_surveys")
-      .select("id, title, status, url_token, starts_at, ends_at, session_id")
+      .select("id, title, status, url_token, starts_at, ends_at, session_id, sessions(session_number, name, courses(name))")
       .eq("project_id", id)
       .order("created_at", { ascending: false }),
   ]);
 
-  if (projectError || !project) return null;
+  if (projectError || !project) {
+    console.error("[projects/[id]] Supabase error:", projectError);
+    return null;
+  }
 
   return {
     project,
@@ -86,8 +79,9 @@ export default async function ProjectDetailPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
+  const supabase = await createClient();
   const { id } = await params;
-  const data = await getProjectDetail(id);
+  const data = await getProjectDetail(supabase, id);
 
   if (!data) {
     notFound();
@@ -103,6 +97,76 @@ export default async function ProjectDetailPage({
     (sum: number, c: { sessions?: { id: string }[] }) =>
       sum + (Array.isArray(c.sessions) ? c.sessions.length : 0),
     0
+  );
+
+  // 세션별 설문 수 계산 (SessionManager 삭제 안전장치용)
+  const sessionSurveyCounts: Record<string, number> = {};
+  for (const s of surveys) {
+    if (s.session_id) {
+      sessionSurveyCounts[s.session_id] = (sessionSurveyCounts[s.session_id] || 0) + 1;
+    }
+  }
+
+  // 설문을 과정 > 세션 트리 구조로 그룹핑
+  type SurveyItem = typeof surveys[number];
+  const sessionToCourse = new Map<string, { courseId: string; courseName: string; educationType: string | null }>();
+  for (const course of courses) {
+    const sessions = Array.isArray(course.sessions) ? course.sessions : [];
+    for (const session of sessions) {
+      sessionToCourse.set(session.id, {
+        courseId: course.id,
+        courseName: course.name,
+        educationType: course.education_type,
+      });
+    }
+  }
+
+  // 과정별 → 세션별 → 설문 그룹
+  const courseGroups = new Map<string, {
+    courseName: string;
+    educationType: string | null;
+    sessions: Map<string, { sessionNumber: number; sessionName: string | null; surveys: SurveyItem[] }>;
+  }>();
+  const ungrouped: SurveyItem[] = [];
+
+  for (const survey of surveys) {
+    if (!survey.session_id) {
+      ungrouped.push(survey);
+      continue;
+    }
+    const courseInfo = sessionToCourse.get(survey.session_id);
+    if (!courseInfo) {
+      ungrouped.push(survey);
+      continue;
+    }
+    if (!courseGroups.has(courseInfo.courseId)) {
+      courseGroups.set(courseInfo.courseId, {
+        courseName: courseInfo.courseName,
+        educationType: courseInfo.educationType,
+        sessions: new Map(),
+      });
+    }
+    const group = courseGroups.get(courseInfo.courseId)!;
+    if (!group.sessions.has(survey.session_id)) {
+      const session = Array.isArray(survey.sessions) ? survey.sessions[0] : null;
+      group.sessions.set(survey.session_id, {
+        sessionNumber: session?.session_number ?? 0,
+        sessionName: session?.name ?? null,
+        surveys: [],
+      });
+    }
+    group.sessions.get(survey.session_id)!.surveys.push(survey);
+  }
+
+  const educationTypeLabels: Record<string, string> = {
+    classroom: "집합",
+    remote: "원격",
+    elearning: "이러닝",
+    blended: "혼합",
+  };
+
+  const sortedCourseGroups = [...courseGroups.entries()].sort((a, b) =>
+    a[1].courseName.localeCompare(b[1].courseName)
   );
 
   return (
@@ -205,123 +269,14 @@ export default async function ProjectDetailPage({
         <ProjectActions project={project} />
       </div>
 
-      {/* Courses & Sessions */}
-      <div className="rounded-xl border border-stone-200 bg-white shadow-sm mb-8">
-        <div className="p-5 border-b border-stone-100">
-          <h2 className="text-base font-semibold text-stone-900">과정 및 세션</h2>
-          <p className="text-sm text-stone-500 mt-0.5">
-            총 {courses.length}개 과정, {sessionCount}개 세션
-          </p>
-        </div>
+      {/* Courses & Sessions — Interactive Manager */}
+      <SessionManager
+        projectId={project.id}
+        courses={courses as { id: string; name: string; education_type: string | null; sessions: { id: string; session_number: number; name: string | null; start_date: string | null; end_date: string | null; capacity: number | null; status: string }[] }[]}
+        sessionSurveyCounts={sessionSurveyCounts}
+      />
 
-        {courses.length === 0 ? (
-          <div className="p-12 text-center">
-            <div className="flex justify-center mb-4">
-              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-stone-100 text-stone-400">
-                <BookOpen size={24} />
-              </div>
-            </div>
-            <h3 className="text-sm font-medium text-stone-800 mb-1">
-              등록된 과정이 없습니다
-            </h3>
-            <p className="text-sm text-stone-500">
-              이 프로젝트에 과정을 추가해 주세요.
-            </p>
-          </div>
-        ) : (
-          <div>
-            {courses.map((course) => {
-              const sessions = Array.isArray(course.sessions)
-                ? course.sessions
-                : [];
-              return (
-                <div key={course.id}>
-                  <div className="px-5 py-2.5 bg-stone-50/80 border-b border-stone-100">
-                    <div className="flex items-center gap-2">
-                      <BookOpen size={14} className="text-teal-600" />
-                      <span className="text-xs font-semibold text-stone-600 uppercase tracking-wide">
-                        {course.name}
-                      </span>
-                      <span className="text-xs text-stone-400 ml-1">
-                        ({sessions.length}세션)
-                      </span>
-                      {course.education_type && (
-                        <span className="inline-flex items-center rounded-md bg-teal-50 px-2 py-0.5 text-xs font-medium text-teal-700">
-                          {course.education_type === "classroom"
-                            ? "집합"
-                            : course.education_type === "online"
-                              ? "온라인"
-                              : course.education_type}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                  {sessions.length === 0 ? (
-                    <div className="px-5 py-3 text-sm text-stone-400 border-b border-stone-100">
-                      등록된 세션이 없습니다.
-                    </div>
-                  ) : (
-                    sessions
-                      .sort(
-                        (a: { session_number: number }, b: { session_number: number }) =>
-                          a.session_number - b.session_number
-                      )
-                      .map(
-                        (session: {
-                          id: string;
-                          session_number: number;
-                          name: string | null;
-                          start_date: string | null;
-                          end_date: string | null;
-                          capacity: number | null;
-                          status: string;
-                        }) => {
-                          const sStatus =
-                            sessionStatusLabels[session.status] ??
-                            sessionStatusLabels.scheduled;
-                          return (
-                            <div
-                              key={session.id}
-                              className="flex items-center gap-4 px-5 py-3 border-b border-stone-100 last:border-0"
-                            >
-                              <span className="text-xs font-mono text-stone-400 shrink-0 w-12">
-                                #{session.session_number}
-                              </span>
-                              <div className="flex-1 min-w-0">
-                                <p className="text-sm text-stone-800">
-                                  {session.name || `세션 ${session.session_number}`}
-                                </p>
-                                <div className="flex items-center gap-3 mt-0.5">
-                                  <span className="text-xs text-stone-400">
-                                    {formatDate(session.start_date)} ~{" "}
-                                    {formatDate(session.end_date)}
-                                  </span>
-                                  {session.capacity && (
-                                    <span className="flex items-center gap-1 text-xs text-stone-400">
-                                      <Users size={11} />
-                                      {session.capacity}명
-                                    </span>
-                                  )}
-                                </div>
-                              </div>
-                              <span
-                                className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium shrink-0 ${sStatus.className}`}
-                              >
-                                {sStatus.label}
-                              </span>
-                            </div>
-                          );
-                        }
-                      )
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
-
-      {/* Surveys */}
+      {/* Surveys — 과정 > 세션 트리 구조 */}
       <div className="rounded-xl border border-stone-200 bg-white shadow-sm">
         <div className="p-5 border-b border-stone-100 flex items-center justify-between">
           <div>
@@ -354,47 +309,122 @@ export default async function ProjectDetailPage({
             </p>
           </div>
         ) : (
-          <div>
-            {surveys.map(
-              (survey: {
-                id: string;
-                title: string;
-                status: string;
-                url_token: string | null;
-                starts_at: string | null;
-                ends_at: string | null;
-                session_id: string | null;
-              }) => {
-                const sStatus =
-                  surveyStatusLabels[survey.status] ?? surveyStatusLabels.draft;
-                return (
-                  <Link
-                    key={survey.id}
-                    href={`/admin/surveys/${survey.id}`}
-                    className="flex items-center gap-4 px-5 py-3.5 border-b border-stone-100 last:border-0 hover:bg-stone-50/50 transition-colors"
-                  >
-                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-teal-50 text-teal-600 shrink-0">
-                      <ClipboardList size={16} />
+          <div className="divide-y divide-stone-100">
+            {/* 과정별 그룹 */}
+            {sortedCourseGroups.map(([courseId, group]) => (
+              <div key={courseId}>
+                {/* 과정 헤더 */}
+                <div className="px-5 py-3 bg-stone-50/80 border-b border-stone-100">
+                  <div className="flex items-center gap-2">
+                    <FolderOpen size={15} className="text-indigo-500" />
+                    <span className="text-sm font-semibold text-stone-800">
+                      {group.courseName}
+                    </span>
+                    {group.educationType && (
+                      <span className="inline-flex items-center rounded-md bg-indigo-50 px-1.5 py-0.5 text-[11px] font-medium text-indigo-600">
+                        {educationTypeLabels[group.educationType] ?? group.educationType}
+                      </span>
+                    )}
+                    <span className="text-[11px] text-stone-400">
+                      {[...group.sessions.values()].reduce((sum, s) => sum + s.surveys.length, 0)}개 설문
+                    </span>
+                  </div>
+                </div>
+                {/* 세션별 서브그룹 */}
+                {[...group.sessions.entries()]
+                  .sort((a, b) => a[1].sessionNumber - b[1].sessionNumber)
+                  .map(([sessionId, sessionGroup]) => (
+                    <div key={sessionId}>
+                      {/* 세션 서브헤더 */}
+                      <div className="px-5 py-2 pl-10 bg-stone-50/40 border-b border-stone-50">
+                        <div className="flex items-center gap-1.5">
+                          <BookOpen size={12} className="text-stone-400" />
+                          <span className="text-xs font-medium text-stone-600">
+                            제{sessionGroup.sessionNumber}차
+                            {sessionGroup.sessionName ? ` · ${sessionGroup.sessionName}` : ""}
+                          </span>
+                          <span className="text-[11px] text-stone-400">
+                            ({sessionGroup.surveys.length}개)
+                          </span>
+                        </div>
+                      </div>
+                      {/* 설문 행 */}
+                      {sessionGroup.surveys.map((survey) => {
+                        const sStatus =
+                          surveyStatusLabels[survey.status] ?? surveyStatusLabels.draft;
+                        return (
+                          <Link
+                            key={survey.id}
+                            href={`/admin/surveys/${survey.id}`}
+                            className="flex items-center gap-4 px-5 pl-14 py-3.5 border-b border-stone-100 last:border-0 hover:bg-stone-50/50 transition-colors"
+                          >
+                            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-teal-50 text-teal-600 shrink-0">
+                              <ClipboardList size={14} />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium text-stone-800 truncate">
+                                {survey.title}
+                              </p>
+                              <span className="text-xs text-stone-400">
+                                {formatDate(survey.starts_at)} ~ {formatDate(survey.ends_at)}
+                              </span>
+                            </div>
+                            <span
+                              className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium shrink-0 ${sStatus.className}`}
+                            >
+                              {sStatus.label}
+                            </span>
+                          </Link>
+                        );
+                      })}
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-stone-800 truncate">
-                        {survey.title}
-                      </p>
-                      <div className="flex items-center gap-3 mt-0.5">
+                  ))}
+              </div>
+            ))}
+
+            {/* 미분류 (세션 미연결) 설문 */}
+            {ungrouped.length > 0 && (
+              <div>
+                <div className="px-5 py-3 bg-amber-50/60 border-b border-stone-100">
+                  <div className="flex items-center gap-2">
+                    <ClipboardList size={15} className="text-amber-500" />
+                    <span className="text-sm font-semibold text-stone-700">
+                      미분류
+                    </span>
+                    <span className="text-[11px] text-stone-400">
+                      세션 미연결 · {ungrouped.length}개 설문
+                    </span>
+                  </div>
+                </div>
+                {ungrouped.map((survey) => {
+                  const sStatus =
+                    surveyStatusLabels[survey.status] ?? surveyStatusLabels.draft;
+                  return (
+                    <Link
+                      key={survey.id}
+                      href={`/admin/surveys/${survey.id}`}
+                      className="flex items-center gap-4 px-5 pl-10 py-3.5 border-b border-stone-100 last:border-0 hover:bg-stone-50/50 transition-colors"
+                    >
+                      <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-teal-50 text-teal-600 shrink-0">
+                        <ClipboardList size={14} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-stone-800 truncate">
+                          {survey.title}
+                        </p>
                         <span className="text-xs text-stone-400">
-                          {formatDate(survey.starts_at)} ~{" "}
-                          {formatDate(survey.ends_at)}
+                          {formatDate(survey.starts_at)} ~ {formatDate(survey.ends_at)}
                         </span>
                       </div>
-                    </div>
-                    <span
-                      className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium shrink-0 ${sStatus.className}`}
-                    >
-                      {sStatus.label}
-                    </span>
-                  </Link>
-                );
-              }
+                      <span
+                        className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium shrink-0 ${sStatus.className}`}
+                      >
+                        {sStatus.label}
+                      </span>
+                    </Link>
+                  );
+                })}
+              </div>
             )}
           </div>
         )}

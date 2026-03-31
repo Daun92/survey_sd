@@ -1,5 +1,7 @@
-import { supabase } from "@/lib/supabase";
+import { createClient } from "@/lib/supabase/server";
+import { formatDate } from "@/lib/utils";
 import { Users } from "lucide-react";
+import { RespondentActions } from "./respondent-actions";
 
 export const revalidate = 60;
 
@@ -7,35 +9,43 @@ const statusLabels: Record<string, { label: string; className: string }> = {
   completed: { label: "완료", className: "bg-emerald-100 text-emerald-800" },
   invited: { label: "초대됨", className: "bg-blue-100 text-blue-800" },
   in_progress: { label: "진행중", className: "bg-amber-100 text-amber-800" },
+  verified: { label: "검증됨", className: "bg-violet-100 text-violet-800" },
 };
 
-function formatDate(dateStr: string | null) {
-  if (!dateStr) return "-";
-  const d = new Date(dateStr);
-  return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, "0")}.${String(d.getDate()).padStart(2, "0")}`;
-}
-
 async function getData() {
-  const { data: respondents } = await supabase
-    .from("hrd_respondents")
-    .select(
-      "id, respondent_name, respondent_position, respondent_email, company_name, org_type, status, completed_at"
-    )
-    .order("company_name", { ascending: true });
+  const supabase = await createClient();
+  const [{ data: respondents }, { data: rounds }] = await Promise.all([
+    supabase
+      .from("hrd_respondents")
+      .select(
+        "id, round_id, respondent_name, respondent_position, respondent_email, company_name, org_type, status, completed_at, url_token"
+      )
+      .order("company_name", { ascending: true }),
+    supabase
+      .from("hrd_survey_rounds")
+      .select("id, title, round_number")
+      .order("created_at", { ascending: false }),
+  ]);
 
-  return { respondents: respondents ?? [] };
+  return { respondents: respondents ?? [], rounds: rounds ?? [] };
 }
 
 export default async function RespondentsPage() {
-  const { respondents } = await getData();
+  const { respondents, rounds } = await getData();
 
   return (
     <div>
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-stone-800">응답자 관리</h1>
-        <p className="text-sm text-stone-500 mt-1">
-          실태조사 응답자를 관리하세요
-        </p>
+      <div className="mb-8 flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-stone-800">응답자 관리</h1>
+          <p className="text-sm text-stone-500 mt-1">
+            실태조사 응답자를 관리하세요
+          </p>
+        </div>
+        <RespondentActions
+          rounds={rounds}
+          mode="header"
+        />
       </div>
 
       {respondents.length === 0 ? (
@@ -73,6 +83,9 @@ export default async function RespondentsPage() {
                   <th className="px-5 py-2.5 text-left text-xs font-medium text-stone-500">
                     완료일
                   </th>
+                  <th className="px-5 py-2.5 text-right text-xs font-medium text-stone-500">
+                    작업
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -85,7 +98,7 @@ export default async function RespondentsPage() {
                       className="border-b border-stone-100 last:border-0 hover:bg-stone-50/50"
                     >
                       <td className="px-5 py-3 text-sm font-medium text-stone-800">
-                        {r.respondent_name}
+                        {r.respondent_name || "-"}
                       </td>
                       <td className="px-5 py-3 text-sm text-stone-600">
                         {r.respondent_position ?? "-"}
@@ -105,6 +118,13 @@ export default async function RespondentsPage() {
                       </td>
                       <td className="px-5 py-3 text-sm text-stone-500">
                         {formatDate(r.completed_at)}
+                      </td>
+                      <td className="px-5 py-3 text-right">
+                        <RespondentActions
+                          respondentId={r.id}
+                          urlToken={r.url_token}
+                          mode="row"
+                        />
                       </td>
                     </tr>
                   );

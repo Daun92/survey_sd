@@ -41,6 +41,33 @@ export function HrdSurveyForm({ respondent, round, parts, existingResponses, tok
   const totalParts = parts.length
   const progress = ((currentPartIndex + 1) / totalParts) * 100
 
+  // 모든 파트의 아이템을 플랫 배열로 (조건부 로직 참조용)
+  const allItems = parts.flatMap(p => p.items)
+
+  function shouldShowItem(item: HrdSurveyItem): boolean {
+    if (!item.conditional_logic?.show_if) return true
+    const { item_code, operator, value } = item.conditional_logic.show_if
+    const targetItem = allItems.find(i => i.item_code === item_code)
+    if (!targetItem) return true
+    const answer = answers[targetItem.id]
+    if (answer === undefined || answer === null || answer === '') return false
+    switch (operator) {
+      case 'eq': return String(answer) === String(value)
+      case 'neq': return String(answer) !== String(value)
+      case 'gt': return Number(answer) > Number(value)
+      case 'lt': return Number(answer) < Number(value)
+      case 'in': {
+        const vals = Array.isArray(value) ? value.map(String) : String(value).split(',').map(s => s.trim())
+        return vals.includes(String(answer))
+      }
+      case 'not_in': {
+        const vals = Array.isArray(value) ? value.map(String) : String(value).split(',').map(s => s.trim())
+        return !vals.includes(String(answer))
+      }
+      default: return true
+    }
+  }
+
   function setAnswer(itemId: string, value: string | number | unknown) {
     setAnswers(prev => ({ ...prev, [itemId]: value }))
     setErrors(prev => {
@@ -75,11 +102,11 @@ export function HrdSurveyForm({ respondent, round, parts, existingResponses, tok
   }
 
   async function handleSubmit() {
-    // 필수 항목 검증
+    // 필수 항목 검증 (조건부 로직으로 숨겨진 항목은 제외)
     const newErrors: Record<string, string> = {}
     for (const part of parts) {
       for (const item of part.items) {
-        if (item.is_required && !answers[item.id]) {
+        if (item.is_required && shouldShowItem(item) && !answers[item.id]) {
           newErrors[item.id] = '필수 항목입니다'
         }
       }
@@ -410,7 +437,7 @@ export function HrdSurveyForm({ respondent, round, parts, existingResponses, tok
             </div>
 
             <div className="space-y-4">
-              {currentPart.items.map(item => renderItem(item))}
+              {currentPart.items.filter(shouldShowItem).map(item => renderItem(item))}
             </div>
           </>
         )}

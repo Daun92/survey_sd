@@ -1,9 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabase'
+import { createClient } from '@/lib/supabase/server'
 import { generateReportComment, type ReportData } from '@/lib/gemini'
+import { requireAuthAPI } from '@/lib/auth'
 
 export async function POST(request: NextRequest) {
+  const auth = await requireAuthAPI()
+  if (auth.error) return auth.error
+
   try {
+    const supabase = await createClient()
     const body: ReportData = await request.json()
 
     if (!body.courseName || !body.overallAvg) {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Check, X, Plus, Loader2, Trash2 } from "lucide-react";
 import { addQuestion, updateQuestion, deleteQuestion } from "../actions";
 import { type Question, type SkipLogic, questionTypeOptions, needsOptions, parseOptions } from "./types";
@@ -9,22 +9,41 @@ interface Props {
   surveyId: string;
   question?: Question;
   allQuestions?: Question[];
+  sectionNames?: string[];
+  defaultSection?: string;
   nextSortOrder: number;
   onDone: () => void;
   onCancel: () => void;
   onDeleted?: () => void;
 }
 
-export function QuestionForm({ surveyId, question, allQuestions, nextSortOrder, onDone, onCancel, onDeleted }: Props) {
+export function QuestionForm({ surveyId, question, allQuestions, sectionNames, defaultSection, nextSortOrder, onDone, onCancel, onDeleted }: Props) {
   const isEdit = !!question;
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [questionText, setQuestionText] = useState(question?.question_text || "");
   const [questionType, setQuestionType] = useState(question?.question_type || "likert_5");
-  const [questionCode, setQuestionCode] = useState(question?.question_code || "");
-  const [section, setSection] = useState(question?.section || "일반");
+  const [questionCode, setQuestionCode] = useState(
+    question?.question_code || (isEdit ? "" : `Q${nextSortOrder + 1}`)
+  );
+  const [section, setSection] = useState(question?.section || defaultSection || "일반");
+  const [customSection, setCustomSection] = useState(false);
   const [isRequired, setIsRequired] = useState(question?.is_required ?? true);
   const [options, setOptions] = useState<string[]>(question ? parseOptions(question.options) : ["옵션 1", "옵션 2"]);
+
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  useEffect(() => {
+    const el = textareaRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = el.scrollHeight + "px";
+  }, [questionText]);
+
+  // Info block metadata
+  const existingMeta = (question as any)?.metadata as Record<string, unknown> | undefined;
+  const [blockStyle, setBlockStyle] = useState<string>((existingMeta?.block_style as string) || "info");
+
+  const isInfoBlock = questionType === "info_block";
 
   // Skip logic
   const [hasSkipLogic, setHasSkipLogic] = useState(!!question?.skip_logic);
@@ -40,16 +59,19 @@ export function QuestionForm({ surveyId, question, allQuestions, nextSortOrder, 
       const skipLogic: SkipLogic | null = hasSkipLogic && skipQuestionId && skipValue
         ? { show_when: { question_id: skipQuestionId, operator: skipOperator as SkipLogic["show_when"]["operator"], value: isNaN(Number(skipValue)) ? skipValue : Number(skipValue) } }
         : null;
-      const payload = {
+      const base = {
         question_text: questionText.trim(),
         question_type: questionType,
         question_code: questionCode.trim() || undefined,
         section: section.trim() || "일반",
-        is_required: isRequired,
+        is_required: isInfoBlock ? false : isRequired,
         sort_order: question?.sort_order ?? nextSortOrder,
         options: needsOptions(questionType) ? options.filter((o) => o.trim()) : null,
         skip_logic: skipLogic,
       };
+      const payload = isInfoBlock
+        ? { ...base, metadata: { block_style: blockStyle } }
+        : base;
       if (isEdit && question) {
         await updateQuestion(question.id, surveyId, payload);
       } else {
@@ -81,7 +103,7 @@ export function QuestionForm({ surveyId, question, allQuestions, nextSortOrder, 
       <p className="text-sm font-semibold text-stone-800">{isEdit ? "문항 수정" : "새 문항 추가"}</p>
       <div>
         <label className="block text-[13px] font-medium text-stone-600 mb-1">질문 내용 <span className="text-red-400">*</span></label>
-        <textarea value={questionText} onChange={(e) => setQuestionText(e.target.value)} rows={2} placeholder="질문 내용을 입력하세요" className="w-full rounded-lg border border-stone-300 px-3 py-2 text-sm focus:border-teal-500 focus:ring-1 focus:ring-teal-500 outline-none resize-none" />
+        <textarea ref={textareaRef} value={questionText} onChange={(e) => setQuestionText(e.target.value)} rows={2} placeholder="질문 내용을 입력하세요" className="w-full rounded-lg border border-stone-300 px-3 py-2 text-sm focus:border-teal-500 focus:ring-1 focus:ring-teal-500 outline-none resize-none overflow-hidden" style={{ minHeight: "3.5rem" }} />
       </div>
       <div className="grid grid-cols-2 gap-3">
         <div>
@@ -91,21 +113,80 @@ export function QuestionForm({ surveyId, question, allQuestions, nextSortOrder, 
           </select>
         </div>
         <div>
-          <label className="block text-[13px] font-medium text-stone-600 mb-1">문항 코드</label>
+          <label className="block text-[13px] font-medium text-stone-600 mb-1 flex items-center gap-1">
+            문항 코드
+            <span className="relative group">
+              <span className="inline-flex items-center justify-center h-3.5 w-3.5 rounded-full bg-stone-200 text-[9px] font-bold text-stone-500 cursor-help">i</span>
+              <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 hidden group-hover:block w-52 rounded-lg bg-stone-800 px-3 py-2 text-[11px] text-stone-200 leading-relaxed shadow-lg z-20">
+                분석/내보내기 시 문항을 식별하는 코드입니다. 표시 순서(#N)와는 별개로, 드래그로 순서를 바꿔도 코드는 유지됩니다.
+              </span>
+            </span>
+          </label>
           <input type="text" value={questionCode} onChange={(e) => setQuestionCode(e.target.value)} placeholder="Q1" className="w-full rounded-lg border border-stone-300 px-3 py-2 text-sm focus:border-teal-500 focus:ring-1 focus:ring-teal-500 outline-none" />
         </div>
       </div>
-      <div className="grid grid-cols-2 gap-3">
-        <div>
+      <div className="flex gap-3 items-end">
+        <div className="flex-1 min-w-0">
           <label className="block text-[13px] font-medium text-stone-600 mb-1">섹션</label>
-          <input type="text" value={section} onChange={(e) => setSection(e.target.value)} placeholder="일반" className="w-full rounded-lg border border-stone-300 px-3 py-2 text-sm focus:border-teal-500 focus:ring-1 focus:ring-teal-500 outline-none" />
+          {sectionNames && sectionNames.length > 0 && !customSection ? (
+            <select
+              value={section}
+              onChange={(e) => {
+                if (e.target.value === "__new__") {
+                  setCustomSection(true);
+                  setSection("");
+                } else {
+                  setSection(e.target.value);
+                }
+              }}
+              className="w-full rounded-lg border border-stone-300 px-3 py-2 text-sm focus:border-teal-500 focus:ring-1 focus:ring-teal-500 outline-none"
+            >
+              {sectionNames.map((s) => (
+                <option key={s} value={s}>{s}</option>
+              ))}
+              <option value="__new__">+ 새 섹션</option>
+            </select>
+          ) : (
+            <div className="flex gap-1.5">
+              <input type="text" value={section} onChange={(e) => setSection(e.target.value)} placeholder="섹션 이름" className="flex-1 rounded-lg border border-stone-300 px-3 py-2 text-sm focus:border-teal-500 focus:ring-1 focus:ring-teal-500 outline-none" autoFocus={customSection} />
+              {customSection && sectionNames && sectionNames.length > 0 && (
+                <button type="button" onClick={() => { setCustomSection(false); setSection(sectionNames[0]); }} className="text-xs text-stone-400 hover:text-stone-600">취소</button>
+              )}
+            </div>
+          )}
         </div>
-        <div className="flex items-end pb-1">
-          <label className="flex items-center gap-2 text-sm text-stone-600 cursor-pointer">
-            <input type="checkbox" checked={isRequired} onChange={(e) => setIsRequired(e.target.checked)} className="accent-teal-600" /> 필수
-          </label>
-        </div>
+        {!isInfoBlock && (
+          <div className="shrink-0 pb-2">
+            <label className="flex items-center gap-2 text-sm text-stone-600 cursor-pointer whitespace-nowrap">
+              <input type="checkbox" checked={isRequired} onChange={(e) => setIsRequired(e.target.checked)} className="accent-teal-600" /> 필수
+            </label>
+          </div>
+        )}
       </div>
+      {/* 안내 블록 스타일 선택 */}
+      {isInfoBlock && (
+        <div>
+          <label className="block text-[13px] font-medium text-stone-600 mb-1.5">블록 스타일</label>
+          <div className="flex gap-2">
+            {[
+              { value: "info", label: "정보", className: "border-blue-300 bg-blue-50 text-blue-700" },
+              { value: "warning", label: "주의", className: "border-amber-300 bg-amber-50 text-amber-700" },
+              { value: "divider", label: "구분선", className: "border-stone-300 bg-stone-50 text-stone-600" },
+            ].map((s) => (
+              <button
+                key={s.value}
+                type="button"
+                onClick={() => setBlockStyle(s.value)}
+                className={`flex-1 rounded-lg border-[1.5px] px-3 py-2 text-xs font-medium transition-all ${
+                  blockStyle === s.value ? s.className : "border-stone-200 bg-white text-stone-400"
+                }`}
+              >
+                {s.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
       {needsOptions(questionType) && (
         <div>
           <label className="block text-[13px] font-medium text-stone-600 mb-1.5">선택지</label>
@@ -121,8 +202,8 @@ export function QuestionForm({ surveyId, question, allQuestions, nextSortOrder, 
           </div>
         </div>
       )}
-      {/* Skip Logic */}
-      {otherQuestions.length > 0 && (
+      {/* Skip Logic (안내 블록에는 불필요) */}
+      {!isInfoBlock && otherQuestions.length > 0 && (
         <div className="border-t border-stone-100 pt-3">
           <label className="flex items-center gap-2 text-[13px] text-stone-600 cursor-pointer mb-2">
             <input type="checkbox" checked={hasSkipLogic} onChange={(e) => setHasSkipLogic(e.target.checked)} className="accent-teal-600" />

@@ -16,9 +16,9 @@ interface PreviewProps {
 
 export default function SurveyPreview({ surveyTitle, surveyDescription, questions, settings, activeTab, onTabChange }: PreviewProps) {
   const tabs: { key: PreviewTab; label: string }[] = [
-    { key: "landing", label: "랜딩" },
+    { key: "landing", label: "시작" },
     { key: "questions", label: "문항" },
-    { key: "ending", label: "엔딩" },
+    { key: "ending", label: "마감" },
   ];
 
   return (
@@ -52,7 +52,7 @@ export default function SurveyPreview({ surveyTitle, surveyDescription, question
 
         <div className="bg-stone-50 h-[580px] overflow-y-auto">
           {activeTab === "landing" && <LandingPreview title={surveyTitle} description={surveyDescription} settings={settings} questionCount={questions.length} />}
-          {activeTab === "questions" && <QuestionsPreview title={surveyTitle} questions={questions} />}
+          {activeTab === "questions" && <QuestionsPreview title={surveyTitle} questions={questions} settings={settings} />}
           {activeTab === "ending" && <EndingPreview settings={settings} />}
         </div>
 
@@ -185,9 +185,23 @@ function LandingPreview({ title, description, settings, questionCount }: { title
   );
 }
 
+// ─── Section Intro Color Map ───
+const sectionIntroColorMap: Record<string, { bg: string; border: string; title: string; desc: string; bar: string }> = {
+  brand:   { bg: "bg-teal-50",   border: "border-teal-200",  title: "text-teal-800",  desc: "text-teal-600",  bar: "bg-teal-400"  },
+  neutral: { bg: "bg-stone-100", border: "border-stone-300", title: "text-stone-700", desc: "text-stone-500", bar: "bg-stone-400"  },
+  warm:    { bg: "bg-amber-50",  border: "border-amber-200", title: "text-amber-800", desc: "text-amber-600", bar: "bg-amber-400"  },
+  cool:    { bg: "bg-blue-50",   border: "border-blue-200",  title: "text-blue-800",  desc: "text-blue-600",  bar: "bg-blue-400"   },
+  teal:    { bg: "bg-teal-50",   border: "border-teal-200",  title: "text-teal-800",  desc: "text-teal-600",  bar: "bg-teal-400"  },
+  blue:    { bg: "bg-blue-50",   border: "border-blue-200",  title: "text-blue-800",  desc: "text-blue-600",  bar: "bg-blue-400"   },
+  amber:   { bg: "bg-amber-50",  border: "border-amber-200", title: "text-amber-800", desc: "text-amber-600", bar: "bg-amber-400"  },
+  rose:    { bg: "bg-rose-50",   border: "border-rose-200",  title: "text-rose-800",  desc: "text-rose-600",  bar: "bg-rose-400"   },
+  violet:  { bg: "bg-violet-50", border: "border-violet-200",title: "text-violet-800",desc: "text-violet-600",bar: "bg-violet-400" },
+};
+const defaultIntroColor = sectionIntroColorMap.brand;
+
 // ─── Questions Preview (Section Page-flip) ───
 
-function QuestionsPreview({ title, questions }: { title: string; questions: Question[] }) {
+function QuestionsPreview({ title, questions, settings }: { title: string; questions: Question[]; settings: SurveySettings }) {
   const sections = groupQuestionsBySection(questions);
   const [currentSection, setCurrentSection] = useState(0);
 
@@ -204,6 +218,8 @@ function QuestionsPreview({ title, questions }: { title: string; questions: Ques
 
   const safeCurrent = Math.min(currentSection, sections.length - 1);
   const [sectionName, sectionQuestions] = sections[safeCurrent] ?? sections[0];
+  const intro = settings.section_intros?.[sectionName];
+  const introColor = sectionIntroColorMap[intro?.color ?? "brand"] ?? defaultIntroColor;
 
   return (
     <div className="flex flex-col h-full">
@@ -226,6 +242,32 @@ function QuestionsPreview({ title, questions }: { title: string; questions: Ques
           </>
         )}
       </div>
+
+      {/* Section Intro Banner */}
+      {(intro?.title || intro?.description) && (
+        <div className={`mx-4 mt-3 rounded-lg border overflow-hidden ${introColor.bg} ${introColor.border}`}>
+          {intro.image_url && (
+            <img
+              src={intro.image_url}
+              alt=""
+              className={`w-full object-cover ${
+                intro.image_size === "small" ? "h-10" :
+                intro.image_size === "medium" ? "h-16" :
+                intro.image_size === "full" ? "h-24" : "h-14"
+              }`}
+            />
+          )}
+          <div className={`h-[2px] ${introColor.bar}`} />
+          <div className="px-3 py-2.5">
+            {intro.title && (
+              <p className={`text-[11px] font-bold leading-tight mb-0.5 ${introColor.title}`}>{intro.title}</p>
+            )}
+            {intro.description && (
+              <p className={`text-[10px] leading-relaxed whitespace-pre-line ${introColor.desc}`}>{intro.description}</p>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Questions */}
       <div className="flex-1 px-5 py-4 space-y-4 overflow-y-auto">
@@ -325,17 +367,19 @@ function EndingPreview({ settings }: { settings: SurveySettings }) {
       </p>
 
       {/* Stats placeholder */}
-      <div className="flex items-center gap-4 text-stone-400 mb-8">
-        <div className="text-center">
-          <p className="text-lg font-bold text-stone-600">--</p>
-          <p className="text-[10px]">응답 수</p>
+      {settings.show_ending_stats && (
+        <div className="flex items-center gap-4 text-stone-400 mb-8">
+          <div className="text-center">
+            <p className="text-lg font-bold text-stone-600">--</p>
+            <p className="text-[10px]">응답 수</p>
+          </div>
+          <div className="h-6 w-px bg-stone-200" />
+          <div className="text-center">
+            <p className="text-lg font-bold text-stone-600">--</p>
+            <p className="text-[10px]">소요 시간</p>
+          </div>
         </div>
-        <div className="h-6 w-px bg-stone-200" />
-        <div className="text-center">
-          <p className="text-lg font-bold text-stone-600">--</p>
-          <p className="text-[10px]">소요 시간</p>
-        </div>
-      </div>
+      )}
 
       <div className="flex items-center gap-2 opacity-30">
         <Image src="/logo_exc.png" alt="EXPERT" width={60} height={12} className="h-3 w-auto" />

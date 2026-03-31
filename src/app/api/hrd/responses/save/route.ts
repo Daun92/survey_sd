@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabase'
+import { createClient } from '@/lib/supabase/server'
+import { withAuth } from '@/lib/api-utils'
 
-export async function POST(req: NextRequest) {
+export const POST = withAuth({ type: "public" }, async (req: NextRequest) => {
+  const supabase = await createClient();
+
   try {
     const body = await req.json()
     const { token, respondent_id, round_id, answers, is_draft } = body
@@ -109,4 +112,4 @@ export async function POST(req: NextRequest) {
     console.error('API error:', err)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
-}
+});

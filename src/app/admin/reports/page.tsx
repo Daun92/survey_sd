@@ -1,4 +1,5 @@
-import { supabase } from "@/lib/supabase";
+import { createClient } from "@/lib/supabase/server";
+import { formatDate } from "@/lib/utils";
 import Link from "next/link";
 import {
   BarChart3,
@@ -10,20 +11,31 @@ import {
   TrendingUp,
   Download,
 } from "lucide-react";
+import dynamic from "next/dynamic";
 import { AIReportComment } from "./ai-comment";
 import { AIOpenAnalysis } from "./ai-open-analysis";
-import { ScoreBarChart, type SectionScore } from "@/components/charts/score-bar-chart";
-import { LikertDistribution, type QuestionDistribution } from "@/components/charts/likert-distribution";
-import { ResponseTrend, type DailyResponse } from "@/components/charts/response-trend";
+import type { SectionScore } from "@/components/charts/score-bar-chart";
+import type { QuestionDistribution } from "@/components/charts/likert-distribution";
+import type { DailyResponse } from "@/components/charts/response-trend";
+
+const ScoreBarChart = dynamic(
+  () => import("@/components/charts/score-bar-chart").then((m) => m.ScoreBarChart),
+  { loading: () => <div className="h-64 animate-pulse rounded-xl bg-stone-100" /> }
+);
+const LikertDistribution = dynamic(
+  () => import("@/components/charts/likert-distribution").then((m) => m.LikertDistribution),
+  { loading: () => <div className="h-64 animate-pulse rounded-xl bg-stone-100" /> }
+);
+const ResponseTrend = dynamic(
+  () => import("@/components/charts/response-trend").then((m) => m.ResponseTrend),
+  { loading: () => <div className="h-64 animate-pulse rounded-xl bg-stone-100" /> }
+);
 
 export const revalidate = 60;
 
-function formatDate(dateStr: string) {
-  const d = new Date(dateStr);
-  return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, "0")}.${String(d.getDate()).padStart(2, "0")}`;
-}
-
 async function getSurveyReport(surveyId: string) {
+  // 1단계: survey 존재 확인 (빠름)
+  const supabase = await createClient();
   const { data: survey } = await supabase
     .from("edu_surveys")
     .select("id, title, status, created_at")
@@ -32,19 +44,19 @@ async function getSurveyReport(surveyId: string) {
 
   if (!survey) return null;
 
-  // 응답 데이터 (answers JSONB 포함)
-  const { data: submissions } = await supabase
-    .from("edu_submissions")
-    .select("id, total_score, answers, created_at")
-    .eq("survey_id", surveyId)
-    .order("created_at", { ascending: true });
-
-  // 문항 데이터
-  const { data: questions } = await supabase
-    .from("edu_questions")
-    .select("id, question_text, question_type, question_code, section, sort_order")
-    .eq("survey_id", surveyId)
-    .order("sort_order", { ascending: true });
+  // 2단계: submissions + questions 병렬 조회
+  const [{ data: submissions }, { data: questions }] = await Promise.all([
+    supabase
+      .from("edu_submissions")
+      .select("id, total_score, answers, created_at")
+      .eq("survey_id", surveyId)
+      .order("created_at", { ascending: true }),
+    supabase
+      .from("edu_questions")
+      .select("id, question_text, question_type, question_code, section, sort_order")
+      .eq("survey_id", surveyId)
+      .order("sort_order", { ascending: true }),
+  ]);
 
   const submissionCount = submissions?.length ?? 0;
   const avgScore =
@@ -53,68 +65,71 @@ async function getSurveyReport(surveyId: string) {
           submissionCount)
       : 0;
 
-  // ── 차트 데이터 집계 ──
+  // ── 차트 데이터 집계 (단일 패스) ──
 
-  // 1. 섹션별 평균 점수
-  const sectionScores: SectionScore[] = [];
-  if (questions && submissions && submissionCount > 0) {
-    const sectionMap = new Map<string, { sum: number; count: number }>();
-    for (const q of questions) {
-      if (!q.question_type?.startsWith("likert") && q.question_type !== "rating") continue;
-      const section = q.section || "일반";
-      if (!sectionMap.has(section)) sectionMap.set(section, { sum: 0, count: 0 });
-      const entry = sectionMap.get(section)!;
-      for (const sub of submissions) {
-        const ans = (sub.answers as Record<string, unknown>)?.[q.id];
-        const num = Number(ans);
-        if (!isNaN(num) && num >= 1 && num <= 5) {
-          entry.sum += num;
-          entry.count += 1;
-        }
-      }
-    }
-    for (const [name, { sum, count }] of sectionMap) {
-      if (count > 0) {
-        sectionScores.push({ name, avg: Math.round((sum / count) * 100) / 100, count });
-      }
-    }
+  // likert/rating 문항만 필터링 + 메타데이터 준비
+  const likertQuestions = (questions ?? []).filter(
+    (q) => q.question_type?.startsWith("likert") || q.question_type === "rating"
+  );
+
+  // 섹션 맵, 분포 맵을 미리 초기화
+  const sectionMap = new Map<string, { sum: number; count: number }>();
+  const distMap = new Map<string, QuestionDistribution>();
+  for (const q of likertQuestions) {
+    const section = q.section || "일반";
+    if (!sectionMap.has(section)) sectionMap.set(section, { sum: 0, count: 0 });
+    distMap.set(q.id, {
+      code: q.question_code || `Q${q.sort_order + 1}`,
+      text: q.question_text,
+      "1": 0, "2": 0, "3": 0, "4": 0, "5": 0,
+      total: 0,
+    });
   }
 
-  // 2. 문항별 Likert 분포
-  const questionDistributions: QuestionDistribution[] = [];
-  if (questions && submissions && submissionCount > 0) {
-    for (const q of questions) {
-      if (!q.question_type?.startsWith("likert") && q.question_type !== "rating") continue;
-      const dist: QuestionDistribution = {
-        code: q.question_code || `Q${q.sort_order + 1}`,
-        text: q.question_text,
-        "1": 0, "2": 0, "3": 0, "4": 0, "5": 0,
-        total: 0,
-      };
-      for (const sub of submissions) {
-        const ans = (sub.answers as Record<string, unknown>)?.[q.id];
-        const num = Number(ans);
-        if (num >= 1 && num <= 5) {
-          dist[String(num) as "1" | "2" | "3" | "4" | "5"] += 1;
-          dist.total += 1;
-        }
-      }
-      if (dist.total > 0) questionDistributions.push(dist);
-    }
-  }
-
-  // 3. 일별 응답 추이
-  const dailyResponses: DailyResponse[] = [];
+  // 단일 패스: submissions를 한 번만 순회하면서 모든 집계 수행
+  const dayMap = new Map<string, number>();
   if (submissions && submissionCount > 0) {
-    const dayMap = new Map<string, number>();
     for (const sub of submissions) {
+      // 일별 응답 추이
       const day = sub.created_at.slice(0, 10);
       dayMap.set(day, (dayMap.get(day) ?? 0) + 1);
-    }
-    for (const [date, count] of Array.from(dayMap).sort()) {
-      dailyResponses.push({ date, count });
+
+      // 문항별 점수 집계
+      const answers = sub.answers as Record<string, unknown> | null;
+      if (!answers) continue;
+      for (const q of likertQuestions) {
+        const num = Number(answers[q.id]);
+        if (isNaN(num) || num < 1 || num > 5) continue;
+        // 섹션 점수
+        const section = q.section || "일반";
+        const sEntry = sectionMap.get(section)!;
+        sEntry.sum += num;
+        sEntry.count += 1;
+        // Likert 분포
+        const dist = distMap.get(q.id)!;
+        dist[String(num) as "1" | "2" | "3" | "4" | "5"] += 1;
+        dist.total += 1;
+      }
     }
   }
+
+  // 결과 변환
+  const sectionScores: SectionScore[] = [];
+  for (const [name, { sum, count }] of sectionMap) {
+    if (count > 0) {
+      sectionScores.push({ name, avg: Math.round((sum / count) * 100) / 100, count });
+    }
+  }
+
+  const questionDistributions: QuestionDistribution[] = [];
+  for (const q of likertQuestions) {
+    const dist = distMap.get(q.id)!;
+    if (dist.total > 0) questionDistributions.push(dist);
+  }
+
+  const dailyResponses: DailyResponse[] = Array.from(dayMap)
+    .sort()
+    .map(([date, count]) => ({ date, count }));
 
   return {
     ...survey,
@@ -128,6 +143,7 @@ async function getSurveyReport(surveyId: string) {
 }
 
 async function getSurveyList() {
+  const supabase = await createClient();
   const { data: surveys } = await supabase
     .from("edu_surveys")
     .select("id, title, status, created_at, edu_submissions(count)")

@@ -1,10 +1,12 @@
-import { supabase } from "@/lib/supabase";
+import { createClient } from "@/lib/supabase/server";
 import { notFound } from "next/navigation";
 import { SurveyForm } from "./SurveyForm";
 
 export const dynamic = "force-dynamic";
 
 async function getSurvey(token: string) {
+  const supabase = await createClient();
+
   const { data: survey } = await supabase
     .from("edu_surveys")
     .select("id, title, description, status")

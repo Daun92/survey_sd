@@ -1,4 +1,5 @@
-import { supabase } from "@/lib/supabase";
+import { createClient } from "@/lib/supabase/server";
+import { formatDate } from "@/lib/utils";
 import Link from "next/link";
 import { Eye, MessageSquare, Inbox } from "lucide-react";
 
@@ -8,12 +9,6 @@ const statusLabels: Record<string, { label: string; className: string }> = {
   active: { label: "진행중", className: "bg-emerald-100 text-emerald-800" },
   closed: { label: "마감", className: "bg-rose-100 text-rose-800" },
 };
-
-function formatDate(dateStr: string | null) {
-  if (!dateStr) return "-";
-  const d = new Date(dateStr);
-  return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, "0")}.${String(d.getDate()).padStart(2, "0")}`;
-}
 
 interface SurveyWithResponses {
   id: string;
@@ -26,48 +21,39 @@ interface SurveyWithResponses {
   avg_score: number | null;
 }
 
-async function getSurveysWithResponses(): Promise<SurveyWithResponses[]> {
-  // Fetch surveys with submission counts and session info in parallel
+async function getSurveysWithResponses(supabase: Awaited<ReturnType<typeof createClient>>): Promise<SurveyWithResponses[]> {
+  // 설문 목록 + submission count를 관계 count로 가져옴 (answers JSONB 불필요)
   const [{ data: surveys }, { data: submissions }] = await Promise.all([
     supabase
       .from("edu_surveys")
-      .select("id, title, status, session_id, sessions(name, capacity)")
-      .order("created_at", { ascending: false }),
+      .select("id, title, status, session_id, sessions(name, capacity), edu_submissions(count)")
+      .order("created_at", { ascending: false })
+      .limit(500),
     supabase
       .from("edu_submissions")
-      .select("survey_id, answers"),
+      .select("survey_id, total_score"),
   ]);
 
-  if (!surveys || !submissions || submissions.length === 0) return [];
+  if (!surveys) return [];
 
-  // Build submission stats per survey
-  const statsMap: Record<
-    string,
-    { count: number; totalScore: number; scoreCount: number }
-  > = {};
-  submissions.forEach((sub) => {
+  // total_score 기반으로 평균 계산 (answers JSONB 파싱 불필요)
+  const statsMap: Record<string, { totalScore: number; scoreCount: number }> = {};
+  (submissions ?? []).forEach((sub) => {
     if (!statsMap[sub.survey_id]) {
-      statsMap[sub.survey_id] = { count: 0, totalScore: 0, scoreCount: 0 };
+      statsMap[sub.survey_id] = { totalScore: 0, scoreCount: 0 };
     }
-    statsMap[sub.survey_id].count += 1;
-
-    if (sub.answers && typeof sub.answers === "object") {
-      const answers = Object.values(sub.answers) as unknown[];
-      answers.forEach((val) => {
-        const num = Number(val);
-        if (!isNaN(num) && num > 0) {
-          statsMap[sub.survey_id].totalScore += num;
-          statsMap[sub.survey_id].scoreCount += 1;
-        }
-      });
+    if (sub.total_score != null) {
+      statsMap[sub.survey_id].totalScore += sub.total_score;
+      statsMap[sub.survey_id].scoreCount += 1;
     }
   });
 
   return surveys
-    .filter((s) => statsMap[s.id])
     .map((s) => {
-      const stats = statsMap[s.id];
       const session = s.sessions as unknown as { name: string; capacity: number | null } | null;
+      const submissionCount =
+        (s.edu_submissions as unknown as { count: number }[])?.[0]?.count ?? 0;
+      const stats = statsMap[s.id];
       return {
         id: s.id,
         title: s.title,
@@ -75,17 +61,19 @@ async function getSurveysWithResponses(): Promise<SurveyWithResponses[]> {
         session_id: s.session_id,
         session_name: session?.name ?? null,
         session_capacity: session?.capacity ?? null,
-        submission_count: stats.count,
+        submission_count: submissionCount,
         avg_score:
-          stats.scoreCount > 0
+          stats && stats.scoreCount > 0
             ? Math.round((stats.totalScore / stats.scoreCount) * 10) / 10
             : null,
       };
-    });
+    })
+    .filter((s) => s.submission_count > 0);
 }
 
 export default async function ResponsesPage() {
-  const surveys = await getSurveysWithResponses();
+  const supabase = await createClient();
+  const surveys = await getSurveysWithResponses(supabase);
 
   return (
     <div>
