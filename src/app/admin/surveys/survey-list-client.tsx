@@ -103,7 +103,7 @@ const statusTransitions: Record<string, { label: string; icon: typeof Play; next
     { label: "마감 처리", icon: Square, next: "closed", className: "text-rose-600 hover:bg-rose-50" },
   ],
   closed: [
-    { label: "재오픈", icon: RotateCcw, next: "active", className: "text-blue-600 hover:bg-blue-50" },
+    { label: "재오픈 (+7일 연장)", icon: RotateCcw, next: "active", className: "text-blue-600 hover:bg-blue-50" },
   ],
 };
 
