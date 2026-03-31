@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, FileText, Users, Layers, Link2, ExternalLink, QrCode, ChevronDown, ChevronRight, Pencil, Eye, X } from "lucide-react";
 import {
@@ -32,6 +32,11 @@ export default function SurveyEditor({ survey, questions, submissionCount }: Edi
   const [editingSectionName, setEditingSectionName] = useState<string | null>(null);
   const [previewTab, setPreviewTab] = useState<PreviewTab>("landing");
   const [liveSettings, setLiveSettings] = useState<SurveySettings>(() => (survey.settings as SurveySettings) ?? {});
+
+  // router.refresh() 후 서버에서 내려온 최신 settings 동기화 (섹션 인트로 저장 반영 등)
+  useEffect(() => {
+    setLiveSettings((survey.settings as SurveySettings) ?? {});
+  }, [survey]);
   const [collapsedSections, setCollapsedSections] = useState<Set<string>>(new Set());
   const [addToSection, setAddToSection] = useState<string | null>(null);
   const [mobilePanel, setMobilePanel] = useState(false);
