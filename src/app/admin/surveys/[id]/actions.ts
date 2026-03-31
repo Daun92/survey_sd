@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { nanoid } from "nanoid";
 import { revalidatePath } from "next/cache";
 import {
   updateSurveySchema,
@@ -66,7 +67,7 @@ export async function duplicateSurvey(surveyId: string) {
   if (fetchError || !original) throw new Error("원본 설문을 찾을 수 없습니다.");
 
   // 새 url_token 생성
-  const urlToken = crypto.randomUUID().replace(/-/g, "").slice(0, 16);
+  const urlToken = nanoid(12);
 
   // 설문 복제 (draft 상태로)
   const { data: newSurvey, error: createError } = await supabase
