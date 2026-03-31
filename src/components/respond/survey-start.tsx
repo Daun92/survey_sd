@@ -1,19 +1,12 @@
 "use client";
 
-import { ArrowRight, Clock, Lightbulb } from "lucide-react";
+import { ArrowRight, Clock, FileText, Lightbulb } from "lucide-react";
 import { SurveyHeader } from "./survey-header";
 
 interface SurveyStartProps {
   survey: {
     title: string;
-    serviceType: string;
-    surveyYear: number;
-    surveyMonth: number;
-  };
-  projectName?: string | null;
-  customer: {
-    companyName: string;
-    contactName: string | null;
+    description?: string | null;
   };
   questionCount: number;
   onStart: () => void;
@@ -21,8 +14,6 @@ interface SurveyStartProps {
 
 export function SurveyStart({
   survey,
-  projectName,
-  customer,
   questionCount,
   onStart,
 }: SurveyStartProps) {
@@ -42,45 +33,91 @@ export function SurveyStart({
       {/* Main Content */}
       <main className="px-6 pt-20 pb-12">
         <div className="max-w-xl w-full mx-auto flex flex-col items-center text-center space-y-6">
-          {/* Meta Pill */}
-          <div
-            className="inline-flex items-center px-4 py-1.5 rounded-full"
-            style={{
-              background: "rgba(255, 255, 255, 0.6)",
-              backdropFilter: "blur(8px)",
-              border: "1px solid rgba(255, 255, 255, 0.4)",
-            }}
-          >
-            <Clock
-              className="h-4 w-4 mr-2"
-              style={{ color: "var(--expert-primary)" }}
-            />
-            <span
-              className="text-sm font-semibold"
-              style={{ color: "var(--expert-on-surface-variant)" }}
-            >
-              예상 소요 시간: {estimatedMinutes}분
-            </span>
-          </div>
-
-          {/* Title & Description */}
+          {/* Title */}
           <h1
             className="text-3xl md:text-4xl font-headline font-extrabold tracking-tight leading-tight"
             style={{ color: "var(--expert-on-surface)" }}
           >
             {survey.title}
           </h1>
+
+          {/* Welcome message */}
           <p
             className="text-base md:text-lg leading-relaxed"
             style={{ color: "var(--expert-on-surface-variant)" }}
           >
-            {customer.companyName}
-            {customer.contactName && ` ${customer.contactName}님`}의{" "}
-            {projectName ? `${projectName} ` : ""}
-            {survey.serviceType} 서비스에 대한 설문입니다.
+            안녕하세요, 고객님.
             <br />
-            솔직한 답변 부탁드립니다.
+            귀하의 소중한 의견은 더 나은 서비스를
+            <br />
+            제공하는 데 큰 도움이 됩니다.
           </p>
+
+          {/* Description (안내사항) */}
+          {survey.description && (
+            <div
+              className="w-full max-w-md rounded-xl p-5 text-left"
+              style={{
+                background: "rgba(255, 255, 255, 0.4)",
+                border: "1px solid rgba(255, 255, 255, 0.6)",
+              }}
+            >
+              <p
+                className="text-xs font-semibold mb-1"
+                style={{ color: "var(--expert-on-surface)" }}
+              >
+                안내사항
+              </p>
+              <p
+                className="text-sm leading-relaxed"
+                style={{ color: "var(--expert-on-surface-variant)" }}
+              >
+                {survey.description}
+              </p>
+            </div>
+          )}
+
+          {/* Meta info */}
+          <div className="flex gap-4">
+            <div
+              className="flex items-center gap-2 px-4 py-2 rounded-full"
+              style={{
+                background: "rgba(255, 255, 255, 0.6)",
+                backdropFilter: "blur(8px)",
+                border: "1px solid rgba(255, 255, 255, 0.4)",
+              }}
+            >
+              <Clock
+                className="h-4 w-4"
+                style={{ color: "var(--expert-primary)" }}
+              />
+              <span
+                className="text-sm font-semibold"
+                style={{ color: "var(--expert-on-surface-variant)" }}
+              >
+                예상 {estimatedMinutes}분
+              </span>
+            </div>
+            <div
+              className="flex items-center gap-2 px-4 py-2 rounded-full"
+              style={{
+                background: "rgba(255, 255, 255, 0.6)",
+                backdropFilter: "blur(8px)",
+                border: "1px solid rgba(255, 255, 255, 0.4)",
+              }}
+            >
+              <FileText
+                className="h-4 w-4"
+                style={{ color: "var(--expert-primary)" }}
+              />
+              <span
+                className="text-sm font-semibold"
+                style={{ color: "var(--expert-on-surface-variant)" }}
+              >
+                {questionCount}문항
+              </span>
+            </div>
+          </div>
 
           {/* Expert Tip */}
           <div

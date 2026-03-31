@@ -280,9 +280,6 @@ export default function SurveyForm({ survey, groupToken, distributionToken, pref
           <h1 className="text-[20px] font-bold text-stone-900 text-center leading-tight tracking-tight">
             {String(survey.title ?? '')}
           </h1>
-          {survey.sessionName && (
-            <p className="text-[13px] text-stone-500 mt-1.5">{String(survey.sessionName ?? '')}</p>
-          )}
         </div>
 
         {/* Welcome Message */}

@@ -45,11 +45,11 @@ export const GET = withAuth({ type: "public" }, async (request: NextRequest, ctx
     survey: {
       id: distribution.survey.id,
       title: distribution.survey.title,
+      description: distribution.survey.description ?? null,
       serviceType: distribution.survey.serviceType.name,
       surveyYear: distribution.survey.surveyYear,
       surveyMonth: distribution.survey.surveyMonth,
     },
-    projectName: distribution.survey.showProjectName ? distribution.projectName : null,
     questions: distribution.survey.questions.map((q) => ({
       id: q.id,
       order: q.questionOrder,
