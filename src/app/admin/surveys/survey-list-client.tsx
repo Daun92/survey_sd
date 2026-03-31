@@ -62,6 +62,7 @@ export interface SurveyItem {
   id: string;
   title: string;
   status: string;
+  education_type: string | null;
   url_token: string;
   starts_at: string | null;
   ends_at: string | null;
@@ -71,6 +72,13 @@ export interface SurveyItem {
   session_name: string | null;
   submission_count: number;
 }
+
+const eduTypeConfig: Record<string, { label: string; className: string }> = {
+  classroom: { label: "집합", className: "bg-indigo-50 text-indigo-700 border border-indigo-200" },
+  remote:    { label: "원격", className: "bg-violet-50 text-violet-700 border border-violet-200" },
+  online:    { label: "온라인", className: "bg-cyan-50 text-cyan-700 border border-cyan-200" },
+  blended:   { label: "블렌디드", className: "bg-teal-50 text-teal-700 border border-teal-200" },
+};
 
 const statusLabels: Record<string, { label: string; className: string }> = {
   active: { label: "진행중", className: "bg-emerald-100 text-emerald-800" },
@@ -232,6 +240,9 @@ function ListView({ surveys }: { surveys: SurveyItem[] }) {
                 설문명
               </th>
               <th className="text-left px-5 h-9 text-xs font-medium text-stone-500">
+                구분
+              </th>
+              <th className="text-left px-5 h-9 text-xs font-medium text-stone-500">
                 고객사 / 프로젝트
               </th>
               <th className="text-left px-5 h-9 text-xs font-medium text-stone-500">
@@ -263,6 +274,22 @@ function ListView({ surveys }: { surveys: SurveyItem[] }) {
                     >
                       {survey.title}
                     </Link>
+                  </td>
+                  <td className="px-5 h-12 whitespace-nowrap">
+                    {survey.education_type && eduTypeConfig[survey.education_type] ? (
+                      <div className="flex flex-col gap-0.5">
+                        <span className={`inline-block rounded-full px-2 py-0.5 text-[11px] font-semibold ${eduTypeConfig[survey.education_type].className}`}>
+                          {eduTypeConfig[survey.education_type].label}
+                        </span>
+                        {survey.session_name && (
+                          <span className="text-[11px] text-stone-400 line-clamp-1">{survey.session_name}</span>
+                        )}
+                      </div>
+                    ) : survey.session_name ? (
+                      <span className="text-[11px] text-stone-400">{survey.session_name}</span>
+                    ) : (
+                      <span className="text-stone-300">—</span>
+                    )}
                   </td>
                   <td className="px-5 h-12">
                     <div className="text-sm text-stone-700 line-clamp-1">
@@ -346,6 +373,19 @@ function CardView({ surveys }: { surveys: SurveyItem[] }) {
                 <StatusDropdown surveyId={survey.id} status={survey.status} />
               </div>
             </div>
+
+            {(survey.education_type || survey.session_name) && (
+              <div className="flex items-center gap-1.5 mb-2 flex-wrap">
+                {survey.education_type && eduTypeConfig[survey.education_type] && (
+                  <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${eduTypeConfig[survey.education_type].className}`}>
+                    {eduTypeConfig[survey.education_type].label}
+                  </span>
+                )}
+                {survey.session_name && (
+                  <span className="text-[11px] text-stone-500">{survey.session_name}</span>
+                )}
+              </div>
+            )}
 
             {(survey.customer_name || survey.project_name) && (
               <p className="text-[13px] text-stone-500 mb-3 line-clamp-1">
