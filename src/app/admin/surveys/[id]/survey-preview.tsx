@@ -16,9 +16,9 @@ interface PreviewProps {
 
 export default function SurveyPreview({ surveyTitle, surveyDescription, questions, settings, activeTab, onTabChange }: PreviewProps) {
   const tabs: { key: PreviewTab; label: string }[] = [
-    { key: "landing", label: "랜딩" },
+    { key: "landing", label: "시작" },
     { key: "questions", label: "문항" },
-    { key: "ending", label: "엔딩" },
+    { key: "ending", label: "마감" },
   ];
 
   return (

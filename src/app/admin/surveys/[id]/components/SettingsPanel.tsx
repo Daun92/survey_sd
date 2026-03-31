@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef } from "react";
-import { Settings2, ChevronDown, ChevronUp, Save, Loader2, Upload, X, ImageIcon } from "lucide-react";
+import { Settings2, ChevronDown, ChevronUp, Save, Loader2, Upload, X, ImageIcon, Play, Square } from "lucide-react";
 import { updateSurveySettings } from "../actions";
 import { type SurveySettings, type RespondentFieldConfig, RESPONDENT_FIELD_PRESETS } from "./types";
 
@@ -71,12 +71,19 @@ export function SettingsPanel({ surveyId, initialSettings, onSettingsChange, onS
       >
         <div className="flex items-center gap-2">
           <Settings2 size={15} className="text-stone-400" />
-          랜딩 · 엔딩 페이지 설정
+          시작 · 마감 화면 설정
         </div>
         {open ? <ChevronUp size={15} className="text-stone-400" /> : <ChevronDown size={15} className="text-stone-400" />}
       </button>
       {open && (
         <div className="px-5 pb-5 border-t border-stone-100 pt-4 space-y-5">
+          {/* ━━━ 시작 화면 설정 ━━━ */}
+          <div className="rounded-lg border border-teal-100 bg-teal-50/20 p-4 space-y-4">
+            <div className="flex items-center gap-2 pb-2 border-b border-teal-100">
+              <Play size={14} className="text-teal-600" />
+              <span className="text-[13px] font-semibold text-teal-700">시작 화면</span>
+            </div>
+
           {/* ── 기본 토글 ── */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <label className="flex items-center gap-2.5 rounded-lg border border-stone-200 px-3 py-2.5 cursor-pointer hover:bg-stone-50 transition-colors">
@@ -212,10 +219,18 @@ export function SettingsPanel({ surveyId, initialSettings, onSettingsChange, onS
             <input type="text" value={settings.landing_notice ?? ""} onChange={(e) => update({ landing_notice: e.target.value })} placeholder="모든 응답은 익명으로 안전하게 처리됩니다" className="w-full rounded-lg border border-stone-200 px-3 py-2 text-sm focus:border-teal-500 focus:ring-1 focus:ring-teal-500 outline-none" />
           </div>
 
-          {/* ── 엔딩 페이지 ── */}
+          </div>{/* end 시작 화면 블록 */}
+
+          {/* ━━━ 마감 화면 설정 ━━━ */}
+          <div className="rounded-lg border border-rose-100 bg-rose-50/20 p-4 space-y-4">
+            <div className="flex items-center gap-2 pb-2 border-b border-rose-100">
+              <Square size={14} className="text-rose-500" />
+              <span className="text-[13px] font-semibold text-rose-600">마감 화면</span>
+            </div>
+
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="block text-[13px] font-medium text-stone-600 mb-1">엔딩 제목</label>
+              <label className="block text-[13px] font-medium text-stone-600 mb-1">마감 제목</label>
               <input type="text" value={settings.ending_title ?? ""} onChange={(e) => update({ ending_title: e.target.value })} placeholder="응답이 제출되었습니다" className="w-full rounded-lg border border-stone-200 px-3 py-2 text-sm focus:border-teal-500 focus:ring-1 focus:ring-teal-500 outline-none" />
             </div>
             <div>
@@ -225,8 +240,9 @@ export function SettingsPanel({ surveyId, initialSettings, onSettingsChange, onS
           </div>
           <label className="flex items-center gap-2.5 rounded-lg border border-stone-200 px-3 py-2.5 cursor-pointer hover:bg-stone-50 transition-colors">
             <input type="checkbox" checked={settings.show_ending_stats ?? false} onChange={(e) => update({ show_ending_stats: e.target.checked })} className="accent-teal-600" />
-            <span className="text-sm text-stone-700">엔딩 페이지에 응답 수 · 소요시간 표시</span>
+            <span className="text-sm text-stone-700">마감 화면에 응답 수 · 소요시간 표시</span>
           </label>
+          </div>{/* end 마감 화면 블록 */}
 
           <button onClick={handleSave} disabled={saving} className="inline-flex items-center gap-1.5 rounded-lg bg-teal-600 px-4 py-2 text-xs font-semibold text-white hover:bg-teal-700 transition-colors disabled:opacity-50">
             {saving ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />} 설정 저장
