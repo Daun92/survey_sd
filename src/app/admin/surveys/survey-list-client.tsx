@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, useRef } from "react";
 import { formatDate } from "@/lib/utils";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -111,10 +111,23 @@ function StatusDropdown({ surveyId, status }: { surveyId: string; status: string
   const [open, setOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [flash, setFlash] = useState(false);
+  const [openUpward, setOpenUpward] = useState(false);
+  const buttonRef = useRef<HTMLButtonElement>(null);
   const router = useRouter();
 
   const badge = statusLabels[status] ?? statusLabels.draft;
   const transitions = statusTransitions[status] ?? [];
+
+  function handleOpen(e: React.MouseEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!open && buttonRef.current) {
+      const rect = buttonRef.current.getBoundingClientRect();
+      const spaceBelow = window.innerHeight - rect.bottom;
+      setOpenUpward(spaceBelow < 100);
+    }
+    setOpen(!open);
+  }
 
   function handleTransition(next: "active" | "closed") {
     startTransition(async () => {
@@ -129,11 +142,8 @@ function StatusDropdown({ surveyId, status }: { surveyId: string; status: string
   return (
     <div className="relative">
       <button
-        onClick={(e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          setOpen(!open);
-        }}
+        ref={buttonRef}
+        onClick={handleOpen}
         className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium cursor-pointer transition-all ${badge.className} ${
           flash ? "ring-2 ring-teal-400 ring-offset-1 scale-105" : ""
         } ${isPending ? "opacity-50" : "hover:ring-1 hover:ring-stone-300"}`}
@@ -149,7 +159,9 @@ function StatusDropdown({ surveyId, status }: { surveyId: string; status: string
       {open && transitions.length > 0 && (
         <>
           <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
-          <div className="absolute left-0 top-full mt-1 z-20 min-w-[140px] rounded-lg border border-stone-200 bg-white shadow-lg py-1">
+          <div className={`absolute left-0 z-20 min-w-[140px] rounded-lg border border-stone-200 bg-white shadow-lg py-1 ${
+            openUpward ? "bottom-full mb-1" : "top-full mt-1"
+          }`}>
             {transitions.map((t) => (
               <button
                 key={t.next}
