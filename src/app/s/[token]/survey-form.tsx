@@ -339,7 +339,7 @@ export default function SurveyForm({ survey, groupToken, distributionToken, pref
                       value={respondentInfo[field.id] || ''}
                       onChange={(e) => setRespondentInfo(prev => ({ ...prev, [field.id]: e.target.value }))}
                       readOnly={isPrefilled}
-                      className={`h-10 rounded-xl text-sm ${isPrefilled ? 'bg-stone-100 text-stone-500' : ''}`}
+                      className={`h-10 rounded-xl text-sm ${isPrefilled ? 'bg-stone-100 text-stone-500' : 'bg-white border-stone-300'}`}
                     />
                   )
                 })}
