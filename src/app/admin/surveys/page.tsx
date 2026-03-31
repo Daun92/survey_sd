@@ -56,6 +56,7 @@ async function getSurveys(supabase: Awaited<ReturnType<typeof createClient>>, st
       id: s.id,
       title: s.title,
       status: s.status as string,
+      education_type: (s as any).education_type ?? null,
       url_token: s.url_token,
       starts_at: s.starts_at,
       ends_at: s.ends_at,
