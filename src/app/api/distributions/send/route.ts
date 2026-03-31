@@ -54,7 +54,7 @@ export const POST = withAuth({ type: "role", minRole: "creator" }, async (reques
         surveyTitle: dist.survey.title,
         serviceType: dist.survey.serviceType.name,
         projectName: dist.survey.showProjectName ? dist.projectName : null,
-        respondUrl: `${baseUrl}/respond/${dist.responseToken}`,
+        respondUrl: `${baseUrl}/r/${dist.responseToken}`,
       });
 
       await prisma.distribution.update({

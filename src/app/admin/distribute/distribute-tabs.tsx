@@ -9,10 +9,10 @@ import { Badge } from '@/components/ui/badge'
 import {
   Copy, Check, Printer, Link2, QrCode, Upload, FileSpreadsheet,
   AlertTriangle, CheckCircle2, XCircle, Download, Loader2, ArrowLeft,
-  ChevronRight, Eye, Mail, Users, Trash2,
+  ChevronRight, Eye, Mail, Users, Trash2, UserPlus, ExternalLink,
 } from 'lucide-react'
 import { parseDistributionCsv, decodeCSVBuffer, type ParsedRow } from '@/lib/csv/parse-distribution-csv'
-import { createDistributionBatch, getDistributions, deleteDistributionBatch } from './actions'
+import { createDistributionBatch, addToDistributionBatch, getDistributions, deleteDistributionBatch } from './actions'
 import EmailSendPanel from './email-send-panel'
 
 interface ClassGroup {
@@ -76,6 +76,13 @@ export default function DistributeTabs({ surveys, batches: initialBatches }: { s
   const [batchId, setBatchId] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [isDragOver, setIsDragOver] = useState(false)
+
+  // 추가 대상자 상태
+  const [addingMore, setAddingMore] = useState(false)
+  const [addMoreParsedRows, setAddMoreParsedRows] = useState<ParsedRow[]>([])
+  const [addMoreFileName, setAddMoreFileName] = useState('')
+  const [addMoreProcessing, setAddMoreProcessing] = useState(false)
+  const [addMoreError, setAddMoreError] = useState<string | null>(null)
 
   // 배치 이력 상태
   const [batches, setBatches] = useState<BatchItem[]>(initialBatches)
@@ -168,6 +175,68 @@ export default function DistributeTabs({ surveys, batches: initialBatches }: { s
     setBatchId('')
     setError(null)
     setFileName('')
+  }
+
+  // ─── 추가 대상자 핸들러 ───
+  const handleAddMoreFile = useCallback(async (file: File) => {
+    setAddMoreError(null)
+    if (!file.name.endsWith('.csv')) {
+      setAddMoreError('CSV 파일만 업로드 가능합니다')
+      return
+    }
+    const buffer = await file.arrayBuffer()
+    const text = decodeCSVBuffer(buffer)
+    const rows = parseDistributionCsv(text)
+    if (rows.length === 0) {
+      setAddMoreError('유효한 데이터가 없습니다.')
+      return
+    }
+    setAddMoreParsedRows(rows)
+    setAddMoreFileName(file.name)
+  }, [])
+
+  const handleAddMoreSubmit = async () => {
+    const validAddRows = addMoreParsedRows.filter((r) => r.emailValid)
+    if (!batchId || !selectedSurveyId || validAddRows.length === 0) return
+    setAddMoreProcessing(true)
+    setAddMoreError(null)
+    try {
+      const result = await addToDistributionBatch({
+        batchId,
+        surveyId: selectedSurveyId,
+        rows: validAddRows,
+      })
+      if ('error' in result) {
+        setAddMoreError(result.error as string)
+        setAddMoreProcessing(false)
+        return
+      }
+      // 기존 결과에 병합
+      setResults((prev) => [...prev, ...result.distributions])
+      // 배치 totalCount 업데이트
+      setBatches((prev) =>
+        prev.map((b) =>
+          b.id === batchId
+            ? { ...b, totalCount: b.totalCount + result.distributions.length }
+            : b
+        )
+      )
+      // 추가 상태 초기화
+      setAddingMore(false)
+      setAddMoreParsedRows([])
+      setAddMoreFileName('')
+    } catch {
+      setAddMoreError('추가 대상자 등록 중 오류가 발생했습니다')
+    } finally {
+      setAddMoreProcessing(false)
+    }
+  }
+
+  const resetAddMore = () => {
+    setAddingMore(false)
+    setAddMoreParsedRows([])
+    setAddMoreFileName('')
+    setAddMoreError(null)
   }
 
   const copyAllLinks = async () => {
@@ -381,7 +450,7 @@ export default function DistributeTabs({ surveys, batches: initialBatches }: { s
                         <th className="text-left px-3 py-2 text-stone-500 font-medium">담당자</th>
                         <th className="text-left px-3 py-2 text-stone-500 font-medium">이메일</th>
                         <th className="text-left px-3 py-2 text-stone-500 font-medium">개인 링크</th>
-                        <th className="text-center px-3 py-2 text-stone-500 font-medium w-16"></th>
+                        <th className="text-center px-3 py-2 text-stone-500 font-medium w-20"></th>
                       </tr>
                     </thead>
                     <tbody>
@@ -394,9 +463,14 @@ export default function DistributeTabs({ surveys, batches: initialBatches }: { s
                             <td className="px-3 py-2 text-stone-700 font-mono text-xs">{r.email}</td>
                             <td className="px-3 py-2 font-mono text-xs text-teal-700 truncate max-w-[300px]">{link}</td>
                             <td className="px-3 py-2 text-center">
-                              <button onClick={() => copyToClipboard(link, r.uniqueToken)} className="text-stone-400 hover:text-stone-700 transition-colors">
-                                {copiedId === r.uniqueToken ? <Check size={14} className="text-emerald-600" /> : <Copy size={14} />}
-                              </button>
+                              <div className="flex items-center justify-center gap-1.5">
+                                <a href={link} target="_blank" rel="noopener noreferrer" className="text-stone-400 hover:text-teal-600 transition-colors" title="응답자 화면 미리보기">
+                                  <ExternalLink size={14} />
+                                </a>
+                                <button onClick={() => copyToClipboard(link, r.uniqueToken)} className="text-stone-400 hover:text-stone-700 transition-colors" title="링크 복사">
+                                  {copiedId === r.uniqueToken ? <Check size={14} className="text-emerald-600" /> : <Copy size={14} />}
+                                </button>
+                              </div>
                             </td>
                           </tr>
                         )
@@ -404,9 +478,102 @@ export default function DistributeTabs({ surveys, batches: initialBatches }: { s
                     </tbody>
                   </table>
                 </div>
-                <div className="mt-4 flex justify-end">
+                <div className="mt-4 flex justify-end gap-2">
+                  <Button variant="outline" size="sm" onClick={() => setAddingMore(true)} className="text-teal-600 border-teal-200 hover:bg-teal-50">
+                    <UserPlus size={14} className="mr-1" /> 추가 대상자
+                  </Button>
                   <Button variant="outline" onClick={resetPersonal}>돌아가기</Button>
                 </div>
+
+                {/* 추가 대상자 CSV 업로드 영역 */}
+                {addingMore && (
+                  <div className="mt-4 rounded-lg border border-teal-200 bg-teal-50/50 p-4 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm font-medium text-teal-700">추가 대상자 업로드</p>
+                      <button onClick={resetAddMore} className="text-xs text-stone-400 hover:text-stone-600">취소</button>
+                    </div>
+
+                    {addMoreParsedRows.length === 0 ? (
+                      <div
+                        className="border-2 border-dashed border-teal-300 rounded-lg p-6 text-center cursor-pointer hover:border-teal-400 transition-colors"
+                        onClick={() => document.getElementById('csv-add-more')?.click()}
+                      >
+                        <Upload size={24} className="mx-auto mb-1 text-teal-400" />
+                        <p className="text-sm text-teal-700">CSV 파일을 클릭하여 선택</p>
+                        <p className="text-xs text-stone-400 mt-1">필수 컬럼: 회사, 담당자, 이메일</p>
+                        <input
+                          id="csv-add-more"
+                          type="file"
+                          accept=".csv"
+                          className="hidden"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0]
+                            if (file) handleAddMoreFile(file)
+                          }}
+                        />
+                      </div>
+                    ) : (
+                      <>
+                        <div className="flex gap-3 text-sm">
+                          <span className="text-stone-500">{addMoreFileName}</span>
+                          <span className="text-emerald-600">유효 {addMoreParsedRows.filter((r) => r.emailValid).length}건</span>
+                          {addMoreParsedRows.filter((r) => !r.emailValid).length > 0 && (
+                            <span className="text-rose-500">제외 {addMoreParsedRows.filter((r) => !r.emailValid).length}건</span>
+                          )}
+                        </div>
+                        <div className="overflow-x-auto border border-stone-200 rounded-lg bg-white max-h-40 overflow-y-auto">
+                          <table className="w-full text-xs">
+                            <thead>
+                              <tr className="bg-stone-50 border-b border-stone-200">
+                                <th className="text-left px-2 py-1.5 text-stone-500 font-medium">회사</th>
+                                <th className="text-left px-2 py-1.5 text-stone-500 font-medium">담당자</th>
+                                <th className="text-left px-2 py-1.5 text-stone-500 font-medium">이메일</th>
+                                <th className="text-center px-2 py-1.5 text-stone-500 font-medium w-12">상태</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {addMoreParsedRows.map((row, idx) => (
+                                <tr key={idx} className={`border-b border-stone-100 ${!row.emailValid ? 'bg-rose-50/50' : ''}`}>
+                                  <td className="px-2 py-1.5 text-stone-700">{row.company}</td>
+                                  <td className="px-2 py-1.5 text-stone-700">{row.name}</td>
+                                  <td className="px-2 py-1.5 text-stone-600 font-mono">{row.email || <span className="text-stone-400">없음</span>}</td>
+                                  <td className="px-2 py-1.5 text-center">
+                                    {row.emailValid
+                                      ? <span className="text-emerald-600">✓</span>
+                                      : <span className="text-rose-500">✗</span>}
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                        <div className="flex justify-end gap-2">
+                          <Button variant="outline" size="sm" onClick={() => { setAddMoreParsedRows([]); setAddMoreFileName('') }}>
+                            다시 선택
+                          </Button>
+                          <Button
+                            size="sm"
+                            className="bg-teal-600 hover:bg-teal-700 text-white"
+                            onClick={handleAddMoreSubmit}
+                            disabled={addMoreProcessing || addMoreParsedRows.filter((r) => r.emailValid).length === 0}
+                          >
+                            {addMoreProcessing ? (
+                              <><Loader2 size={12} className="mr-1 animate-spin" />추가 중...</>
+                            ) : (
+                              <><UserPlus size={12} className="mr-1" />{addMoreParsedRows.filter((r) => r.emailValid).length}건 추가</>
+                            )}
+                          </Button>
+                        </div>
+                      </>
+                    )}
+
+                    {addMoreError && (
+                      <div className="flex items-center gap-2 text-sm text-rose-600">
+                        <AlertTriangle size={14} />{addMoreError}
+                      </div>
+                    )}
+                  </div>
+                )}
               </CardContent>
             </Card>
             <EmailSendPanel batchId={batchId} surveyId={selectedSurveyId} results={results} />
@@ -647,9 +814,14 @@ export default function DistributeTabs({ surveys, batches: initialBatches }: { s
                                         <span className={`inline-block px-2 py-0.5 rounded-full text-[11px] font-medium ${st.color}`}>{st.text}</span>
                                       </td>
                                       <td className="px-3 py-2 text-center">
-                                        <button onClick={() => copyToClipboard(link, d.id)} className="text-stone-400 hover:text-stone-700 transition-colors" title="링크 복사">
-                                          {copiedId === d.id ? <Check size={13} className="text-emerald-600" /> : <Copy size={13} />}
-                                        </button>
+                                        <div className="flex items-center justify-center gap-1.5">
+                                          <a href={link} target="_blank" rel="noopener noreferrer" className="text-stone-400 hover:text-teal-600 transition-colors" title="응답자 화면 미리보기">
+                                            <ExternalLink size={13} />
+                                          </a>
+                                          <button onClick={() => copyToClipboard(link, d.id)} className="text-stone-400 hover:text-stone-700 transition-colors" title="링크 복사">
+                                            {copiedId === d.id ? <Check size={13} className="text-emerald-600" /> : <Copy size={13} />}
+                                          </button>
+                                        </div>
                                       </td>
                                     </tr>
                                   )
