@@ -2,7 +2,7 @@
  * Distribution Repository — 배포 데이터 접근 계층
  */
 import { prisma } from "@/lib/db";
-import { v4 as uuidv4 } from "uuid";
+import { nanoid } from "nanoid";
 
 export interface DistributionListFilter {
   surveyId?: number;
@@ -103,7 +103,7 @@ export const distributionRepository = {
         customerId,
         channel,
         projectName: resolvedProjectNames[customerId] || null,
-        responseToken: uuidv4(),
+        responseToken: nanoid(10),
         status: "pending",
       })),
     });
