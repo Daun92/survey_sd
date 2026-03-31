@@ -48,7 +48,7 @@ export const POST = withAuth({ type: "role", minRole: "creator" }, async (reques
         contactName: dist.customer.contactName,
         surveyTitle: dist.survey.title,
         serviceType: dist.survey.serviceType.name,
-        respondUrl: `${baseUrl}/respond/${dist.responseToken}`,
+        respondUrl: `${baseUrl}/r/${dist.responseToken}`,
         reminderCount: dist.reminderCount + 1,
       });
 

@@ -166,7 +166,7 @@ export default function DistributeSurveyPage({ params }: { params: Promise<{ sur
   }
 
   function copyLink(token: string) {
-    const url = `${window.location.origin}/respond/${token}`;
+    const url = `${window.location.origin}/r/${token}`;
     navigator.clipboard.writeText(url);
     toast.success("링크가 복사되었습니다");
   }
