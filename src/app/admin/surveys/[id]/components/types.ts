@@ -18,7 +18,7 @@ export const RESPONDENT_FIELD_PRESETS: RespondentFieldConfig[] = [
 export interface SectionIntro {
   title?: string;
   description?: string;
-  color?: "neutral" | "brand" | "warm" | "cool" | "teal" | "blue" | "amber" | "rose" | "violet";
+  color?: "neutral" | "brand" | "warm" | "cool" | "teal" | "blue" | "amber" | "rose" | "violet" | "green" | "transparent";
   image_url?: string;
   image_size?: "full" | "medium" | "small" | "original";
 }
