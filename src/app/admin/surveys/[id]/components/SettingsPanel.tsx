@@ -228,14 +228,14 @@ export function SettingsPanel({ surveyId, initialSettings, onSettingsChange, onS
               <span className="text-[13px] font-semibold text-rose-600">마감 화면</span>
             </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="space-y-3">
             <div>
               <label className="block text-[13px] font-medium text-stone-600 mb-1">마감 제목</label>
               <input type="text" value={settings.ending_title ?? ""} onChange={(e) => update({ ending_title: e.target.value })} placeholder="응답이 제출되었습니다" className="w-full rounded-lg border border-stone-200 px-3 py-2 text-sm focus:border-teal-500 focus:ring-1 focus:ring-teal-500 outline-none" />
             </div>
             <div>
               <label className="block text-[13px] font-medium text-stone-600 mb-1">감사 메시지</label>
-              <input type="text" value={settings.thank_you_message ?? ""} onChange={(e) => update({ thank_you_message: e.target.value })} placeholder="소중한 의견에 감사드립니다." className="w-full rounded-lg border border-stone-200 px-3 py-2 text-sm focus:border-teal-500 focus:ring-1 focus:ring-teal-500 outline-none" />
+              <textarea value={settings.thank_you_message ?? ""} onChange={(e) => update({ thank_you_message: e.target.value })} placeholder="소중한 의견에 감사드립니다.&#10;귀하의 응답은 더 나은 서비스를 위해 소중히 활용하겠습니다." rows={3} className="w-full rounded-lg border border-stone-200 px-3 py-2 text-sm focus:border-teal-500 focus:ring-1 focus:ring-teal-500 outline-none resize-none" />
             </div>
           </div>
           <label className="flex items-center gap-2.5 rounded-lg border border-stone-200 px-3 py-2.5 cursor-pointer hover:bg-stone-50 transition-colors">
