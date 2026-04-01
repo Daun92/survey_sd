@@ -187,15 +187,18 @@ function LandingPreview({ title, description, settings, questionCount }: { title
 
 // ─── Section Intro Color Map ───
 const sectionIntroColorMap: Record<string, { bg: string; border: string; title: string; desc: string; bar: string }> = {
-  brand:   { bg: "bg-teal-50",   border: "border-teal-200",  title: "text-teal-800",  desc: "text-teal-600",  bar: "bg-teal-400"  },
-  neutral: { bg: "bg-stone-100", border: "border-stone-300", title: "text-stone-700", desc: "text-stone-500", bar: "bg-stone-400"  },
-  warm:    { bg: "bg-amber-50",  border: "border-amber-200", title: "text-amber-800", desc: "text-amber-600", bar: "bg-amber-400"  },
-  cool:    { bg: "bg-blue-50",   border: "border-blue-200",  title: "text-blue-800",  desc: "text-blue-600",  bar: "bg-blue-400"   },
-  teal:    { bg: "bg-teal-50",   border: "border-teal-200",  title: "text-teal-800",  desc: "text-teal-600",  bar: "bg-teal-400"  },
-  blue:    { bg: "bg-blue-50",   border: "border-blue-200",  title: "text-blue-800",  desc: "text-blue-600",  bar: "bg-blue-400"   },
-  amber:   { bg: "bg-amber-50",  border: "border-amber-200", title: "text-amber-800", desc: "text-amber-600", bar: "bg-amber-400"  },
-  rose:    { bg: "bg-rose-50",   border: "border-rose-200",  title: "text-rose-800",  desc: "text-rose-600",  bar: "bg-rose-400"   },
-  violet:  { bg: "bg-violet-50", border: "border-violet-200",title: "text-violet-800",desc: "text-violet-600",bar: "bg-violet-400" },
+  brand:       { bg: "bg-teal-50",   border: "border-teal-200",   title: "text-teal-800",   desc: "text-teal-600",   bar: "bg-teal-400"   },
+  neutral:     { bg: "bg-stone-100", border: "border-stone-300",  title: "text-stone-700",  desc: "text-stone-500",  bar: "bg-stone-400"  },
+  warm:        { bg: "bg-amber-50",  border: "border-amber-200",  title: "text-amber-800",  desc: "text-amber-600",  bar: "bg-amber-400"  },
+  cool:        { bg: "bg-blue-50",   border: "border-blue-200",   title: "text-blue-800",   desc: "text-blue-600",   bar: "bg-blue-400"   },
+  rose:        { bg: "bg-rose-50",   border: "border-rose-200",   title: "text-rose-800",   desc: "text-rose-600",   bar: "bg-rose-400"   },
+  violet:      { bg: "bg-violet-50", border: "border-violet-200", title: "text-violet-800", desc: "text-violet-600", bar: "bg-violet-400" },
+  green:       { bg: "bg-emerald-50",border: "border-emerald-200",title: "text-emerald-800",desc: "text-emerald-600",bar: "bg-emerald-400"},
+  transparent: { bg: "bg-transparent",border: "border-transparent",title: "text-stone-800", desc: "text-stone-500",  bar: "bg-transparent"},
+  // 하위 호환
+  teal:        { bg: "bg-teal-50",   border: "border-teal-200",   title: "text-teal-800",   desc: "text-teal-600",   bar: "bg-teal-400"   },
+  blue:        { bg: "bg-blue-50",   border: "border-blue-200",   title: "text-blue-800",   desc: "text-blue-600",   bar: "bg-blue-400"   },
+  amber:       { bg: "bg-amber-50",  border: "border-amber-200",  title: "text-amber-800",  desc: "text-amber-600",  bar: "bg-amber-400"  },
 };
 const defaultIntroColor = sectionIntroColorMap.brand;
 
@@ -244,21 +247,38 @@ function QuestionsPreview({ title, questions, settings }: { title: string; quest
       </div>
 
       {/* Section Intro Banner */}
-      {(intro?.title || intro?.description) && (
+      {(intro?.title || intro?.description || intro?.image_url) && (
         <div className={`mx-4 mt-3 rounded-lg border overflow-hidden ${introColor.bg} ${introColor.border}`}>
-          {intro.image_url && (
+          {/* full 크기: 배너 상단 full-bleed */}
+          {intro.image_url && intro.image_size === "full" && (
             <img
               src={intro.image_url}
               alt=""
-              className={`w-full object-cover ${
-                intro.image_size === "small" ? "h-10" :
-                intro.image_size === "medium" ? "h-16" :
-                intro.image_size === "full" ? "h-24" : "h-14"
-              }`}
+              className="w-full block"
+              style={{ display: "block", height: "auto", maxHeight: "120px", objectFit: "cover" }}
             />
           )}
-          <div className={`h-[2px] ${introColor.bar}`} />
+          {(intro?.title || intro?.description) && <div className={`h-[2px] ${introColor.bar}`} />}
           <div className="px-3 py-2.5">
+            {/* full 이외 크기: 패딩 안에서 실제 이미지 크기 반영 */}
+            {intro.image_url && intro.image_size !== "full" && (
+              <div className="flex justify-center mb-2">
+                <img
+                  src={intro.image_url}
+                  alt=""
+                  style={{
+                    display: "block",
+                    height: "auto",
+                    maxHeight: "80px",
+                    ...(intro.image_size === "small"
+                      ? { width: "35%" }
+                      : intro.image_size === "medium"
+                      ? { width: "55%" }
+                      : { width: "auto", maxWidth: "100%" }),
+                  }}
+                />
+              </div>
+            )}
             {intro.title && (
               <p className={`text-[11px] font-bold leading-tight mb-0.5 ${introColor.title}`}>{intro.title}</p>
             )}

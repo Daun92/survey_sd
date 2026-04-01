@@ -280,6 +280,9 @@ export default function SurveyForm({ survey, groupToken, distributionToken, pref
           <h1 className="text-[20px] font-bold text-stone-900 text-center leading-tight tracking-tight">
             {String(survey.title ?? '')}
           </h1>
+          {survey.sessionName && (
+            <p className="text-[13px] text-stone-500 mt-1.5">{String(survey.sessionName ?? '')}</p>
+          )}
         </div>
 
         {/* Welcome Message */}
@@ -409,7 +412,7 @@ export default function SurveyForm({ survey, groupToken, distributionToken, pref
               {survey.settings.thank_you_message || '소중한 의견에 감사드립니다.\n응답 내용은 서비스 품질 개선에 활용됩니다.'}
             </p>
           </div>
-          {survey.settings.show_ending_stats === true && (
+          {survey.settings.show_ending_stats !== false && (
           <div className="flex items-center gap-6 pt-2">
             <div className="flex flex-col items-center gap-1">
               <span className="text-xl font-bold text-stone-800">{answeredLikert + Object.entries(answers).filter(([, v]) => (typeof v === 'string' && v.length > 0) || (Array.isArray(v) && v.length > 0)).length}</span>

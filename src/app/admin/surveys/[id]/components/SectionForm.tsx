@@ -6,10 +6,14 @@ import { renameSection, updateSectionIntro, deleteSection } from "../actions";
 import type { SectionIntro } from "./types";
 
 const INTRO_COLORS = [
-  { value: "neutral", label: "기본", style: { backgroundColor: "#a8a29e" } },
-  { value: "brand", label: "브랜드", style: { backgroundColor: "#14b8a6" } },
-  { value: "warm", label: "따뜻한", style: { backgroundColor: "#d97706" } },
-  { value: "cool", label: "시원한", style: { backgroundColor: "#3b82f6" } },
+  { value: "transparent", label: "투명", style: { backgroundColor: "transparent", border: "1.5px dashed #d1d5db" } },
+  { value: "neutral",     label: "기본",   style: { backgroundColor: "#a8a29e" } },
+  { value: "brand",       label: "초록",   style: { backgroundColor: "#14b8a6" } },
+  { value: "cool",        label: "파랑",   style: { backgroundColor: "#3b82f6" } },
+  { value: "warm",        label: "주황",   style: { backgroundColor: "#d97706" } },
+  { value: "rose",        label: "분홍",   style: { backgroundColor: "#f43f5e" } },
+  { value: "violet",      label: "보라",   style: { backgroundColor: "#8b5cf6" } },
+  { value: "green",       label: "녹색",   style: { backgroundColor: "#22c55e" } },
 ] as const;
 
 interface Props {
@@ -183,12 +187,12 @@ export function SectionForm({ surveyId, sectionName, questionCount, intro, onDon
           {introImageUrl && (
             <div>
               <label className="block text-[11px] text-stone-500 mb-1">이미지 크기</label>
-              <div className="flex gap-1.5">
+              <div className="flex gap-1.5 mb-2">
                 {[
                   { value: "original", label: "원본" },
-                  { value: "full", label: "전체" },
-                  { value: "medium", label: "중간" },
-                  { value: "small", label: "작게" },
+                  { value: "full",     label: "전체" },
+                  { value: "medium",   label: "중간" },
+                  { value: "small",    label: "작게" },
                 ].map((s) => (
                   <button
                     key={s.value}
@@ -204,12 +208,32 @@ export function SectionForm({ surveyId, sectionName, questionCount, intro, onDon
                   </button>
                 ))}
               </div>
+              {/* 이미지 크기 미리보기 */}
+              <div className="rounded-lg border border-stone-100 bg-stone-50 p-2 flex justify-center items-center min-h-[60px]">
+                <img
+                  src={introImageUrl}
+                  alt="미리보기"
+                  style={{
+                    display: "block",
+                    height: "auto",
+                    maxHeight: "80px",
+                    borderRadius: "4px",
+                    ...(introImageSize === "full"
+                      ? { width: "100%" }
+                      : introImageSize === "medium"
+                      ? { width: "55%" }
+                      : introImageSize === "small"
+                      ? { width: "35%" }
+                      : { width: "auto", maxWidth: "100%" }),
+                  }}
+                />
+              </div>
             </div>
           )}
 
           <div>
-            <label className="block text-[11px] text-stone-500 mb-1">색상 테마</label>
-            <div className="flex items-center gap-2">
+            <label className="block text-[11px] text-stone-500 mb-1.5">색상 테마</label>
+            <div className="flex items-center gap-1.5 flex-wrap">
               {INTRO_COLORS.map((c) => (
                 <button
                   key={c.value}
@@ -218,12 +242,15 @@ export function SectionForm({ surveyId, sectionName, questionCount, intro, onDon
                   className={`h-6 w-6 rounded-full transition-all ${
                     introColor === c.value
                       ? "ring-2 ring-offset-1 ring-stone-400 scale-110"
-                      : "opacity-50 hover:opacity-80"
+                      : "opacity-60 hover:opacity-90"
                   }`}
                   style={c.style}
                   title={c.label}
                 />
               ))}
+              <span className="text-[10px] text-stone-400 ml-1">
+                {INTRO_COLORS.find((c) => c.value === introColor)?.label ?? ""}
+              </span>
             </div>
           </div>
         </div>
