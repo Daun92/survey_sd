@@ -20,21 +20,34 @@ import {
   Settings,
   LogOut,
   UserCog,
+  FolderOpen,
+  FileBarChart,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import type { UserProfile } from "@/lib/auth";
 
-const eduMenuItems = [
+// ─── 설문 설계 ───
+const designItems = [
   { href: "/admin", label: "대시보드", icon: LayoutDashboard },
+  { href: "/admin/projects", label: "프로젝트 관리", icon: FolderOpen },
   { href: "/admin/surveys", label: "설문 관리", icon: ClipboardList },
   { href: "/admin/cs-templates", label: "설문 템플릿", icon: BookOpen },
-  { href: "/admin/responses", label: "응답 및 리포트", icon: ChartColumn },
+];
+
+// ─── 배포 ───
+const distributeItems = [
   { href: "/admin/distribute", label: "배부 관리", icon: Send },
   { href: "/admin/email-templates", label: "메일 템플릿", icon: Mail },
 ];
 
-const adminOnlyEduItems = [
+const adminDistributeItems = [
   { href: "/admin/respondents", label: "응답자 관리", icon: UserCheck },
+];
+
+// ─── 분석 ───
+const analysisItems = [
+  { href: "/admin/responses", label: "응답 확인", icon: ChartColumn },
+  { href: "/admin/reports", label: "리포트", icon: FileBarChart },
 ];
 
 const hrdMenuItems = [
@@ -63,6 +76,8 @@ const departmentLabels: Record<string, string> = {
 function isActive(pathname: string, href: string) {
   if (href === "/admin") return pathname === "/admin";
   if (href === "/admin/hrd") return pathname === "/admin/hrd";
+  if (href === "/admin/projects") return pathname.startsWith("/admin/projects");
+  if (href === "/admin/reports") return pathname.startsWith("/admin/reports");
   return pathname.startsWith(href);
 }
 
@@ -101,14 +116,43 @@ export function Sidebar({ userProfile }: SidebarProps) {
       </div>
 
       <nav className="mt-2 space-y-4 px-3 pb-20">
+        {/* 설문 설계 */}
         <div>
           <div className="px-3 py-2">
             <span className="text-[10px] font-semibold uppercase tracking-wider text-stone-500">
-              교육 만족도
+              설문 설계
             </span>
           </div>
           <div className="space-y-0.5">
-            {eduMenuItems.map((item) => {
+            {designItems.map((item) => {
+              const active = isActive(pathname, item.href);
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={`flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition-colors ${
+                    active
+                      ? "bg-teal-50/10 text-teal-300 font-medium"
+                      : "text-stone-400 hover:bg-stone-800 hover:text-white"
+                  }`}
+                >
+                  <item.icon size={18} aria-hidden="true" />
+                  {item.label}
+                </Link>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* 배포 */}
+        <div>
+          <div className="px-3 py-2">
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-stone-500">
+              배포
+            </span>
+          </div>
+          <div className="space-y-0.5">
+            {distributeItems.map((item) => {
               const active = isActive(pathname, item.href);
               return (
                 <Link
@@ -126,7 +170,7 @@ export function Sidebar({ userProfile }: SidebarProps) {
               );
             })}
             {userProfile.role === "admin" &&
-              adminOnlyEduItems.map((item) => {
+              adminDistributeItems.map((item) => {
                 const active = isActive(pathname, item.href);
                 return (
                   <Link
@@ -143,6 +187,34 @@ export function Sidebar({ userProfile }: SidebarProps) {
                   </Link>
                 );
               })}
+          </div>
+        </div>
+
+        {/* 분석 */}
+        <div>
+          <div className="px-3 py-2">
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-stone-500">
+              분석
+            </span>
+          </div>
+          <div className="space-y-0.5">
+            {analysisItems.map((item) => {
+              const active = isActive(pathname, item.href);
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={`flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition-colors ${
+                    active
+                      ? "bg-teal-50/10 text-teal-300 font-medium"
+                      : "text-stone-400 hover:bg-stone-800 hover:text-white"
+                  }`}
+                >
+                  <item.icon size={18} aria-hidden="true" />
+                  {item.label}
+                </Link>
+              );
+            })}
           </div>
         </div>
 
