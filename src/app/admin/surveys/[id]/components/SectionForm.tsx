@@ -142,7 +142,7 @@ export function SectionForm({ surveyId, sectionName, questionCount, intro, onDon
               onChange={(e) => setIntroDescription(e.target.value)}
               placeholder="이 섹션에 대한 안내 (선택)"
               rows={2}
-              className="w-full rounded-lg border border-stone-200 px-3 py-1.5 text-sm focus:border-teal-500 focus:ring-1 focus:ring-teal-500 outline-none resize-none"
+              className="w-full rounded-lg border border-stone-200 px-3 py-1.5 text-sm focus:border-teal-500 focus:ring-1 focus:ring-teal-500 outline-none resize-y field-sizing-content"
             />
           </div>
 
