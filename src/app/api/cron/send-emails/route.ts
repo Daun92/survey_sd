@@ -13,6 +13,12 @@ export async function GET(request: NextRequest) {
 
   const supabase = createAdminClient()
   const sender = getEmailSender()
+
+  if (sender.isMock) {
+    console.error("[CRON] Email sender is in mock mode. Set HIWORKS_OFFICE_TOKEN and HIWORKS_USER_ID.")
+    return NextResponse.json({ error: "Email not configured", processed: 0, succeeded: 0, failed: 0 }, { status: 503 })
+  }
+
   const now = new Date().toISOString()
 
   let processed = 0
