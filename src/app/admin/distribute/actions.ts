@@ -3,7 +3,8 @@
 import { createAdminClient } from "@/lib/supabase/admin"
 import { createBatchSchema, type CreateBatchInput } from "@/lib/validations/distribution"
 import { renderTemplate, getTemplateVariables } from "@/lib/email/template-renderer"
-import { getEmailSender, isEmailConfigured } from "@/lib/email/sender"
+import { getEmailSender, getEmailSenderFromDB, isEmailConfigured, createSenderFromConfig } from "@/lib/email/sender"
+import type { EmailProviderType, EmailProviderConfig } from "@/lib/email/types"
 
 interface DistributionResult {
   name: string
@@ -420,9 +421,9 @@ export async function scheduleEmailBatch(
 
   // 4. 즉시 발송인 경우 바로 처리
   if (input.scheduleType === "immediate") {
-    const sender = getEmailSender()
+    const sender = await getEmailSenderFromDB()
     if (sender.isMock) {
-      return { error: "메일 발송 설정이 완료되지 않았습니다. HIWORKS_OFFICE_TOKEN / HIWORKS_USER_ID 환경변수를 확인하세요." }
+      return { error: "메일 발송 설정이 완료되지 않았습니다. 이메일 제공자를 설정하거나 환경변수를 확인하세요." }
     }
     const { data: pendingQueue } = await supabase
       .from("email_queue")
@@ -559,9 +560,9 @@ export async function sendTestEmail(input: {
   const subject = `[테스트] ${renderTemplate(input.customSubject ?? template.subject, vars)}`
   const bodyHtml = renderTemplate(input.customBodyHtml ?? template.body_html, vars)
 
-  const sender = getEmailSender()
+  const sender = await getEmailSenderFromDB()
   if (sender.isMock) {
-    return { error: "메일 발송 설정이 완료되지 않았습니다. HIWORKS_OFFICE_TOKEN / HIWORKS_USER_ID 환경변수를 확인하세요." }
+    return { error: "메일 발송 설정이 완료되지 않았습니다. 이메일 제공자를 설정하거나 환경변수를 확인하세요." }
   }
 
   const result = await sender.send({
@@ -582,9 +583,6 @@ export async function sendTestEmail(input: {
 export async function resendDistributionEmail(
   distributionId: string
 ): Promise<{ success?: boolean; error?: string }> {
-  if (!isEmailConfigured()) {
-    return { error: "메일 발송 설정이 완료되지 않았습니다. HIWORKS_OFFICE_TOKEN / HIWORKS_USER_ID 환경변수를 확인하세요." }
-  }
 
   const supabase = createAdminClient()
 
@@ -670,7 +668,10 @@ export async function resendDistributionEmail(
     .update({ status: "processing" })
     .eq("id", queueItem.id)
 
-  const sender = getEmailSender()
+  const sender = await getEmailSenderFromDB()
+  if (sender.isMock) {
+    return { error: "메일 발송 설정이 완료되지 않았습니다. 이메일 제공자를 설정하거나 환경변수를 확인하세요." }
+  }
   const result = await sender.send({
     to: dist.recipient_email,
     toName: dist.recipient_name ?? undefined,
@@ -705,10 +706,6 @@ export async function resendDistributionEmail(
 export async function resendBatchEmails(
   batchId: string
 ): Promise<{ sent?: number; failed?: number; error?: string }> {
-  if (!isEmailConfigured()) {
-    return { error: "메일 발송 설정이 완료되지 않았습니다. HIWORKS_OFFICE_TOKEN / HIWORKS_USER_ID 환경변수를 확인하세요." }
-  }
-
   const supabase = createAdminClient()
 
   // 미완료 & 이메일 있는 distribution 조회
@@ -723,7 +720,10 @@ export async function resendBatchEmails(
     return { error: "재발송 대상이 없습니다" }
   }
 
-  const sender = getEmailSender()
+  const sender = await getEmailSenderFromDB()
+  if (sender.isMock) {
+    return { error: "메일 발송 설정이 완료되지 않았습니다. 이메일 제공자를 설정하거나 환경변수를 확인하세요." }
+  }
   const now = new Date().toISOString()
   let sent = 0
   let failed = 0
@@ -802,4 +802,144 @@ export async function resendBatchEmails(
   }
 
   return { sent, failed }
+}
+
+// ─── 이메일 제공자 관리 ───
+
+const SMTP_PRESETS: Record<string, { host: string; port: number; secure: boolean }> = {
+  gmail: { host: 'smtp.gmail.com', port: 587, secure: false },
+  outlook: { host: 'smtp.office365.com', port: 587, secure: false },
+}
+
+export async function getEmailProviders() {
+  const supabase = createAdminClient()
+  const { data } = await supabase
+    .from('email_providers')
+    .select('id, name, provider_type, smtp_host, smtp_port, smtp_user, from_name, from_email, is_default, created_at')
+    .order('is_default', { ascending: false })
+    .order('created_at', { ascending: false })
+
+  return data ?? []
+}
+
+export async function saveEmailProvider(input: {
+  id?: string
+  name: string
+  providerType: EmailProviderType
+  smtpHost?: string
+  smtpPort?: number
+  smtpSecure?: boolean
+  smtpUser?: string
+  smtpPassword?: string
+  apiToken?: string
+  apiUserId?: string
+  fromName?: string
+  fromEmail?: string
+  isDefault?: boolean
+}): Promise<{ id?: string; error?: string }> {
+  const supabase = createAdminClient()
+
+  const preset = SMTP_PRESETS[input.providerType]
+
+  const record = {
+    name: input.name,
+    provider_type: input.providerType,
+    smtp_host: input.smtpHost || preset?.host || null,
+    smtp_port: input.smtpPort || preset?.port || 587,
+    smtp_secure: input.smtpSecure ?? preset?.secure ?? false,
+    smtp_user: input.smtpUser || null,
+    smtp_password: input.smtpPassword || null,
+    api_token: input.apiToken || null,
+    api_user_id: input.apiUserId || null,
+    from_name: input.fromName || null,
+    from_email: input.fromEmail || null,
+    is_default: input.isDefault ?? false,
+    updated_at: new Date().toISOString(),
+  }
+
+  // is_default 설정 시 기존 기본값 해제
+  if (record.is_default) {
+    await supabase
+      .from('email_providers')
+      .update({ is_default: false })
+      .eq('is_default', true)
+  }
+
+  if (input.id) {
+    const { error } = await supabase
+      .from('email_providers')
+      .update(record)
+      .eq('id', input.id)
+
+    if (error) return { error: '제공자 수정 실패: ' + error.message }
+    return { id: input.id }
+  }
+
+  const { data, error } = await supabase
+    .from('email_providers')
+    .insert(record)
+    .select('id')
+    .single()
+
+  if (error || !data) return { error: '제공자 등록 실패: ' + (error?.message ?? '') }
+  return { id: data.id }
+}
+
+export async function deleteEmailProvider(id: string): Promise<{ error?: string }> {
+  const supabase = createAdminClient()
+  const { error } = await supabase
+    .from('email_providers')
+    .delete()
+    .eq('id', id)
+
+  if (error) return { error: '삭제 실패: ' + error.message }
+  return {}
+}
+
+export async function testEmailProvider(input: {
+  providerType: EmailProviderType
+  smtpHost?: string
+  smtpPort?: number
+  smtpSecure?: boolean
+  smtpUser?: string
+  smtpPassword?: string
+  apiToken?: string
+  apiUserId?: string
+  fromName?: string
+  fromEmail?: string
+  testEmail: string
+}): Promise<{ success?: boolean; error?: string }> {
+  const config: EmailProviderConfig = {
+    id: '',
+    name: '',
+    provider_type: input.providerType,
+    smtp_host: input.smtpHost || null,
+    smtp_port: input.smtpPort || null,
+    smtp_secure: input.smtpSecure ?? null,
+    smtp_user: input.smtpUser || null,
+    smtp_password: input.smtpPassword || null,
+    api_token: input.apiToken || null,
+    api_user_id: input.apiUserId || null,
+    from_name: input.fromName || null,
+    from_email: input.fromEmail || null,
+    is_default: false,
+    created_by: null,
+    created_at: '',
+    updated_at: '',
+  }
+
+  const sender = createSenderFromConfig(config)
+  if (sender.isMock) {
+    return { error: '발송 설정이 올바르지 않습니다. 필수 항목을 확인하세요.' }
+  }
+
+  const result = await sender.send({
+    to: input.testEmail,
+    toName: '테스트 수신자',
+    subject: '[테스트] 이메일 제공자 연결 확인',
+    bodyHtml: '<p>이 메일은 이메일 제공자 설정 테스트입니다.</p><p>정상적으로 수신되었다면 설정이 올바릅니다.</p>',
+  })
+
+  if (result.success) return { success: true }
+  return { error: result.error ?? '발송 실패' }
 }

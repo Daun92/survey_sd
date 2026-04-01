@@ -14,6 +14,7 @@ import {
 import { parseDistributionCsv, decodeCSVBuffer, type ParsedRow } from '@/lib/csv/parse-distribution-csv'
 import { createDistributionBatch, addToDistributionBatch, getDistributions, deleteDistributionBatch, resendDistributionEmail, resendBatchEmails } from './actions'
 import EmailSendPanel from './email-send-panel'
+import EmailProviderSettings from './email-provider-settings'
 
 interface ClassGroup {
   id: string
@@ -26,7 +27,34 @@ interface SurveyItem {
   title: string
   token: string
   status: string
+  educationType: string | null
+  surveyType: string | null
+  sessionName: string | null
+  sessionNumber: number | null
   classGroups: ClassGroup[]
+}
+
+const educationTypeLabel: Record<string, string> = {
+  classroom: '집합',
+  remote: '원격',
+  consulting: '컨설팅',
+  blended: '혼합',
+  s2_edu_post: '교육후',
+}
+
+function getSurveyDisplayName(s: SurveyItem) {
+  const tags: string[] = []
+  if (s.educationType && educationTypeLabel[s.educationType]) {
+    tags.push(educationTypeLabel[s.educationType])
+  } else if (s.educationType) {
+    tags.push(s.educationType)
+  }
+  if (s.sessionName) {
+    tags.push(s.sessionName)
+  } else if (s.sessionNumber != null) {
+    tags.push(`${s.sessionNumber}차`)
+  }
+  return tags.length > 0 ? `${s.title} [${tags.join(' · ')}]` : s.title
 }
 
 interface BatchItem {
@@ -85,6 +113,7 @@ export default function DistributeTabs({ surveys, batches: initialBatches }: { s
   const [addMoreError, setAddMoreError] = useState<string | null>(null)
 
   // 배치 이력 상태
+  const [historyFilter, setHistoryFilter] = useState<string>('all')
   const [batches, setBatches] = useState<BatchItem[]>(initialBatches)
   const [expandedBatchId, setExpandedBatchId] = useState<string | null>(null)
   const [batchDistributions, setBatchDistributions] = useState<any[]>([])
@@ -96,6 +125,10 @@ export default function DistributeTabs({ surveys, batches: initialBatches }: { s
 
   const selectedSurvey = surveys.find((s) => s.id === selectedSurveyId)
   const surveyUrl = selectedSurvey ? `${BASE_URL}/s/${selectedSurvey.token}` : ''
+
+  const filteredBatches = historyFilter === 'all'
+    ? batches
+    : batches.filter((b) => b.surveyId === historyFilter)
 
   const validRows = parsedRows.filter((r) => r.emailValid)
   const invalidRows = parsedRows.filter((r) => !r.emailValid)
@@ -611,7 +644,7 @@ export default function DistributeTabs({ surveys, batches: initialBatches }: { s
               onChange={(e) => setSelectedSurveyId(e.target.value)}
             >
               {surveys.map((s) => (
-                <option key={s.id} value={s.id}>{s.title}</option>
+                <option key={s.id} value={s.id}>{getSurveyDisplayName(s)}</option>
               ))}
             </select>
           </CardContent>
@@ -736,15 +769,34 @@ export default function DistributeTabs({ surveys, batches: initialBatches }: { s
         {batches.length > 0 && (
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Users size={18} className="text-stone-600" />
-                배부 이력
-              </CardTitle>
-              <CardDescription>이전에 생성한 개인 링크 배치를 확인하고 관리합니다</CardDescription>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <Users size={18} className="text-stone-600" />
+                    배부 이력
+                  </CardTitle>
+                  <CardDescription>이전에 생성한 개인 링크 배치를 확인하고 관리합니다</CardDescription>
+                </div>
+                <select
+                  className="rounded-md border border-stone-200 bg-white px-3 py-1.5 text-sm text-stone-700"
+                  value={historyFilter}
+                  onChange={(e) => setHistoryFilter(e.target.value)}
+                >
+                  <option value="all">전체 설문 ({batches.length})</option>
+                  {surveys.map((s) => {
+                    const count = batches.filter((b) => b.surveyId === s.id).length
+                    if (count === 0) return null
+                    return <option key={s.id} value={s.id}>{getSurveyDisplayName(s)} ({count})</option>
+                  })}
+                </select>
+              </div>
             </CardHeader>
             <CardContent className="p-0">
+              {filteredBatches.length === 0 ? (
+                <div className="px-5 py-8 text-center text-sm text-stone-400">선택한 설문의 배부 이력이 없습니다</div>
+              ) : (
               <div className="divide-y divide-stone-100">
-                {batches.map((batch) => {
+                {filteredBatches.map((batch) => {
                   const isExpanded = expandedBatchId === batch.id
                   const isLoading = loadingBatchId === batch.id
                   const isDeleting = deletingBatchId === batch.id
@@ -920,9 +972,13 @@ export default function DistributeTabs({ surveys, batches: initialBatches }: { s
                   )
                 })}
               </div>
+              )}
             </CardContent>
           </Card>
         )}
+
+        {/* ⑤ 이메일 제공자 설정 */}
+        <EmailProviderSettings />
       </div>
     </div>
   )
