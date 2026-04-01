@@ -16,7 +16,7 @@ CREATE TABLE IF NOT EXISTS sms_providers (
 
   -- 메타
   is_default BOOLEAN DEFAULT false,
-  created_by UUID REFERENCES user_profiles(id) ON DELETE SET NULL,
+  created_by UUID,
   created_at TIMESTAMPTZ DEFAULT now(),
   updated_at TIMESTAMPTZ DEFAULT now()
 );
