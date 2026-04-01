@@ -9,6 +9,9 @@ import {
   CalendarDays,
   Users,
   TrendingUp,
+  Target,
+  ArrowDownRight,
+  ArrowUpRight,
   Download,
 } from "lucide-react";
 import dynamic from "next/dynamic";
@@ -17,9 +20,14 @@ import { AIOpenAnalysis } from "./ai-open-analysis";
 import type { SectionScore } from "@/components/charts/score-bar-chart";
 import type { QuestionDistribution } from "@/components/charts/likert-distribution";
 import type { DailyResponse } from "@/components/charts/response-trend";
+import type { SectionGroup, QuestionDetail } from "@/components/charts/section-score-table";
 
 const ScoreBarChart = dynamic(
   () => import("@/components/charts/score-bar-chart").then((m) => m.ScoreBarChart),
+  { loading: () => <div className="h-64 animate-pulse rounded-xl bg-stone-100" /> }
+);
+const SectionScoreTable = dynamic(
+  () => import("@/components/charts/section-score-table").then((m) => m.SectionScoreTable),
   { loading: () => <div className="h-64 animate-pulse rounded-xl bg-stone-100" /> }
 );
 const LikertDistribution = dynamic(
@@ -33,8 +41,23 @@ const ResponseTrend = dynamic(
 
 export const revalidate = 60;
 
+const TARGET_SCORE = 90;
+
+function getGradeLabel100(score: number) {
+  if (score >= 90) return "매우우수";
+  if (score >= 80) return "우수";
+  if (score >= 70) return "양호";
+  return "개선필요";
+}
+
+function getGradeBadgeClass(score: number) {
+  if (score >= 90) return "bg-teal-100 text-teal-800";
+  if (score >= 80) return "bg-emerald-100 text-emerald-800";
+  if (score >= 70) return "bg-amber-100 text-amber-800";
+  return "bg-rose-100 text-rose-800";
+}
+
 async function getSurveyReport(surveyId: string) {
-  // 1단계: survey 존재 확인 (빠름)
   const supabase = await createClient();
   const { data: survey } = await supabase
     .from("edu_surveys")
@@ -44,11 +67,10 @@ async function getSurveyReport(surveyId: string) {
 
   if (!survey) return null;
 
-  // 2단계: submissions + questions 병렬 조회
   const [{ data: submissions }, { data: questions }] = await Promise.all([
     supabase
       .from("edu_submissions")
-      .select("id, total_score, answers, created_at")
+      .select("id, total_score, answers, respondent_name, respondent_department, respondent_position, created_at")
       .eq("survey_id", surveyId)
       .order("created_at", { ascending: true }),
     supabase
@@ -59,25 +81,22 @@ async function getSurveyReport(surveyId: string) {
   ]);
 
   const submissionCount = submissions?.length ?? 0;
-  const avgScore =
-    submissionCount > 0
-      ? (submissions!.reduce((sum, s) => sum + (s.total_score ?? 0), 0) /
-          submissionCount)
-      : 0;
 
-  // ── 차트 데이터 집계 (단일 패스) ──
-
-  // likert/rating 문항만 필터링 + 메타데이터 준비
+  // ── likert/rating 문항만 필터링 ──
   const likertQuestions = (questions ?? []).filter(
     (q) => q.question_type?.startsWith("likert") || q.question_type === "rating"
   );
+  const maxPossible = likertQuestions.length * 5; // 100점 만점 기준
 
-  // 섹션 맵, 분포 맵을 미리 초기화
+  // ── 집계 초기화 ──
   const sectionMap = new Map<string, { sum: number; count: number }>();
+  const questionStatMap = new Map<string, { sum: number; count: number }>();
   const distMap = new Map<string, QuestionDistribution>();
+
   for (const q of likertQuestions) {
     const section = q.section || "일반";
     if (!sectionMap.has(section)) sectionMap.set(section, { sum: 0, count: 0 });
+    questionStatMap.set(q.id, { sum: 0, count: 0 });
     distMap.set(q.id, {
       code: q.question_code || `Q${q.sort_order + 1}`,
       text: q.question_text,
@@ -86,13 +105,22 @@ async function getSurveyReport(surveyId: string) {
     });
   }
 
-  // 단일 패스: submissions를 한 번만 순회하면서 모든 집계 수행
+  // ── 단일 패스 집계 ──
   const dayMap = new Map<string, number>();
+  let totalScoreSum = 0;
+  let totalScoreCount = 0;
+
   if (submissions && submissionCount > 0) {
     for (const sub of submissions) {
       // 일별 응답 추이
       const day = sub.created_at.slice(0, 10);
       dayMap.set(day, (dayMap.get(day) ?? 0) + 1);
+
+      // total_score 기반 전체 평균
+      if (sub.total_score != null) {
+        totalScoreSum += sub.total_score;
+        totalScoreCount += 1;
+      }
 
       // 문항별 점수 집계
       const answers = sub.answers as Record<string, unknown> | null;
@@ -100,12 +128,16 @@ async function getSurveyReport(surveyId: string) {
       for (const q of likertQuestions) {
         const num = Number(answers[q.id]);
         if (isNaN(num) || num < 1 || num > 5) continue;
-        // 섹션 점수
+
         const section = q.section || "일반";
         const sEntry = sectionMap.get(section)!;
         sEntry.sum += num;
         sEntry.count += 1;
-        // Likert 분포
+
+        const qEntry = questionStatMap.get(q.id)!;
+        qEntry.sum += num;
+        qEntry.count += 1;
+
         const dist = distMap.get(q.id)!;
         dist[String(num) as "1" | "2" | "3" | "4" | "5"] += 1;
         dist.total += 1;
@@ -113,20 +145,64 @@ async function getSurveyReport(surveyId: string) {
     }
   }
 
-  // 결과 변환
+  // ── 100점 기준 전체 평균 ──
+  // total_score가 있으면 사용, 없으면 문항 평균에서 환산
+  let avgScore100: number;
+  if (totalScoreCount > 0 && maxPossible > 0) {
+    avgScore100 = (totalScoreSum / totalScoreCount / maxPossible) * 100;
+  } else {
+    const allSum = Array.from(questionStatMap.values()).reduce((a, b) => a + b.sum, 0);
+    const allCount = Array.from(questionStatMap.values()).reduce((a, b) => a + b.count, 0);
+    avgScore100 = allCount > 0 ? (allSum / allCount) * 20 : 0;
+  }
+
+  // ── 섹션별 100점 환산 점수 ──
   const sectionScores: SectionScore[] = [];
   for (const [name, { sum, count }] of sectionMap) {
     if (count > 0) {
-      sectionScores.push({ name, avg: Math.round((sum / count) * 100) / 100, count });
+      sectionScores.push({
+        name,
+        avg: Math.round((sum / count) * 20 * 10) / 10, // 100점 환산
+        count,
+      });
     }
   }
 
+  // ── 문항별 상세 (섹션 그룹) ──
+  const sectionGroupMap = new Map<string, QuestionDetail[]>();
+  for (const q of likertQuestions) {
+    const section = q.section || "일반";
+    if (!sectionGroupMap.has(section)) sectionGroupMap.set(section, []);
+    const stat = questionStatMap.get(q.id)!;
+    const avg5 = stat.count > 0 ? stat.sum / stat.count : 0;
+    sectionGroupMap.get(section)!.push({
+      code: q.question_code || `Q${q.sort_order + 1}`,
+      text: q.question_text,
+      section,
+      avg5,
+      avg100: avg5 * 20,
+      count: stat.count,
+    });
+  }
+
+  const sectionGroups: SectionGroup[] = [];
+  for (const [section, questions] of sectionGroupMap) {
+    const sScore = sectionScores.find((s) => s.name === section);
+    sectionGroups.push({
+      section,
+      avg100: sScore?.avg ?? 0,
+      questions,
+    });
+  }
+
+  // ── Likert 분포 ──
   const questionDistributions: QuestionDistribution[] = [];
   for (const q of likertQuestions) {
     const dist = distMap.get(q.id)!;
     if (dist.total > 0) questionDistributions.push(dist);
   }
 
+  // ── 일별 응답 추이 ──
   const dailyResponses: DailyResponse[] = Array.from(dayMap)
     .sort()
     .map(([date, count]) => ({ date, count }));
@@ -134,11 +210,14 @@ async function getSurveyReport(surveyId: string) {
   return {
     ...survey,
     submissionCount,
-    avgScore: Math.round(avgScore * 10) / 10,
+    avgScore100: Math.round(avgScore100 * 10) / 10,
+    gap: Math.round((avgScore100 - TARGET_SCORE) * 10) / 10,
     submissions: submissions ?? [],
     sectionScores,
+    sectionGroups,
     questionDistributions,
     dailyResponses,
+    likertQuestionCount: likertQuestions.length,
   };
 }
 
@@ -154,7 +233,6 @@ async function getSurveyList() {
   return surveys.map((sv) => ({
     ...sv,
     submissionCount: (sv.edu_submissions as unknown as { count: number }[])?.[0]?.count ?? 0,
-    avgScore: 0,
   }));
 }
 
@@ -201,9 +279,11 @@ export default async function ReportsPage({
     }
 
     const status = statusLabels[report.status] ?? statusLabels.draft;
+    const isGapPositive = report.gap >= 0;
 
     return (
       <div>
+        {/* 헤더 */}
         <div className="mb-8">
           <Link
             href="/admin/reports"
@@ -229,6 +309,7 @@ export default async function ReportsPage({
           </div>
         </div>
 
+        {/* 설문 정보 + 요약 */}
         <div className="rounded-xl border border-stone-200 bg-white shadow-sm mb-6">
           <div className="p-5 border-b border-stone-100">
             <div className="flex items-center justify-between">
@@ -237,7 +318,7 @@ export default async function ReportsPage({
                   {report.title}
                 </h2>
                 <p className="text-sm text-stone-500 mt-0.5">
-                  {formatDate(report.created_at)}
+                  {formatDate(report.created_at)} · {report.likertQuestionCount}개 문항 (100점 만점)
                 </p>
               </div>
               <span
@@ -248,7 +329,8 @@ export default async function ReportsPage({
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x divide-stone-100">
+          {/* 4칸 요약 카드 */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 divide-y sm:divide-y-0 sm:divide-x divide-stone-100">
             <div className="p-5 text-center">
               <div className="flex justify-center mb-2">
                 <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-teal-50 text-teal-600">
@@ -267,20 +349,34 @@ export default async function ReportsPage({
                 </div>
               </div>
               <p className="text-[28px] font-bold text-stone-800">
-                {report.avgScore}
+                {report.avgScore100}
+                <span className="text-sm font-normal text-stone-400">점</span>
               </p>
-              <p className="text-xs text-stone-500 mt-1">평균 점수</p>
+              <p className="text-xs text-stone-500 mt-1">만족도 (100점)</p>
             </div>
             <div className="p-5 text-center">
               <div className="flex justify-center mb-2">
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-teal-50 text-teal-600">
-                  <CalendarDays size={16} />
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-stone-100 text-stone-500">
+                  <Target size={16} />
                 </div>
               </div>
               <p className="text-[28px] font-bold text-stone-800">
-                {formatDate(report.created_at)}
+                {TARGET_SCORE}
+                <span className="text-sm font-normal text-stone-400">점</span>
               </p>
-              <p className="text-xs text-stone-500 mt-1">설문 생성일</p>
+              <p className="text-xs text-stone-500 mt-1">목표 점수</p>
+            </div>
+            <div className="p-5 text-center">
+              <div className="flex justify-center mb-2">
+                <div className={`flex h-8 w-8 items-center justify-center rounded-lg ${isGapPositive ? "bg-teal-50 text-teal-600" : "bg-rose-50 text-rose-600"}`}>
+                  {isGapPositive ? <ArrowUpRight size={16} /> : <ArrowDownRight size={16} />}
+                </div>
+              </div>
+              <p className={`text-[28px] font-bold ${isGapPositive ? "text-teal-600" : "text-rose-600"}`}>
+                {isGapPositive ? "+" : ""}{report.gap}
+                <span className="text-sm font-normal text-stone-400">점</span>
+              </p>
+              <p className="text-xs text-stone-500 mt-1">목표 대비 GAP</p>
             </div>
           </div>
         </div>
@@ -288,10 +384,16 @@ export default async function ReportsPage({
         {/* 차트 영역 */}
         {report.submissionCount > 0 && (
           <div className="space-y-4 mb-6">
+            {/* 섹션별 바 차트 + Likert 분포 */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               <ScoreBarChart data={report.sectionScores} />
               <LikertDistribution data={report.questionDistributions.slice(0, 15)} />
             </div>
+
+            {/* 섹션별 문항 상세 테이블 */}
+            <SectionScoreTable data={report.sectionGroups} />
+
+            {/* 응답 추이 */}
             <ResponseTrend data={report.dailyResponses} />
           </div>
         )}
@@ -301,7 +403,7 @@ export default async function ReportsPage({
           reportData={{
             courseName: report.title,
             sessionName: "",
-            overallAvg: report.avgScore,
+            overallAvg: report.avgScore100,
             responseRate: 0,
             totalResponses: report.submissionCount,
             sectionScores: report.sectionScores.map((s) => ({ name: s.name, avg: s.avg })),
@@ -310,49 +412,69 @@ export default async function ReportsPage({
               text: q.text,
               section: "",
               avg: q.total > 0
-                ? (q["1"] * 1 + q["2"] * 2 + q["3"] * 3 + q["4"] * 4 + q["5"] * 5) / q.total
+                ? ((q["1"] * 1 + q["2"] * 2 + q["3"] * 3 + q["4"] * 4 + q["5"] * 5) / q.total) * 20
                 : 0,
             })),
           }}
         />
 
+        {/* 응답 내역 테이블 */}
         {report.submissions.length > 0 ? (
-          <div className="rounded-xl border border-stone-200 bg-white shadow-sm">
+          <div className="rounded-xl border border-stone-200 bg-white shadow-sm mt-6">
             <div className="p-5 border-b border-stone-100">
               <h3 className="text-base font-semibold text-stone-900">
                 응답 내역
               </h3>
+              <p className="text-xs text-stone-400 mt-0.5">개별 응답자의 총점 및 등급</p>
             </div>
             <div>
               <div className="flex items-center px-5 h-9 bg-stone-50/80 border-b border-stone-100">
-                <div className="flex-1 text-xs font-medium text-stone-500">
-                  #
-                </div>
-                <div className="flex-[2] text-xs font-medium text-stone-500">
-                  응답일
-                </div>
-                <div className="flex-1 text-xs font-medium text-stone-500 text-right">
-                  점수
-                </div>
+                <div className="w-12 text-xs font-medium text-stone-500">#</div>
+                <div className="flex-[2] text-xs font-medium text-stone-500">응답일</div>
+                <div className="flex-[2] text-xs font-medium text-stone-500">응답자</div>
+                <div className="flex-[2] text-xs font-medium text-stone-500">소속</div>
+                <div className="w-24 text-xs font-medium text-stone-500 text-right">총점</div>
+                <div className="w-20 text-xs font-medium text-stone-500 text-center">등급</div>
               </div>
-              {report.submissions.map((sub, idx) => (
-                <div
-                  key={sub.id}
-                  className="flex items-center px-5 h-12 border-b border-stone-100 last:border-0"
-                >
-                  <div className="flex-1 text-sm text-stone-500">{idx + 1}</div>
-                  <div className="flex-[2] text-sm text-stone-700">
-                    {formatDate(sub.created_at)}
+              {report.submissions.map((sub, idx) => {
+                const score = sub.total_score as number | null;
+                // total_score가 max_possible 기준으로 환산
+                const score100 = score != null && report.likertQuestionCount > 0
+                  ? Math.round((score / (report.likertQuestionCount * 5)) * 1000) / 10
+                  : score;
+                return (
+                  <div
+                    key={sub.id}
+                    className="flex items-center px-5 h-12 border-b border-stone-100 last:border-0 hover:bg-stone-50/50"
+                  >
+                    <div className="w-12 text-sm text-stone-400">{idx + 1}</div>
+                    <div className="flex-[2] text-sm text-stone-700">
+                      {formatDate(sub.created_at)}
+                    </div>
+                    <div className="flex-[2] text-sm font-medium text-stone-800">
+                      {(sub as { respondent_name?: string }).respondent_name || "익명"}
+                    </div>
+                    <div className="flex-[2] text-sm text-stone-500">
+                      {(sub as { respondent_department?: string }).respondent_department || "-"}
+                    </div>
+                    <div className="w-24 text-sm font-semibold text-stone-800 text-right">
+                      {score100 != null ? `${score100}` : "-"}
+                      <span className="text-xs font-normal text-stone-400">/100</span>
+                    </div>
+                    <div className="w-20 text-center">
+                      {score100 != null && (
+                        <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium ${getGradeBadgeClass(score100)}`}>
+                          {getGradeLabel100(score100)}
+                        </span>
+                      )}
+                    </div>
                   </div>
-                  <div className="flex-1 text-sm font-medium text-stone-800 text-right">
-                    {sub.total_score ?? "-"}
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         ) : (
-          <div className="rounded-xl border border-stone-200 bg-white shadow-sm p-12 text-center">
+          <div className="rounded-xl border border-stone-200 bg-white shadow-sm p-12 text-center mt-6">
             <p className="text-sm text-stone-500">
               아직 응답 데이터가 없습니다.
             </p>
@@ -422,13 +544,6 @@ export default async function ReportsPage({
                         {survey.submissionCount}
                       </p>
                       <p className="text-xs text-stone-500">응답 수</p>
-                    </div>
-                    <div className="h-8 w-px bg-stone-100" />
-                    <div>
-                      <p className="text-lg font-bold text-stone-800">
-                        {survey.avgScore}
-                      </p>
-                      <p className="text-xs text-stone-500">평균 점수</p>
                     </div>
                   </div>
 

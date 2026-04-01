@@ -90,27 +90,37 @@ export default async function ResponseDetailPage({
       </div>
 
       {/* 통계 카드 */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-        <div className="rounded-xl border border-stone-200 bg-white shadow-sm p-5">
-          <div className="flex items-center gap-2 mb-1">
-            <Users size={14} className="text-stone-400" />
-            <p className="text-[13px] font-medium text-stone-500">총 응답</p>
+      {(() => {
+        const likertCount = questions.filter(
+          (q) => q.question_type?.startsWith("likert") || q.question_type === "rating"
+        ).length;
+        const maxPossible = likertCount * 5;
+        const rawAvg = submissions.length > 0
+          ? submissions.reduce((sum, s) => sum + (s.total_score ?? 0), 0) / submissions.length
+          : 0;
+        const avg100 = maxPossible > 0 ? Math.round((rawAvg / maxPossible) * 1000) / 10 : 0;
+        return (
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+            <div className="rounded-xl border border-stone-200 bg-white shadow-sm p-5">
+              <div className="flex items-center gap-2 mb-1">
+                <Users size={14} className="text-stone-400" />
+                <p className="text-[13px] font-medium text-stone-500">총 응답</p>
+              </div>
+              <p className="text-2xl font-bold text-stone-800">{submissions.length}</p>
+            </div>
+            <div className="rounded-xl border border-stone-200 bg-white shadow-sm p-5">
+              <p className="text-[13px] font-medium text-stone-500 mb-1">평균 점수 (100점)</p>
+              <p className="text-2xl font-bold text-teal-600">
+                {submissions.length > 0 ? `${avg100}점` : "-"}
+              </p>
+            </div>
+            <div className="rounded-xl border border-stone-200 bg-white shadow-sm p-5">
+              <p className="text-[13px] font-medium text-stone-500 mb-1">문항 수</p>
+              <p className="text-2xl font-bold text-stone-800">{questions.length}</p>
+            </div>
           </div>
-          <p className="text-2xl font-bold text-stone-800">{submissions.length}</p>
-        </div>
-        <div className="rounded-xl border border-stone-200 bg-white shadow-sm p-5">
-          <p className="text-[13px] font-medium text-stone-500 mb-1">평균 점수</p>
-          <p className="text-2xl font-bold text-teal-600">
-            {submissions.length > 0
-              ? (submissions.reduce((sum, s) => sum + (s.total_score ?? 0), 0) / submissions.length).toFixed(1)
-              : "-"}
-          </p>
-        </div>
-        <div className="rounded-xl border border-stone-200 bg-white shadow-sm p-5">
-          <p className="text-[13px] font-medium text-stone-500 mb-1">문항 수</p>
-          <p className="text-2xl font-bold text-stone-800">{questions.length}</p>
-        </div>
-      </div>
+        );
+      })()}
 
       {/* 응답 테이블 */}
       {submissions.length === 0 ? (
@@ -136,7 +146,7 @@ export default async function ResponseDetailPage({
                       {q.question_code || `Q${q.sort_order + 1}`}
                     </th>
                   ))}
-                  <th className="bg-stone-50 text-right px-4 py-2.5 text-xs font-medium text-stone-500 whitespace-nowrap">총점</th>
+                  <th className="bg-stone-50 text-right px-4 py-2.5 text-xs font-medium text-stone-500 whitespace-nowrap">총점(/100)</th>
                 </tr>
               </thead>
               <tbody>
@@ -162,9 +172,20 @@ export default async function ResponseDetailPage({
                           {answers[q.id] !== undefined ? String(answers[q.id]) : "-"}
                         </td>
                       ))}
-                      <td className="text-right px-4 py-3 font-medium text-stone-800 whitespace-nowrap">
-                        {sub.total_score != null ? sub.total_score : "-"}
-                      </td>
+                      {(() => {
+                        const likertCount = questions.filter(
+                          (q) => q.question_type?.startsWith("likert") || q.question_type === "rating"
+                        ).length;
+                        const maxP = likertCount * 5;
+                        const score100 = sub.total_score != null && maxP > 0
+                          ? Math.round((sub.total_score / maxP) * 1000) / 10
+                          : null;
+                        return (
+                          <td className="text-right px-4 py-3 font-medium text-stone-800 whitespace-nowrap">
+                            {score100 != null ? score100 : "-"}
+                          </td>
+                        );
+                      })()}
                     </tr>
                   );
                 })}
