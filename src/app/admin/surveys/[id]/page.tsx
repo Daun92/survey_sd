@@ -8,6 +8,9 @@ import {
   Hash,
   MessageSquare,
   ClipboardList,
+  Send,
+  FileBarChart,
+  Eye,
 } from "lucide-react";
 import SurveyEditor from "./SurveyEditor";
 
@@ -130,6 +133,31 @@ export default async function SurveyDetailPage({
           <div className="flex items-center gap-1.5 text-[13px] text-stone-500">
             <MessageSquare size={14} className="text-stone-400" />
             응답 {submissionCount}건
+          </div>
+
+          <div className="ml-auto flex items-center gap-2">
+            <Link
+              href="/admin/distribute"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-stone-200 px-3 py-1.5 text-[13px] font-medium text-stone-600 hover:bg-stone-50 transition-colors"
+            >
+              <Send size={13} /> 배부하기
+            </Link>
+            {submissionCount > 0 && (
+              <>
+                <Link
+                  href={`/admin/responses/${survey.id}`}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-stone-200 px-3 py-1.5 text-[13px] font-medium text-stone-600 hover:bg-stone-50 transition-colors"
+                >
+                  <Eye size={13} /> 응답 보기
+                </Link>
+                <Link
+                  href={`/admin/reports?survey=${survey.id}`}
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-teal-600 px-3 py-1.5 text-[13px] font-medium text-white hover:bg-teal-700 transition-colors"
+                >
+                  <FileBarChart size={13} /> 리포트
+                </Link>
+              </>
+            )}
           </div>
         </div>
       </div>
