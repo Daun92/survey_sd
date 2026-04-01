@@ -21,6 +21,8 @@ import type { SectionScore } from "@/components/charts/score-bar-chart";
 import type { QuestionDistribution } from "@/components/charts/likert-distribution";
 import type { DailyResponse } from "@/components/charts/response-trend";
 import type { SectionGroup, QuestionDetail } from "@/components/charts/section-score-table";
+import type { ScoreBucket } from "@/components/charts/score-distribution";
+import type { MatrixQuestion, MatrixRow } from "@/components/charts/respondent-matrix";
 
 const ScoreBarChart = dynamic(
   () => import("@/components/charts/score-bar-chart").then((m) => m.ScoreBarChart),
@@ -36,6 +38,14 @@ const LikertDistribution = dynamic(
 );
 const ResponseTrend = dynamic(
   () => import("@/components/charts/response-trend").then((m) => m.ResponseTrend),
+  { loading: () => <div className="h-64 animate-pulse rounded-xl bg-stone-100" /> }
+);
+const ScoreDistribution = dynamic(
+  () => import("@/components/charts/score-distribution").then((m) => m.ScoreDistribution),
+  { loading: () => <div className="h-64 animate-pulse rounded-xl bg-stone-100" /> }
+);
+const RespondentMatrix = dynamic(
+  () => import("@/components/charts/respondent-matrix").then((m) => m.RespondentMatrix),
   { loading: () => <div className="h-64 animate-pulse rounded-xl bg-stone-100" /> }
 );
 
@@ -207,6 +217,87 @@ async function getSurveyReport(surveyId: string) {
     .sort()
     .map(([date, count]) => ({ date, count }));
 
+  // ── 최고/최저 만족 문항 (100점 기준) ──
+  const allQuestionDetails = sectionGroups.flatMap((g) => g.questions);
+  const sortedByScore = [...allQuestionDetails].sort((a, b) => b.avg100 - a.avg100);
+  const topQuestions = sortedByScore.slice(0, 3);
+  const bottomQuestions = sortedByScore.slice(-3).reverse();
+
+  // ── 주관식 답변 수집 ──
+  const textQuestions = (questions ?? []).filter((q) => q.question_type === "text");
+  const openResponses: { name: string; department: string; questionText: string; answer: string }[] = [];
+  if (textQuestions.length > 0 && submissions) {
+    for (const sub of submissions) {
+      const answers = sub.answers as Record<string, unknown> | null;
+      if (!answers) continue;
+      for (const tq of textQuestions) {
+        const val = answers[tq.id];
+        if (typeof val === "string" && val.trim()) {
+          openResponses.push({
+            name: (sub as any).respondent_name || "익명",
+            department: (sub as any).respondent_department || "",
+            questionText: tq.question_text,
+            answer: val.trim(),
+          });
+        }
+      }
+    }
+  }
+
+  // ── 점수 분포 히스토그램 ──
+  const buckets: ScoreBucket[] = [
+    { range: "90~100", count: 0, color: "#14b8a6" },
+    { range: "80~89", count: 0, color: "#10b981" },
+    { range: "70~79", count: 0, color: "#f59e0b" },
+    { range: "60~69", count: 0, color: "#f97316" },
+    { range: "~59", count: 0, color: "#f43f5e" },
+  ];
+  if (submissions) {
+    for (const sub of submissions) {
+      const score = sub.total_score as number | null;
+      const s100 = score != null && likertQuestions.length > 0
+        ? Math.round((score / (likertQuestions.length * 5)) * 100)
+        : null;
+      if (s100 == null) continue;
+      if (s100 >= 90) buckets[0].count++;
+      else if (s100 >= 80) buckets[1].count++;
+      else if (s100 >= 70) buckets[2].count++;
+      else if (s100 >= 60) buckets[3].count++;
+      else buckets[4].count++;
+    }
+  }
+
+  // ── 응답자 매트릭스 데이터 ──
+  const matrixQuestions: MatrixQuestion[] = likertQuestions.map((q) => ({
+    id: q.id,
+    code: q.question_code || `Q${q.sort_order + 1}`,
+    text: q.question_text,
+  }));
+
+  const matrixRows: MatrixRow[] = (submissions ?? []).map((sub) => {
+    const score = sub.total_score as number | null;
+    const s100 = score != null && likertQuestions.length > 0
+      ? Math.round((score / (likertQuestions.length * 5)) * 100)
+      : 0;
+    return {
+      name: (sub as any).respondent_name || "익명",
+      department: (sub as any).respondent_department || "",
+      channel: (sub as any).channel || "online",
+      answers: (sub.answers as Record<string, number | string>) ?? {},
+      totalScore100: s100,
+    };
+  });
+
+  // ── 채널별 응답 수 ──
+  const channelCounts = { online: 0, interview: 0 };
+  if (submissions) {
+    for (const sub of submissions) {
+      const ch = (sub as any).channel;
+      if (ch === "interview") channelCounts.interview++;
+      else channelCounts.online++;
+    }
+  }
+
   return {
     ...survey,
     submissionCount,
@@ -218,6 +309,13 @@ async function getSurveyReport(surveyId: string) {
     questionDistributions,
     dailyResponses,
     likertQuestionCount: likertQuestions.length,
+    topQuestions,
+    bottomQuestions,
+    openResponses,
+    scoreBuckets: buckets,
+    matrixQuestions,
+    matrixRows,
+    channelCounts,
   };
 }
 
@@ -381,14 +479,55 @@ export default async function ReportsPage({
           </div>
         </div>
 
+        {/* 핵심 인사이트 */}
+        {report.submissionCount > 0 && (
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+            <div className="rounded-xl border border-teal-200 bg-teal-50/50 p-4">
+              <p className="text-[11px] font-medium text-teal-600 mb-2">최고 만족 항목</p>
+              {report.topQuestions.map((q, i) => (
+                <div key={i} className="flex items-center justify-between text-xs mb-1">
+                  <span className="text-stone-700 truncate mr-2">{q.text}</span>
+                  <span className="font-bold text-teal-700 shrink-0">{Math.round(q.avg100 * 10) / 10}</span>
+                </div>
+              ))}
+            </div>
+            <div className="rounded-xl border border-rose-200 bg-rose-50/50 p-4">
+              <p className="text-[11px] font-medium text-rose-600 mb-2">최저 만족 항목</p>
+              {report.bottomQuestions.map((q, i) => (
+                <div key={i} className="flex items-center justify-between text-xs mb-1">
+                  <span className="text-stone-700 truncate mr-2">{q.text}</span>
+                  <span className="font-bold text-rose-700 shrink-0">{Math.round(q.avg100 * 10) / 10}</span>
+                </div>
+              ))}
+            </div>
+            <div className="rounded-xl border border-stone-200 bg-stone-50/50 p-4">
+              <p className="text-[11px] font-medium text-stone-600 mb-2">응답 채널</p>
+              <div className="flex items-center gap-4 mt-3">
+                <div className="text-center flex-1">
+                  <p className="text-xl font-bold text-stone-800">{report.channelCounts.online}</p>
+                  <p className="text-[11px] text-stone-500">온라인 설문</p>
+                </div>
+                <div className="h-8 w-px bg-stone-200" />
+                <div className="text-center flex-1">
+                  <p className="text-xl font-bold text-stone-800">{report.channelCounts.interview}</p>
+                  <p className="text-[11px] text-stone-500">인터뷰</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* 차트 영역 */}
         {report.submissionCount > 0 && (
           <div className="space-y-4 mb-6">
-            {/* 섹션별 바 차트 + Likert 분포 */}
+            {/* 섹션별 바 차트 + 점수 분포 */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               <ScoreBarChart data={report.sectionScores} />
-              <LikertDistribution data={report.questionDistributions.slice(0, 15)} />
+              <ScoreDistribution data={report.scoreBuckets} />
             </div>
+
+            {/* Likert 분포 */}
+            <LikertDistribution data={report.questionDistributions.slice(0, 20)} />
 
             {/* 섹션별 문항 상세 테이블 */}
             <SectionScoreTable data={report.sectionGroups} />
@@ -418,66 +557,31 @@ export default async function ReportsPage({
           }}
         />
 
-        {/* 응답 내역 테이블 */}
-        {report.submissions.length > 0 ? (
+        {/* 응답자별 상세 매트릭스 */}
+        {report.matrixRows.length > 0 && (
+          <div className="mt-6">
+            <RespondentMatrix questions={report.matrixQuestions} rows={report.matrixRows} />
+          </div>
+        )}
+
+        {/* 주관식 답변 모음 */}
+        {report.openResponses.length > 0 && (
           <div className="rounded-xl border border-stone-200 bg-white shadow-sm mt-6">
             <div className="p-5 border-b border-stone-100">
-              <h3 className="text-base font-semibold text-stone-900">
-                응답 내역
-              </h3>
-              <p className="text-xs text-stone-400 mt-0.5">개별 응답자의 총점 및 등급</p>
+              <h3 className="text-sm font-semibold text-stone-800">주관식 답변</h3>
+              <p className="text-[11px] text-stone-400 mt-0.5">{report.openResponses.length}건의 자유 의견</p>
             </div>
-            <div>
-              <div className="flex items-center px-5 h-9 bg-stone-50/80 border-b border-stone-100">
-                <div className="w-12 text-xs font-medium text-stone-500">#</div>
-                <div className="flex-[2] text-xs font-medium text-stone-500">응답일</div>
-                <div className="flex-[2] text-xs font-medium text-stone-500">응답자</div>
-                <div className="flex-[2] text-xs font-medium text-stone-500">소속</div>
-                <div className="w-24 text-xs font-medium text-stone-500 text-right">총점</div>
-                <div className="w-20 text-xs font-medium text-stone-500 text-center">등급</div>
-              </div>
-              {report.submissions.map((sub, idx) => {
-                const score = sub.total_score as number | null;
-                // total_score가 max_possible 기준으로 환산
-                const score100 = score != null && report.likertQuestionCount > 0
-                  ? Math.round((score / (report.likertQuestionCount * 5)) * 1000) / 10
-                  : score;
-                return (
-                  <div
-                    key={sub.id}
-                    className="flex items-center px-5 h-12 border-b border-stone-100 last:border-0 hover:bg-stone-50/50"
-                  >
-                    <div className="w-12 text-sm text-stone-400">{idx + 1}</div>
-                    <div className="flex-[2] text-sm text-stone-700">
-                      {formatDate(sub.created_at)}
-                    </div>
-                    <div className="flex-[2] text-sm font-medium text-stone-800">
-                      {(sub as { respondent_name?: string }).respondent_name || "익명"}
-                    </div>
-                    <div className="flex-[2] text-sm text-stone-500">
-                      {(sub as { respondent_department?: string }).respondent_department || "-"}
-                    </div>
-                    <div className="w-24 text-sm font-semibold text-stone-800 text-right">
-                      {score100 != null ? `${score100}` : "-"}
-                      <span className="text-xs font-normal text-stone-400">/100</span>
-                    </div>
-                    <div className="w-20 text-center">
-                      {score100 != null && (
-                        <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium ${getGradeBadgeClass(score100)}`}>
-                          {getGradeLabel100(score100)}
-                        </span>
-                      )}
-                    </div>
+            <div className="divide-y divide-stone-100">
+              {report.openResponses.map((r, idx) => (
+                <div key={idx} className="px-5 py-4">
+                  <div className="flex items-center gap-2 mb-1.5">
+                    <span className="text-xs font-medium text-stone-800">{r.name}</span>
+                    {r.department && <span className="text-[11px] text-stone-400">{r.department}</span>}
                   </div>
-                );
-              })}
+                  <p className="text-sm text-stone-600 leading-relaxed whitespace-pre-wrap">{r.answer}</p>
+                </div>
+              ))}
             </div>
-          </div>
-        ) : (
-          <div className="rounded-xl border border-stone-200 bg-white shadow-sm p-12 text-center mt-6">
-            <p className="text-sm text-stone-500">
-              아직 응답 데이터가 없습니다.
-            </p>
           </div>
         )}
       </div>
