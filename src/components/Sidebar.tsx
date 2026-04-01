@@ -10,6 +10,7 @@ import {
   ChartColumn,
   Send,
   Mail,
+  Smartphone,
   UserCheck,
   FileSearch,
   PenTool,
@@ -38,6 +39,7 @@ const designItems = [
 const distributeItems = [
   { href: "/admin/distribute", label: "배부 관리", icon: Send },
   { href: "/admin/email-templates", label: "메일 템플릿", icon: Mail },
+  { href: "/admin/sms-templates", label: "SMS 템플릿", icon: Smartphone },
 ];
 
 const adminDistributeItems = [

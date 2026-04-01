@@ -186,7 +186,10 @@ export default function SmsSendPanel({ batchId, surveyId, results }: Props) {
             </div>
           ) : templates.length === 0 ? (
             <p className="text-sm text-stone-400">
-              등록된 SMS 템플릿이 없습니다.
+              등록된 SMS 템플릿이 없습니다.{" "}
+              <a href="/admin/sms-templates" className="text-teal-600 hover:underline">
+                템플릿 만들기
+              </a>
             </p>
           ) : (
             <select
