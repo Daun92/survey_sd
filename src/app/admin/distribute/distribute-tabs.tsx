@@ -10,7 +10,9 @@ import {
   Copy, Check, Printer, Link2, QrCode, Upload, FileSpreadsheet,
   AlertTriangle, CheckCircle2, XCircle, Download, Loader2, ArrowLeft,
   ChevronRight, Eye, Mail, Users, Trash2, UserPlus, ExternalLink, Send,
+  FileBarChart,
 } from 'lucide-react'
+import Link from 'next/link'
 import { parseDistributionCsv, decodeCSVBuffer, type ParsedRow } from '@/lib/csv/parse-distribution-csv'
 import { createDistributionBatch, addToDistributionBatch, getDistributions, deleteDistributionBatch, resendDistributionEmail, resendBatchEmails } from './actions'
 import EmailSendPanel from './email-send-panel'
@@ -822,6 +824,14 @@ export default function DistributeTabs({ surveys, batches: initialBatches }: { s
                             {batch.completedCount > 0 && <span className="flex items-center gap-0.5"><CheckCircle2 size={10} /> 완료 {batch.completedCount}</span>}
                           </div>
                         </div>
+                        <Link
+                          href={`/admin/reports?survey=${batch.surveyId}`}
+                          onClick={(e) => e.stopPropagation()}
+                          className="p-1.5 text-stone-300 hover:text-teal-600 transition-colors rounded-md hover:bg-teal-50 flex-shrink-0"
+                          title="리포트 보기"
+                        >
+                          <FileBarChart size={14} />
+                        </Link>
                         <button
                           onClick={(e) => { e.stopPropagation(); handleDeleteBatch(batch.id) }}
                           disabled={isDeleting}
