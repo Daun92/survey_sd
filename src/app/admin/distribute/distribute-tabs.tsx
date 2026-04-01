@@ -13,7 +13,7 @@ import {
   FileBarChart,
 } from 'lucide-react'
 import Link from 'next/link'
-import { parseDistributionCsv, decodeCSVBuffer, type ParsedRow } from '@/lib/csv/parse-distribution-csv'
+import { parseDistributionCsv, parseDistributionXlsx, decodeCSVBuffer, type ParsedRow } from '@/lib/csv/parse-distribution-csv'
 import { createDistributionBatch, addToDistributionBatch, getDistributions, deleteDistributionBatch, resendDistributionEmail, resendBatchEmails, resendDistributionSms, resendBatchSms } from './actions'
 import EmailSendPanel from './email-send-panel'
 import EmailProviderSettings from './email-provider-settings'
@@ -150,15 +150,21 @@ export default function DistributeTabs({ surveys, batches: initialBatches }: { s
   // ─── 개인 링크 핸들러 ───
   const handleFile = useCallback(async (file: File) => {
     setError(null)
-    if (!file.name.endsWith('.csv')) {
-      setError('CSV 파일만 업로드 가능합니다')
+    const ext = file.name.split('.').pop()?.toLowerCase()
+    if (ext !== 'csv' && ext !== 'xlsx' && ext !== 'xls') {
+      setError('CSV 또는 Excel(.xlsx) 파일만 업로드 가능합니다')
       return
     }
     const buffer = await file.arrayBuffer()
-    const text = decodeCSVBuffer(buffer)
-    const rows = parseDistributionCsv(text)
+    let rows: ParsedRow[]
+    if (ext === 'xlsx' || ext === 'xls') {
+      rows = await parseDistributionXlsx(buffer)
+    } else {
+      const text = decodeCSVBuffer(buffer)
+      rows = parseDistributionCsv(text)
+    }
     if (rows.length === 0) {
-      setError('유효한 데이터가 없습니다. CSV 형식을 확인해주세요.')
+      setError('유효한 데이터가 없습니다. 파일 형식과 헤더를 확인해주세요.')
       return
     }
     setParsedRows(rows)
@@ -223,13 +229,19 @@ export default function DistributeTabs({ surveys, batches: initialBatches }: { s
   // ─── 추가 대상자 핸들러 ───
   const handleAddMoreFile = useCallback(async (file: File) => {
     setAddMoreError(null)
-    if (!file.name.endsWith('.csv')) {
-      setAddMoreError('CSV 파일만 업로드 가능합니다')
+    const ext = file.name.split('.').pop()?.toLowerCase()
+    if (ext !== 'csv' && ext !== 'xlsx' && ext !== 'xls') {
+      setAddMoreError('CSV 또는 Excel(.xlsx) 파일만 업로드 가능합니다')
       return
     }
     const buffer = await file.arrayBuffer()
-    const text = decodeCSVBuffer(buffer)
-    const rows = parseDistributionCsv(text)
+    let rows: ParsedRow[]
+    if (ext === 'xlsx' || ext === 'xls') {
+      rows = await parseDistributionXlsx(buffer)
+    } else {
+      const text = decodeCSVBuffer(buffer)
+      rows = parseDistributionCsv(text)
+    }
     if (rows.length === 0) {
       setAddMoreError('유효한 데이터가 없습니다.')
       return
@@ -543,11 +555,11 @@ export default function DistributeTabs({ surveys, batches: initialBatches }: { s
                       >
                         <Upload size={24} className="mx-auto mb-1 text-teal-400" />
                         <p className="text-sm text-teal-700">CSV 파일을 클릭하여 선택</p>
-                        <p className="text-xs text-stone-400 mt-1">필수 컬럼: 회사, 담당자, 이메일</p>
+                        <p className="text-xs text-stone-400 mt-1">인식 컬럼: 회사, 담당자, 이메일, 전화, 프로젝트명, 과정(차수), AM, 수행팀</p>
                         <input
                           id="csv-add-more"
                           type="file"
-                          accept=".csv"
+                          accept=".csv,.xlsx,.xls"
                           className="hidden"
                           onChange={(e) => {
                             const file = e.target.files?.[0]
@@ -737,7 +749,7 @@ export default function DistributeTabs({ surveys, batches: initialBatches }: { s
               개인 링크 생성
             </CardTitle>
             <CardDescription>
-              CSV 파일을 업로드하면 응답자별 고유 링크를 자동 생성합니다
+              CSV 또는 Excel 파일을 업로드하면 응답자별 고유 링크를 자동 생성합니다
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -754,13 +766,13 @@ export default function DistributeTabs({ surveys, batches: initialBatches }: { s
             >
               <Upload size={32} className={`mx-auto mb-2 ${isDragOver ? 'text-teal-500' : 'text-stone-400'}`} />
               <p className="text-sm font-medium text-stone-700">
-                CSV 파일을 여기에 드래그하거나 클릭하여 선택
+                CSV 또는 Excel 파일을 여기에 드래그하거나 클릭하여 선택
               </p>
-              <p className="text-xs text-stone-400 mt-1">필수 컬럼: 회사, 담당자, 이메일</p>
+              <p className="text-xs text-stone-400 mt-1">인식 컬럼: 회사, 담당자, 이메일, 전화, 프로젝트명, 과정(차수), AM, 수행팀</p>
               <input
                 id="csv-input"
                 type="file"
-                accept=".csv"
+                accept=".csv,.xlsx,.xls"
                 className="hidden"
                 onChange={handleFileInput}
               />

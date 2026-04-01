@@ -1,4 +1,4 @@
-// CSV 파싱 유틸리티 — CS 설문대상 CSV → 배포용 구조화 데이터
+// CSV/XLSX 파싱 유틸리티 — CS 설문대상 파일 → 배포용 구조화 데이터
 
 export interface ParsedRow {
   rowNumber: number
@@ -89,23 +89,19 @@ export function decodeCSVBuffer(buffer: ArrayBuffer): string {
   }
 }
 
-/** CSV 텍스트를 파싱하여 배포용 구조화 데이터 배열로 반환 */
-export function parseDistributionCsv(text: string): ParsedRow[] {
-  const lines = text.split(/\r?\n/).filter((l) => l.trim())
-  if (lines.length < 2) return []
-
-  const headerFields = parseCSVLine(lines[0])
+/** 2차원 문자열 배열(헤더 + 데이터 행)을 ParsedRow[]로 변환 — CSV/XLSX 공통 */
+function parseRowsFromGrid(headerRow: string[], dataRows: string[][]): ParsedRow[] {
   const columnIndices: Record<string, number> = {}
 
-  headerFields.forEach((header, idx) => {
+  headerRow.forEach((header, idx) => {
     const key = HEADER_MAP[header.trim()]
     if (key) columnIndices[key] = idx
   })
 
   const rows: ParsedRow[] = []
 
-  for (let i = 1; i < lines.length; i++) {
-    const fields = parseCSVLine(lines[i])
+  for (let i = 0; i < dataRows.length; i++) {
+    const fields = dataRows[i]
     const get = (key: string) => {
       const idx = columnIndices[key]
       return idx !== undefined ? (fields[idx] ?? '').trim() : ''
@@ -115,19 +111,17 @@ export function parseDistributionCsv(text: string): ParsedRow[] {
     const rawEmail = get('email')
     const rawPhone = get('phone')
 
-    // 담당자와 이메일 모두 없으면 스킵
     if (!name && !rawEmail) continue
 
     const emailIsPhone = isPhoneInEmailField(rawEmail)
     const email = emailIsPhone ? '' : rawEmail
     const emailValid = email ? EMAIL_REGEX.test(email) : false
 
-    // 이메일 컬럼에 전화번호가 있으면 phone에 병합
     const effectivePhone = rawPhone || (emailIsPhone ? rawEmail : '')
     const phoneNormalized = normalizePhone(effectivePhone)
 
     rows.push({
-      rowNumber: i + 1,
+      rowNumber: i + 2, // 1-indexed, 헤더 제외
       company: get('company'),
       project: get('project'),
       course: get('course'),
@@ -142,4 +136,34 @@ export function parseDistributionCsv(text: string): ParsedRow[] {
   }
 
   return rows
+}
+
+/** XLSX ArrayBuffer를 파싱하여 배포용 구조화 데이터 배열로 반환 */
+export async function parseDistributionXlsx(buffer: ArrayBuffer): Promise<ParsedRow[]> {
+  const XLSX = await import('xlsx')
+  const workbook = XLSX.read(buffer, { type: 'array' })
+  const sheetName = workbook.SheetNames[0]
+  if (!sheetName) return []
+
+  const sheet = workbook.Sheets[sheetName]
+  const jsonData = XLSX.utils.sheet_to_json<string[]>(sheet, { header: 1, defval: '' })
+  if (jsonData.length < 2) return []
+
+  const headerRow = jsonData[0].map((cell) => String(cell))
+  const dataRows = jsonData.slice(1).map((row) =>
+    row.map((cell) => String(cell ?? ''))
+  )
+
+  return parseRowsFromGrid(headerRow, dataRows)
+}
+
+/** CSV 텍스트를 파싱하여 배포용 구조화 데이터 배열로 반환 */
+export function parseDistributionCsv(text: string): ParsedRow[] {
+  const lines = text.split(/\r?\n/).filter((l) => l.trim())
+  if (lines.length < 2) return []
+
+  const headerRow = parseCSVLine(lines[0])
+  const dataRows = lines.slice(1).map((line) => parseCSVLine(line))
+
+  return parseRowsFromGrid(headerRow, dataRows)
 }
