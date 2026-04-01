@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { updateProject, deleteProject } from "./actions";
 import { Pencil, Trash2, Loader2, X, Check } from "lucide-react";
 
@@ -33,6 +34,7 @@ const projectTypeOptions = [
 ];
 
 export function ProjectActions({ project }: Props) {
+  const router = useRouter();
   const [editing, setEditing] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [pending, setPending] = useState(false);
@@ -54,11 +56,12 @@ export function ProjectActions({ project }: Props) {
   async function handleDelete() {
     setPending(true);
     setError(null);
-    try {
-      await deleteProject(project.id);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "삭제 중 오류가 발생했습니다.");
+    const result = await deleteProject(project.id);
+    if (result.error) {
+      setError(result.error);
       setPending(false);
+    } else {
+      router.push("/admin/projects");
     }
   }
 

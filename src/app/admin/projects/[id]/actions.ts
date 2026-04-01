@@ -41,16 +41,27 @@ export async function updateProject(id: string, formData: FormData) {
   revalidatePath("/admin/projects");
 }
 
-export async function deleteProject(id: string) {
+export async function deleteProject(id: string): Promise<{ error?: string }> {
   const supabase = await createClient();
+
+  // 안전장치: 연결된 과정(courses) 확인
+  const { count: courseCount } = await supabase
+    .from("courses")
+    .select("id", { count: "exact", head: true })
+    .eq("project_id", id);
+
+  if (courseCount && courseCount > 0) {
+    return { error: `이 프로젝트에 과정이 ${courseCount}개 있어 삭제할 수 없습니다. 과정을 먼저 삭제해주세요.` };
+  }
+
   const { error } = await supabase.from("projects").delete().eq("id", id);
 
   if (error) {
-    throw new Error("프로젝트 삭제 실패: " + error.message);
+    return { error: "프로젝트 삭제 실패: " + error.message };
   }
 
   revalidatePath("/admin/projects");
-  redirect("/admin/projects");
+  return {};
 }
 
 // ─── Session CRUD ───────────────────────────────────────
