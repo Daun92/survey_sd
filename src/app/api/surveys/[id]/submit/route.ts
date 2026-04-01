@@ -87,6 +87,7 @@ export const POST = withAuth({ type: "public" }, async (request: NextRequest, ct
         survey_id: survey.id,
         session_id: survey.session_id,
         class_group_id: resolvedGroupId,
+        distribution_id: distributionId,
         respondent_name: distRespondentName || null,
         respondent_department: respondent_department || null,
         respondent_position: respondent_position || null,

@@ -6,7 +6,7 @@ export const PATCH = withAuth({ type: "public" }, async (request: NextRequest, c
   const supabase = await createClient();
 
   try {
-    const token = ctx.params?.token
+    const token = ctx.params?.id
     if (!token) return NextResponse.json({ error: 'Token이 필요합니다' }, { status: 400 })
     const { status } = await request.json()
 
