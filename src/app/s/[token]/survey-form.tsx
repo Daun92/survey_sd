@@ -751,7 +751,7 @@ export default function SurveyForm({ survey, groupToken, distributionToken, pref
               <Textarea
                 placeholder="의견을 입력해 주세요..."
                 rows={3}
-                className="rounded-xl"
+                className="rounded-xl bg-white border-stone-300 shadow-sm"
                 value={(answers[question.id] as string) || ''}
                 onChange={(e) => handleTextChange(question.id, e.target.value)}
               />

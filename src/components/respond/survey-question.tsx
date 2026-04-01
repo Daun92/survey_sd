@@ -367,10 +367,10 @@ function TextExpert({
       rows={4}
       className="w-full max-w-2xl p-6 rounded-xl text-base resize-y transition-all duration-200 outline-none"
       style={{
-        backgroundColor: "var(--expert-surface-lowest)",
-        border: "1.5px solid var(--expert-outline-variant)",
+        backgroundColor: "#ffffff",
+        border: "1.5px solid var(--expert-outline)",
         color: "var(--expert-on-surface)",
-        boxShadow: "none",
+        boxShadow: "0 1px 3px rgba(0, 0, 0, 0.06)",
       }}
       onFocus={(e) => {
         e.target.style.borderColor = "var(--expert-primary)";
@@ -378,8 +378,8 @@ function TextExpert({
           "0 0 0 3px rgba(0, 106, 60, 0.15)";
       }}
       onBlur={(e) => {
-        e.target.style.borderColor = "var(--expert-outline-variant)";
-        e.target.style.boxShadow = "none";
+        e.target.style.borderColor = "var(--expert-outline)";
+        e.target.style.boxShadow = "0 1px 3px rgba(0, 0, 0, 0.06)";
       }}
     />
   );
