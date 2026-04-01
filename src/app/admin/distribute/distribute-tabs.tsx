@@ -873,6 +873,7 @@ export default function DistributeTabs({ surveys, batches: initialBatches }: { s
                                 <tr className="bg-stone-50 border-b border-stone-200">
                                   <th className="text-left px-3 py-2 text-stone-500 font-medium w-10">#</th>
                                   <th className="text-left px-3 py-2 text-stone-500 font-medium">담당자</th>
+                                  <th className="text-left px-3 py-2 text-stone-500 font-medium">연락처</th>
                                   <th className="text-left px-3 py-2 text-stone-500 font-medium">이메일</th>
                                   <th className="text-left px-3 py-2 text-stone-500 font-medium">개인 링크</th>
                                   <th className="text-center px-3 py-2 text-stone-500 font-medium w-16">상태</th>
@@ -887,10 +888,11 @@ export default function DistributeTabs({ surveys, batches: initialBatches }: { s
                                     <tr key={d.id} className="border-b border-stone-100 last:border-0">
                                       <td className="px-3 py-2 text-stone-400">{idx + 1}</td>
                                       <td className="px-3 py-2 text-stone-700">{d.recipient_name}</td>
-                                      <td className="px-3 py-2 text-stone-600 font-mono text-xs">{d.recipient_email || '-'}</td>
-                                      <td className="px-3 py-2 font-mono text-xs text-teal-700 truncate max-w-[260px]">
-                                        <a href={link} target="_blank" rel="noopener noreferrer" className="hover:underline">
-                                          /d/{d.unique_token?.slice(0, 12)}…
+                                      <td className="px-3 py-2 text-stone-600 text-xs">{d.recipient_phone || '-'}</td>
+                                      <td className="px-3 py-2 text-stone-600 text-xs">{d.recipient_email || '-'}</td>
+                                      <td className="px-3 py-2 font-mono text-xs text-teal-700">
+                                        <a href={link} target="_blank" rel="noopener noreferrer" className="hover:underline" title={link}>
+                                          /{d.unique_token?.slice(0, 6)}…
                                         </a>
                                       </td>
                                       <td className="px-3 py-2 text-center">
