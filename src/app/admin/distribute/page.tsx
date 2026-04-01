@@ -9,9 +9,10 @@ async function getSurveyData(supabase: Awaited<ReturnType<typeof createClient>>)
   const { data: surveys } = await supabase
     .from("edu_surveys")
     .select(`
-      id, title, status, url_token, created_at,
+      id, title, status, education_type, url_token, created_at,
       sessions ( id, name,
-        class_groups ( id, name, survey_url_token )
+        class_groups ( id, name, survey_url_token ),
+        courses ( name )
       )
     `)
     .in("status", ["active", "draft"])
@@ -22,6 +23,8 @@ async function getSurveyData(supabase: Awaited<ReturnType<typeof createClient>>)
     title: s.title,
     token: s.url_token,
     status: s.status,
+    educationType: s.education_type ?? null,
+    sessionName: s.sessions?.name ?? null,
     classGroups: (s.sessions?.class_groups ?? []).map((g: any) => ({
       id: g.id,
       name: g.name,

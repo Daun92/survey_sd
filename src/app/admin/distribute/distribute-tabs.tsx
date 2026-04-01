@@ -26,7 +26,16 @@ interface SurveyItem {
   title: string
   token: string
   status: string
+  educationType: string | null
+  sessionName: string | null
   classGroups: ClassGroup[]
+}
+
+const eduTypeLabel: Record<string, string> = {
+  classroom: '집합',
+  remote: '원격',
+  online: '온라인',
+  blended: '블렌디드',
 }
 
 interface BatchItem {
@@ -93,6 +102,7 @@ export default function DistributeTabs({ surveys, batches: initialBatches }: { s
   const [resendingId, setResendingId] = useState<string | null>(null)
   const [resendResult, setResendResult] = useState<{ id: string; success?: boolean; error?: string } | null>(null)
   const [batchResending, setBatchResending] = useState(false)
+  const [emailPanelBatchId, setEmailPanelBatchId] = useState<string | null>(null)
 
   const selectedSurvey = surveys.find((s) => s.id === selectedSurveyId)
   const surveyUrl = selectedSurvey ? `${BASE_URL}/s/${selectedSurvey.token}` : ''
@@ -610,9 +620,15 @@ export default function DistributeTabs({ surveys, batches: initialBatches }: { s
               value={selectedSurveyId}
               onChange={(e) => setSelectedSurveyId(e.target.value)}
             >
-              {surveys.map((s) => (
-                <option key={s.id} value={s.id}>{s.title}</option>
-              ))}
+              {surveys.map((s) => {
+                const eduLabel = s.educationType ? eduTypeLabel[s.educationType] : null
+                const parts = [s.title]
+                if (eduLabel) parts.push(`[${eduLabel}]`)
+                if (s.sessionName) parts.push(`- ${s.sessionName}`)
+                return (
+                  <option key={s.id} value={s.id}>{parts.join(' ')}</option>
+                )
+              })}
             </select>
           </CardContent>
         </Card>
@@ -732,19 +748,21 @@ export default function DistributeTabs({ surveys, batches: initialBatches }: { s
           </CardContent>
         </Card>
 
-        {/* ④ 배부 이력 */}
-        {batches.length > 0 && (
+        {/* ④ 배부 이력 (선택한 설문 기준) */}
+        {(() => {
+          const filteredBatches = batches.filter(b => b.surveyId === selectedSurveyId)
+          return filteredBatches.length > 0 ? (
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Users size={18} className="text-stone-600" />
                 배부 이력
               </CardTitle>
-              <CardDescription>이전에 생성한 개인 링크 배치를 확인하고 관리합니다</CardDescription>
+              <CardDescription>선택한 설문의 개인 링크 배치를 확인하고 관리합니다</CardDescription>
             </CardHeader>
             <CardContent className="p-0">
               <div className="divide-y divide-stone-100">
-                {batches.map((batch) => {
+                {filteredBatches.map((batch) => {
                   const isExpanded = expandedBatchId === batch.id
                   const isLoading = loadingBatchId === batch.id
                   const isDeleting = deletingBatchId === batch.id
@@ -911,6 +929,33 @@ export default function DistributeTabs({ surveys, batches: initialBatches }: { s
                               <Download size={13} className="mr-1" /> CSV 다운로드
                             </Button>
                           </div>
+
+                          {/* 이메일 발송 토글 */}
+                          <div className="mt-3">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="w-full text-stone-600 border-stone-200"
+                              onClick={() => setEmailPanelBatchId(emailPanelBatchId === batch.id ? null : batch.id)}
+                            >
+                              <Mail size={13} className="mr-1" />
+                              {emailPanelBatchId === batch.id ? '이메일 발송 닫기' : '이메일 발송 / 테스트 발송'}
+                            </Button>
+                          </div>
+
+                          {emailPanelBatchId === batch.id && (
+                            <div className="mt-3">
+                              <EmailSendPanel
+                                batchId={batch.id}
+                                surveyId={batch.surveyId}
+                                results={batchDistributions.map((d: any) => ({
+                                  name: d.recipient_name ?? '',
+                                  email: d.recipient_email ?? '',
+                                  uniqueToken: d.unique_token ?? '',
+                                }))}
+                              />
+                            </div>
+                          )}
                         </div>
                       )}
                       {isExpanded && !isLoading && batchDistributions.length === 0 && (
@@ -922,7 +967,8 @@ export default function DistributeTabs({ surveys, batches: initialBatches }: { s
               </div>
             </CardContent>
           </Card>
-        )}
+          ) : null
+        })()}
       </div>
     </div>
   )
