@@ -9,10 +9,10 @@ import { Badge } from '@/components/ui/badge'
 import {
   Copy, Check, Printer, Link2, QrCode, Upload, FileSpreadsheet,
   AlertTriangle, CheckCircle2, XCircle, Download, Loader2, ArrowLeft,
-  ChevronRight, Eye, Mail, Users, Trash2, UserPlus, ExternalLink,
+  ChevronRight, Eye, Mail, Users, Trash2, UserPlus, ExternalLink, Send,
 } from 'lucide-react'
 import { parseDistributionCsv, decodeCSVBuffer, type ParsedRow } from '@/lib/csv/parse-distribution-csv'
-import { createDistributionBatch, addToDistributionBatch, getDistributions, deleteDistributionBatch } from './actions'
+import { createDistributionBatch, addToDistributionBatch, getDistributions, deleteDistributionBatch, resendDistributionEmail, resendBatchEmails } from './actions'
 import EmailSendPanel from './email-send-panel'
 
 interface ClassGroup {
@@ -90,6 +90,9 @@ export default function DistributeTabs({ surveys, batches: initialBatches }: { s
   const [batchDistributions, setBatchDistributions] = useState<any[]>([])
   const [loadingBatchId, setLoadingBatchId] = useState<string | null>(null)
   const [deletingBatchId, setDeletingBatchId] = useState<string | null>(null)
+  const [resendingId, setResendingId] = useState<string | null>(null)
+  const [resendResult, setResendResult] = useState<{ id: string; success?: boolean; error?: string } | null>(null)
+  const [batchResending, setBatchResending] = useState(false)
 
   const selectedSurvey = surveys.find((s) => s.id === selectedSurveyId)
   const surveyUrl = selectedSurvey ? `${BASE_URL}/s/${selectedSurvey.token}` : ''
@@ -793,7 +796,7 @@ export default function DistributeTabs({ surveys, batches: initialBatches }: { s
                                   <th className="text-left px-3 py-2 text-stone-500 font-medium">이메일</th>
                                   <th className="text-left px-3 py-2 text-stone-500 font-medium">개인 링크</th>
                                   <th className="text-center px-3 py-2 text-stone-500 font-medium w-16">상태</th>
-                                  <th className="text-center px-3 py-2 text-stone-500 font-medium w-10"></th>
+                                  <th className="text-center px-3 py-2 text-stone-500 font-medium w-20"></th>
                                 </tr>
                               </thead>
                               <tbody>
@@ -815,6 +818,33 @@ export default function DistributeTabs({ surveys, batches: initialBatches }: { s
                                       </td>
                                       <td className="px-3 py-2 text-center">
                                         <div className="flex items-center justify-center gap-1.5">
+                                          {d.status !== 'completed' && d.recipient_email && (
+                                            <button
+                                              onClick={async (e) => {
+                                                e.stopPropagation()
+                                                setResendingId(d.id)
+                                                setResendResult(null)
+                                                const res = await resendDistributionEmail(d.id)
+                                                setResendResult({ id: d.id, ...res })
+                                                setResendingId(null)
+                                                if (res.success) {
+                                                  const dists = await getDistributions(batch.id)
+                                                  setBatchDistributions(dists)
+                                                }
+                                              }}
+                                              disabled={resendingId === d.id}
+                                              className="text-stone-400 hover:text-teal-600 transition-colors"
+                                              title={resendResult?.id === d.id && resendResult?.error ? resendResult.error : "재발송"}
+                                            >
+                                              {resendingId === d.id
+                                                ? <Loader2 size={13} className="animate-spin" />
+                                                : resendResult?.id === d.id && resendResult?.success
+                                                  ? <CheckCircle2 size={13} className="text-emerald-500" />
+                                                  : resendResult?.id === d.id && resendResult?.error
+                                                    ? <XCircle size={13} className="text-rose-500" />
+                                                    : <Send size={13} />}
+                                            </button>
+                                          )}
                                           <a href={link} target="_blank" rel="noopener noreferrer" className="text-stone-400 hover:text-teal-600 transition-colors" title="응답자 화면 미리보기">
                                             <ExternalLink size={13} />
                                           </a>
@@ -830,6 +860,31 @@ export default function DistributeTabs({ surveys, batches: initialBatches }: { s
                             </table>
                           </div>
                           <div className="flex gap-2 mt-3 justify-end">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="text-teal-700 border-teal-200 hover:bg-teal-50 mr-auto"
+                              onClick={async () => {
+                                if (!confirm('미응답자에게 설문 안내 메일을 재발송하시겠습니까?')) return
+                                setBatchResending(true)
+                                setResendResult(null)
+                                const res = await resendBatchEmails(batch.id)
+                                setBatchResending(false)
+                                if (res.error) {
+                                  setError(res.error)
+                                } else {
+                                  const dists = await getDistributions(batch.id)
+                                  setBatchDistributions(dists)
+                                  alert(`${res.sent ?? 0}건 발송 완료${res.failed ? `, ${res.failed}건 실패` : ''}`)
+                                }
+                              }}
+                              disabled={batchResending}
+                            >
+                              {batchResending
+                                ? <Loader2 size={13} className="mr-1 animate-spin" />
+                                : <Send size={13} className="mr-1" />}
+                              미응답자 재발송
+                            </Button>
                             <Button variant="outline" size="sm" onClick={() => {
                               const text = batchDistributions
                                 .map((d: any) => `${d.recipient_name}\t${d.recipient_email ?? ''}\t${BASE_URL}/d/${d.unique_token}`)

@@ -14,5 +14,6 @@ export interface EmailResult {
 }
 
 export interface EmailSender {
+  readonly isMock?: boolean
   send(req: EmailSendRequest): Promise<EmailResult>
 }

@@ -3,7 +3,7 @@
 import { createAdminClient } from "@/lib/supabase/admin"
 import { createBatchSchema, type CreateBatchInput } from "@/lib/validations/distribution"
 import { renderTemplate, getTemplateVariables } from "@/lib/email/template-renderer"
-import { getEmailSender } from "@/lib/email/sender"
+import { getEmailSender, isEmailConfigured } from "@/lib/email/sender"
 
 interface DistributionResult {
   name: string
@@ -421,6 +421,9 @@ export async function scheduleEmailBatch(
   // 4. 즉시 발송인 경우 바로 처리
   if (input.scheduleType === "immediate") {
     const sender = getEmailSender()
+    if (sender.isMock) {
+      return { error: "메일 발송 설정이 완료되지 않았습니다. HIWORKS_OFFICE_TOKEN / HIWORKS_USER_ID 환경변수를 확인하세요." }
+    }
     const { data: pendingQueue } = await supabase
       .from("email_queue")
       .select("id, recipient_email, recipient_name, subject, body_html, distribution_id")
@@ -557,6 +560,10 @@ export async function sendTestEmail(input: {
   const bodyHtml = renderTemplate(input.customBodyHtml ?? template.body_html, vars)
 
   const sender = getEmailSender()
+  if (sender.isMock) {
+    return { error: "메일 발송 설정이 완료되지 않았습니다. HIWORKS_OFFICE_TOKEN / HIWORKS_USER_ID 환경변수를 확인하세요." }
+  }
+
   const result = await sender.send({
     to: input.testEmail,
     toName: "테스트 수신자",
@@ -568,4 +575,231 @@ export async function sendTestEmail(input: {
     return { success: true }
   }
   return { error: result.error ?? "발송 실패" }
+}
+
+// ─── 개별 재발송 ───
+
+export async function resendDistributionEmail(
+  distributionId: string
+): Promise<{ success?: boolean; error?: string }> {
+  if (!isEmailConfigured()) {
+    return { error: "메일 발송 설정이 완료되지 않았습니다. HIWORKS_OFFICE_TOKEN / HIWORKS_USER_ID 환경변수를 확인하세요." }
+  }
+
+  const supabase = createAdminClient()
+
+  // 1. distribution 조회
+  const { data: dist, error: distErr } = await supabase
+    .from("distributions")
+    .select("id, unique_token, recipient_name, recipient_email, batch_id, status")
+    .eq("id", distributionId)
+    .single()
+
+  if (distErr || !dist) {
+    return { error: "배부 데이터를 찾을 수 없습니다" }
+  }
+  if (!dist.recipient_email) {
+    return { error: "수신자 이메일이 없습니다" }
+  }
+  if (dist.status === "completed") {
+    return { error: "이미 설문을 완료한 수신자입니다" }
+  }
+
+  // 2. 기존 email_queue에서 subject/body 가져오기
+  const { data: prevQueue } = await supabase
+    .from("email_queue")
+    .select("subject, body_html")
+    .eq("distribution_id", distributionId)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .single()
+
+  let subject: string
+  let bodyHtml: string
+
+  if (prevQueue) {
+    subject = prevQueue.subject
+    bodyHtml = prevQueue.body_html
+  } else {
+    // 기본 템플릿으로 렌더링
+    const { data: defaultTpl } = await supabase
+      .from("email_templates")
+      .select("subject, body_html")
+      .eq("is_default", true)
+      .limit(1)
+      .single()
+
+    if (!defaultTpl) {
+      return { error: "기본 이메일 템플릿을 찾을 수 없습니다" }
+    }
+
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://survey.exc.co.kr"
+    const vars = getTemplateVariables({
+      recipientName: dist.recipient_name ?? undefined,
+      surveyLink: `${baseUrl}/d/${dist.unique_token}`,
+    })
+
+    subject = renderTemplate(defaultTpl.subject, vars)
+    bodyHtml = renderTemplate(defaultTpl.body_html, vars)
+  }
+
+  // 3. email_queue에 insert
+  const now = new Date().toISOString()
+  const { data: queueItem, error: insertErr } = await supabase
+    .from("email_queue")
+    .insert({
+      distribution_id: dist.id,
+      recipient_email: dist.recipient_email,
+      recipient_name: dist.recipient_name,
+      subject,
+      body_html: bodyHtml,
+      schedule_type: "immediate",
+      scheduled_at: now,
+      status: "pending",
+    })
+    .select("id")
+    .single()
+
+  if (insertErr || !queueItem) {
+    return { error: "큐 등록 실패: " + (insertErr?.message ?? "Unknown") }
+  }
+
+  // 4. 즉시 발송
+  await supabase
+    .from("email_queue")
+    .update({ status: "processing" })
+    .eq("id", queueItem.id)
+
+  const sender = getEmailSender()
+  const result = await sender.send({
+    to: dist.recipient_email,
+    toName: dist.recipient_name ?? undefined,
+    subject,
+    bodyHtml,
+  })
+
+  if (result.success) {
+    await supabase
+      .from("email_queue")
+      .update({ status: "sent", sent_at: now })
+      .eq("id", queueItem.id)
+
+    await supabase
+      .from("distributions")
+      .update({ status: "sent", sent_at: now })
+      .eq("id", dist.id)
+
+    return { success: true }
+  }
+
+  await supabase
+    .from("email_queue")
+    .update({ status: "failed", last_error: result.error ?? "Unknown error" })
+    .eq("id", queueItem.id)
+
+  return { error: result.error ?? "발송 실패" }
+}
+
+// ─── 배치 미응답자 일괄 재발송 ───
+
+export async function resendBatchEmails(
+  batchId: string
+): Promise<{ sent?: number; failed?: number; error?: string }> {
+  if (!isEmailConfigured()) {
+    return { error: "메일 발송 설정이 완료되지 않았습니다. HIWORKS_OFFICE_TOKEN / HIWORKS_USER_ID 환경변수를 확인하세요." }
+  }
+
+  const supabase = createAdminClient()
+
+  // 미완료 & 이메일 있는 distribution 조회
+  const { data: distributions, error: distErr } = await supabase
+    .from("distributions")
+    .select("id, unique_token, recipient_name, recipient_email, status")
+    .eq("batch_id", batchId)
+    .neq("status", "completed")
+    .not("recipient_email", "is", null)
+
+  if (distErr || !distributions || distributions.length === 0) {
+    return { error: "재발송 대상이 없습니다" }
+  }
+
+  const sender = getEmailSender()
+  const now = new Date().toISOString()
+  let sent = 0
+  let failed = 0
+
+  for (const dist of distributions) {
+    // 기존 큐에서 subject/body 가져오기
+    const { data: prevQueue } = await supabase
+      .from("email_queue")
+      .select("subject, body_html")
+      .eq("distribution_id", dist.id)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .single()
+
+    let subject: string
+    let bodyHtml: string
+
+    if (prevQueue) {
+      subject = prevQueue.subject
+      bodyHtml = prevQueue.body_html
+    } else {
+      const { data: defaultTpl } = await supabase
+        .from("email_templates")
+        .select("subject, body_html")
+        .eq("is_default", true)
+        .limit(1)
+        .single()
+
+      if (!defaultTpl) continue
+
+      const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://survey.exc.co.kr"
+      const vars = getTemplateVariables({
+        recipientName: dist.recipient_name ?? undefined,
+        surveyLink: `${baseUrl}/d/${dist.unique_token}`,
+      })
+
+      subject = renderTemplate(defaultTpl.subject, vars)
+      bodyHtml = renderTemplate(defaultTpl.body_html, vars)
+    }
+
+    // 큐 insert + 즉시 발송
+    const { data: queueItem } = await supabase
+      .from("email_queue")
+      .insert({
+        distribution_id: dist.id,
+        recipient_email: dist.recipient_email!,
+        recipient_name: dist.recipient_name,
+        subject,
+        body_html: bodyHtml,
+        schedule_type: "immediate",
+        scheduled_at: now,
+        status: "processing",
+      })
+      .select("id")
+      .single()
+
+    const result = await sender.send({
+      to: dist.recipient_email!,
+      toName: dist.recipient_name ?? undefined,
+      subject,
+      bodyHtml,
+    })
+
+    if (result.success) {
+      if (queueItem) {
+        await supabase.from("email_queue").update({ status: "sent", sent_at: now }).eq("id", queueItem.id)
+      }
+      await supabase.from("distributions").update({ status: "sent", sent_at: now }).eq("id", dist.id)
+      sent++
+    } else {
+      if (queueItem) {
+        await supabase.from("email_queue").update({ status: "failed", last_error: result.error ?? "Unknown" }).eq("id", queueItem.id)
+      }
+      failed++
+    }
+  }
+
+  return { sent, failed }
 }

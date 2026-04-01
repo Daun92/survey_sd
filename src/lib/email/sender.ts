@@ -2,6 +2,8 @@ import type { EmailSendRequest, EmailResult, EmailSender } from './types'
 
 // ─── Mock 발송기 (개발/테스트용) ───
 class MockEmailSender implements EmailSender {
+  readonly isMock = true
+
   async send(req: EmailSendRequest): Promise<EmailResult> {
     console.log(`[MockEmail] To: ${req.toName} <${req.to}>`)
     console.log(`[MockEmail] Subject: ${req.subject}`)
@@ -71,6 +73,11 @@ class HiWorksEmailSender implements EmailSender {
       }
     }
   }
+}
+
+// ─── 환경변수 체크 ───
+export function isEmailConfigured(): boolean {
+  return !!(process.env.HIWORKS_OFFICE_TOKEN && process.env.HIWORKS_USER_ID)
 }
 
 // ─── 팩토리 ───
