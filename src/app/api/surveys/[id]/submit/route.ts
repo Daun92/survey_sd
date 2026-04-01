@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { submitSurveySchema } from '@/lib/validations/submission'
 import { withAuth } from '@/lib/api-utils'
 
 export const POST = withAuth({ type: "public" }, async (request: NextRequest, ctx) => {
-  const supabase = await createClient()
+  const supabase = createAdminClient()
 
   const token = ctx.params?.id
   if (!token) return NextResponse.json({ error: 'Token이 필요합니다' }, { status: 400 })
@@ -104,7 +104,7 @@ export const POST = withAuth({ type: "public" }, async (request: NextRequest, ct
 
     if (submitError) {
       console.error('Submission error:', submitError)
-      return NextResponse.json({ error: '응답 저장에 실패했습니다', debug: submitError.message, code: submitError.code }, { status: 500 })
+      return NextResponse.json({ error: '응답 저장에 실패했습니다' }, { status: 500 })
     }
 
     // distribution 완료 처리
