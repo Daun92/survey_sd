@@ -83,9 +83,10 @@ function isActive(pathname: string, href: string) {
 
 interface SidebarProps {
   userProfile: UserProfile;
+  badges?: Record<string, number>;
 }
 
-export function Sidebar({ userProfile }: SidebarProps) {
+export function Sidebar({ userProfile, badges = {} }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
 
@@ -100,6 +101,35 @@ export function Sidebar({ userProfile }: SidebarProps) {
     const supabase = createClient();
     await supabase.auth.signOut();
     router.push("/login");
+  }
+
+  function renderNavItem(item: { href: string; label: string; icon: React.ComponentType<{ size: number }> }) {
+    const active = isActive(pathname, item.href);
+    const badge = badges[item.href];
+    const isFailure = item.href === "/admin/distribute" && badge;
+    return (
+      <Link
+        key={item.href}
+        href={item.href}
+        className={`flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition-colors ${
+          active
+            ? "bg-teal-50/10 text-teal-300 font-medium"
+            : "text-stone-400 hover:bg-stone-800 hover:text-white"
+        }`}
+      >
+        <item.icon size={18} aria-hidden="true" />
+        <span className="flex-1">{item.label}</span>
+        {badge != null && badge > 0 && (
+          <span className={`flex h-5 min-w-[20px] items-center justify-center rounded-full px-1.5 text-[10px] font-bold ${
+            isFailure
+              ? "bg-rose-500/20 text-rose-400"
+              : "bg-teal-500/20 text-teal-400"
+          }`}>
+            {badge}
+          </span>
+        )}
+      </Link>
+    );
   }
 
   return (
@@ -124,23 +154,7 @@ export function Sidebar({ userProfile }: SidebarProps) {
             </span>
           </div>
           <div className="space-y-0.5">
-            {designItems.map((item) => {
-              const active = isActive(pathname, item.href);
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={`flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition-colors ${
-                    active
-                      ? "bg-teal-50/10 text-teal-300 font-medium"
-                      : "text-stone-400 hover:bg-stone-800 hover:text-white"
-                  }`}
-                >
-                  <item.icon size={18} aria-hidden="true" />
-                  {item.label}
-                </Link>
-              );
-            })}
+            {designItems.map(renderNavItem)}
           </div>
         </div>
 
@@ -152,41 +166,8 @@ export function Sidebar({ userProfile }: SidebarProps) {
             </span>
           </div>
           <div className="space-y-0.5">
-            {distributeItems.map((item) => {
-              const active = isActive(pathname, item.href);
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={`flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition-colors ${
-                    active
-                      ? "bg-teal-50/10 text-teal-300 font-medium"
-                      : "text-stone-400 hover:bg-stone-800 hover:text-white"
-                  }`}
-                >
-                  <item.icon size={18} aria-hidden="true" />
-                  {item.label}
-                </Link>
-              );
-            })}
-            {userProfile.role === "admin" &&
-              adminDistributeItems.map((item) => {
-                const active = isActive(pathname, item.href);
-                return (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    className={`flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition-colors ${
-                      active
-                        ? "bg-teal-50/10 text-teal-300 font-medium"
-                        : "text-stone-400 hover:bg-stone-800 hover:text-white"
-                    }`}
-                  >
-                    <item.icon size={18} aria-hidden="true" />
-                    {item.label}
-                  </Link>
-                );
-              })}
+            {distributeItems.map(renderNavItem)}
+            {userProfile.role === "admin" && adminDistributeItems.map(renderNavItem)}
           </div>
         </div>
 
@@ -198,23 +179,7 @@ export function Sidebar({ userProfile }: SidebarProps) {
             </span>
           </div>
           <div className="space-y-0.5">
-            {analysisItems.map((item) => {
-              const active = isActive(pathname, item.href);
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={`flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition-colors ${
-                    active
-                      ? "bg-teal-50/10 text-teal-300 font-medium"
-                      : "text-stone-400 hover:bg-stone-800 hover:text-white"
-                  }`}
-                >
-                  <item.icon size={18} aria-hidden="true" />
-                  {item.label}
-                </Link>
-              );
-            })}
+            {analysisItems.map(renderNavItem)}
           </div>
         </div>
 
@@ -226,23 +191,7 @@ export function Sidebar({ userProfile }: SidebarProps) {
               </span>
             </div>
             <div className="space-y-0.5">
-              {hrdMenuItems.map((item) => {
-                const active = isActive(pathname, item.href);
-                return (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    className={`flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition-colors ${
-                      active
-                        ? "bg-teal-50/10 text-teal-300 font-medium"
-                        : "text-stone-400 hover:bg-stone-800 hover:text-white"
-                    }`}
-                  >
-                    <item.icon size={18} aria-hidden="true" />
-                    {item.label}
-                  </Link>
-                );
-              })}
+              {hrdMenuItems.map(renderNavItem)}
             </div>
           </div>
         )}
