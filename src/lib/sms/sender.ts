@@ -32,7 +32,7 @@ class AligoSmsSender implements SmsSender {
     const formData = new FormData()
     formData.append('key', this.apiKey)
     formData.append('user_id', this.userId)
-    formData.append('sender', this.senderPhone)
+    formData.append('sender', req.from || this.senderPhone)
     formData.append('receiver', req.to)
     formData.append('msg', req.body)
     formData.append('msg_type', req.messageType)
@@ -74,38 +74,37 @@ class AligoSmsSender implements SmsSender {
   }
 }
 
-// ─── 비즈뿌리오 발송기 ───
-// API: POST https://api.bizppurio.com/v3/message (JSON)
-// 문서: https://bizmessage.zendesk.com/hc/ko/sections/9700693541647
+// ─── 뿌리오 발송기 ───
+// API: https://message.ppurio.com
+// 문서: https://www.ppurio.com/send-api/develop
 
-const PPURIO_BASE_URL = 'https://api.bizppurio.com'
+const PPURIO_BASE_URL = 'https://message.ppurio.com'
 
 class PpurioSmsSender implements SmsSender {
   private account: string
-  private authKey: string
-  private senderPhone: string
-  private cachedToken: string | null = null
-  private tokenExpiry: Date | null = null
+  private token: string
+  private defaultSenderPhone: string
+  private cachedAccessToken: string | null = null
+  private tokenExpiry: number = 0  // Unix timestamp (ms)
 
-  constructor(account: string, authKey: string, senderPhone: string) {
+  constructor(account: string, token: string, senderPhone: string) {
     this.account = account
-    this.authKey = authKey
-    this.senderPhone = senderPhone
+    this.token = token
+    this.defaultSenderPhone = senderPhone
   }
 
-  private async getToken(): Promise<string> {
-    // 캐시된 토큰이 유효하면 재사용 (만료 5분 전 갱신)
-    if (this.cachedToken && this.tokenExpiry && this.tokenExpiry.getTime() - Date.now() > 5 * 60 * 1000) {
-      return this.cachedToken
+  /** 액세스 토큰 발급 (24시간 유효, 만료 5분 전 갱신) */
+  private async getAccessToken(): Promise<string> {
+    if (this.cachedAccessToken && Date.now() < this.tokenExpiry - 5 * 60 * 1000) {
+      return this.cachedAccessToken
     }
 
-    const credentials = Buffer.from(`${this.account}:${this.authKey}`).toString('base64')
+    const credentials = Buffer.from(`${this.account}:${this.token}`).toString('base64')
 
     const res = await fetch(`${PPURIO_BASE_URL}/v1/token`, {
       method: 'POST',
       headers: {
         'Authorization': `Basic ${credentials}`,
-        'Content-type': 'application/json; charset=utf-8',
       },
     })
 
@@ -113,71 +112,63 @@ class PpurioSmsSender implements SmsSender {
       throw new Error(`뿌리오 토큰 발급 실패: HTTP ${res.status}`)
     }
 
-    const data = await res.json() as {
-      accesstoken: string
-      type: string
-      expired: string  // "yyyyMMddHHmmss"
+    const data = await res.json() as { token: string }
+
+    if (!data.token) {
+      throw new Error('뿌리오 토큰 응답에 token 필드 없음')
     }
 
-    this.cachedToken = data.accesstoken
+    this.cachedAccessToken = data.token
+    // 토큰 유효기간 24시간
+    this.tokenExpiry = Date.now() + 24 * 60 * 60 * 1000
 
-    // expired 문자열 파싱: "20230414090407" → Date
-    const exp = data.expired
-    this.tokenExpiry = new Date(
-      parseInt(exp.slice(0, 4)),
-      parseInt(exp.slice(4, 6)) - 1,
-      parseInt(exp.slice(6, 8)),
-      parseInt(exp.slice(8, 10)),
-      parseInt(exp.slice(10, 12)),
-      parseInt(exp.slice(12, 14))
-    )
-
-    return this.cachedToken
+    return this.cachedAccessToken
   }
 
   async send(req: SmsSendRequest): Promise<SmsResult> {
     try {
-      const token = await this.getToken()
-
-      const content = req.messageType === 'SMS'
-        ? { sms: { message: req.body } }
-        : { lms: { message: req.body } }
+      const accessToken = await this.getAccessToken()
+      const senderPhone = req.from || this.defaultSenderPhone
 
       const body = {
         account: this.account,
-        type: req.messageType,
-        from: this.senderPhone,
-        to: req.to,
-        refkey: crypto.randomUUID().replace(/-/g, '').slice(0, 32),
-        content,
+        messageType: req.messageType,
+        content: req.body,
+        from: senderPhone,
+        duplicateFlag: 'N',
+        targetCount: 1,
+        targets: [
+          {
+            to: req.to,
+            ...(req.toName ? { name: req.toName } : {}),
+          },
+        ],
       }
 
-      const res = await fetch(`${PPURIO_BASE_URL}/v3/message`, {
+      const res = await fetch(`${PPURIO_BASE_URL}/v1/message`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-type': 'application/json; charset=utf-8',
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
         },
         body: JSON.stringify(body),
       })
 
-      const data = await res.json() as {
-        code: string
-        description: string
-        refkey?: string
-        messagekey?: string
-      }
-
-      if (data.code === '1000') {
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}))
         return {
-          success: true,
-          messageId: data.messagekey ?? `ppurio-${Date.now()}`,
+          success: false,
+          error: `뿌리오 발송 실패: HTTP ${res.status} ${JSON.stringify(errData)}`,
         }
       }
 
+      const data = await res.json() as {
+        messageKey?: string
+      }
+
       return {
-        success: false,
-        error: `뿌리오 발송 실패 [${data.code}]: ${data.description}`,
+        success: true,
+        messageId: data.messageKey ?? `ppurio-${Date.now()}`,
       }
     } catch (err) {
       return {
@@ -232,6 +223,16 @@ export async function getSmsSenderFromDB(): Promise<SmsSender> {
 
 // ─── 환경변수 기반 팩토리 (하위 호환) ───
 export function getSmsSender(): SmsSender {
+  // 1. 뿌리오 환경변수 우선
+  const ppurioUser = process.env.PPURIO_USERNAME
+  const ppurioToken = process.env.PPURIO_TOKEN
+  const ppurioSender = process.env.PPURIO_SENDER_PHONE
+
+  if (ppurioUser && ppurioToken && ppurioSender) {
+    return new PpurioSmsSender(ppurioUser, ppurioToken, ppurioSender)
+  }
+
+  // 2. Aligo 폴백
   const apiKey = process.env.ALIGO_API_KEY
   const userId = process.env.ALIGO_USER_ID
   const senderPhone = process.env.ALIGO_SENDER_PHONE
@@ -240,6 +241,6 @@ export function getSmsSender(): SmsSender {
     return new AligoSmsSender(apiKey, userId, senderPhone)
   }
 
-  console.warn('[SMS] ALIGO_API_KEY/USER_ID/SENDER_PHONE 미설정 → Mock 발송기 사용')
+  console.warn('[SMS] PPURIO 또는 ALIGO 환경변수 미설정 → Mock 발송기 사용')
   return new MockSmsSender()
 }

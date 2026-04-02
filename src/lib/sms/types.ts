@@ -3,6 +3,7 @@
 export interface SmsSendRequest {
   to: string          // 수신 전화번호
   toName?: string
+  from?: string       // 발신번호 (동적 지정 시 사용, 미지정 시 프로바이더 기본값)
   body: string        // 메시지 본문 (plain text)
   messageType: 'SMS' | 'LMS'
 }
