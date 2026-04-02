@@ -93,7 +93,7 @@ class PpurioSmsSender implements SmsSender {
     this.defaultSenderPhone = senderPhone
   }
 
-  /** 액세스 토큰 발급 (24시간 유효, 만료 5분 전 갱신) */
+  /** 액세스 토큰 발급 (유효기간 1일, 만료 5분 전 자동 갱신) */
   private async getAccessToken(): Promise<string> {
     if (this.cachedAccessToken && Date.now() < this.tokenExpiry - 5 * 60 * 1000) {
       return this.cachedAccessToken
@@ -109,18 +109,40 @@ class PpurioSmsSender implements SmsSender {
     })
 
     if (!res.ok) {
-      throw new Error(`뿌리오 토큰 발급 실패: HTTP ${res.status}`)
+      const errBody = await res.json().catch(() => ({})) as { code?: number; description?: string }
+      throw new Error(
+        `뿌리오 토큰 발급 실패: HTTP ${res.status}` +
+        (errBody.code ? ` [${errBody.code}] ${errBody.description ?? ''}` : '')
+      )
     }
 
-    const data = await res.json() as { token: string }
+    const data = await res.json() as {
+      token: string
+      type: string       // "Bearer"
+      expired: string | number  // "yyyyMMddHHmmss" 형식 (문서: text(14), 예시: number)
+    }
 
     if (!data.token) {
       throw new Error('뿌리오 토큰 응답에 token 필드 없음')
     }
 
     this.cachedAccessToken = data.token
-    // 토큰 유효기간 24시간
-    this.tokenExpiry = Date.now() + 24 * 60 * 60 * 1000
+
+    // expired 필드 파싱: "20201110185520" → Date
+    const exp = String(data.expired)
+    if (exp.length === 14) {
+      this.tokenExpiry = new Date(
+        parseInt(exp.slice(0, 4)),
+        parseInt(exp.slice(4, 6)) - 1,
+        parseInt(exp.slice(6, 8)),
+        parseInt(exp.slice(8, 10)),
+        parseInt(exp.slice(10, 12)),
+        parseInt(exp.slice(12, 14))
+      ).getTime()
+    } else {
+      // 파싱 실패 시 24시간 폴백
+      this.tokenExpiry = Date.now() + 24 * 60 * 60 * 1000
+    }
 
     return this.cachedAccessToken
   }
@@ -129,6 +151,7 @@ class PpurioSmsSender implements SmsSender {
     try {
       const accessToken = await this.getAccessToken()
       const senderPhone = req.from || this.defaultSenderPhone
+      const refKey = crypto.randomUUID().replace(/-/g, '').slice(0, 32)
 
       const body = {
         account: this.account,
@@ -143,6 +166,7 @@ class PpurioSmsSender implements SmsSender {
             ...(req.toName ? { name: req.toName } : {}),
           },
         ],
+        refKey,
       }
 
       const res = await fetch(`${PPURIO_BASE_URL}/v1/message`, {
@@ -154,21 +178,24 @@ class PpurioSmsSender implements SmsSender {
         body: JSON.stringify(body),
       })
 
-      if (!res.ok) {
-        const errData = await res.json().catch(() => ({}))
-        return {
-          success: false,
-          error: `뿌리오 발송 실패: HTTP ${res.status} ${JSON.stringify(errData)}`,
-        }
-      }
-
       const data = await res.json() as {
+        code: number | string
+        description?: string
+        refKey?: string
         messageKey?: string
       }
 
+      // 성공: code === 1000 (문서상 text(4)이나 예시에서 number로 올 수 있음)
+      if (String(data.code) === '1000') {
+        return {
+          success: true,
+          messageId: data.messageKey ?? `ppurio-${Date.now()}`,
+        }
+      }
+
       return {
-        success: true,
-        messageId: data.messageKey ?? `ppurio-${Date.now()}`,
+        success: false,
+        error: `뿌리오 발송 실패 [${data.code}]: ${data.description ?? `HTTP ${res.status}`}`,
       }
     } catch (err) {
       return {
