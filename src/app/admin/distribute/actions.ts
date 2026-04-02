@@ -1097,7 +1097,7 @@ export async function scheduleSmsBatch(
       if (result.success) {
         await supabase
           .from("sms_queue")
-          .update({ status: "sent", sent_at: now, provider_message_id: result.messageId ?? null })
+          .update({ status: "sent", sent_at: now, provider_message_id: result.messageId ?? null, provider_message_key: result.messageKey ?? null })
           .eq("id", item.id)
 
         await supabase
@@ -1475,4 +1475,99 @@ export async function testSmsProvider(input: {
 
   if (result.success) return { success: true }
   return { error: result.error ?? "SMS 발송 실패" }
+}
+
+// ─── SMS 예약 발송 취소 ───
+
+export async function cancelScheduledSms(
+  queueId: string
+): Promise<{ success?: boolean; error?: string }> {
+  const supabase = createAdminClient()
+
+  // 1. 큐 항목 조회
+  const { data: item, error: qErr } = await supabase
+    .from("sms_queue")
+    .select("id, status, provider_message_key, schedule_type, distribution_id")
+    .eq("id", queueId)
+    .single()
+
+  if (qErr || !item) {
+    return { error: "SMS 큐 항목을 찾을 수 없습니다" }
+  }
+
+  if (item.status !== "pending") {
+    return { error: `취소 불가: 현재 상태가 '${item.status}'입니다 (pending만 취소 가능)` }
+  }
+
+  // 2. 뿌리오 예약 발송인 경우 API로 취소 요청
+  if (item.provider_message_key) {
+    const sender = await getSmsSenderFromDB()
+    if (sender.cancel) {
+      const providerConfig = await supabase
+        .from("sms_providers")
+        .select("api_user_id")
+        .eq("is_default", true)
+        .limit(1)
+        .single()
+
+      const account = providerConfig.data?.api_user_id || process.env.PPURIO_USERNAME || ""
+      const result = await sender.cancel(account, item.provider_message_key)
+
+      if (!result.success) {
+        return { error: result.error ?? "뿌리오 예약 취소 실패" }
+      }
+    }
+  }
+
+  // 3. 큐 상태 업데이트
+  const { error: updateErr } = await supabase
+    .from("sms_queue")
+    .update({ status: "cancelled" })
+    .eq("id", item.id)
+
+  if (updateErr) {
+    return { error: "큐 상태 업데이트 실패: " + updateErr.message }
+  }
+
+  return { success: true }
+}
+
+// ─── SMS 배치 예약 일괄 취소 ───
+
+export async function cancelScheduledSmsBatch(
+  batchId: string
+): Promise<{ cancelled?: number; error?: string }> {
+  const supabase = createAdminClient()
+
+  const { data: distributions } = await supabase
+    .from("distributions")
+    .select("id")
+    .eq("batch_id", batchId)
+
+  if (!distributions || distributions.length === 0) {
+    return { error: "배치에 해당하는 배부 데이터가 없습니다" }
+  }
+
+  const distIds = distributions.map((d) => d.id)
+
+  const { data: pendingItems } = await supabase
+    .from("sms_queue")
+    .select("id")
+    .in("distribution_id", distIds)
+    .eq("status", "pending")
+
+  if (!pendingItems || pendingItems.length === 0) {
+    return { error: "취소 가능한 대기 중 SMS가 없습니다" }
+  }
+
+  const { error: updateErr } = await supabase
+    .from("sms_queue")
+    .update({ status: "cancelled" })
+    .in("id", pendingItems.map((i) => i.id))
+
+  if (updateErr) {
+    return { error: "일괄 취소 실패: " + updateErr.message }
+  }
+
+  return { cancelled: pendingItems.length }
 }
