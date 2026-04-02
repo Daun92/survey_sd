@@ -245,6 +245,23 @@ export default function SurveyForm({ survey, groupToken, distributionToken, pref
   }, [step])
 
   const allQuestions = survey.sections.flatMap((s) => s.questions)
+
+  // ─── 숨겨진 문항의 답변 자동 클리어 (연쇄 분기 지원) ───
+  useEffect(() => {
+    const hiddenIds = allQuestions
+      .filter((q) => q.skip_logic?.show_when && !shouldShowQuestion(q, answers))
+      .map((q) => q.id)
+      .filter((id) => answers[id] !== undefined)
+
+    if (hiddenIds.length > 0) {
+      setAnswers((prev) => {
+        const next = { ...prev }
+        for (const id of hiddenIds) delete next[id]
+        return next
+      })
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [answers])
   const isLikertType = (t: string) => t === 'likert_5' || t === 'likert_6'
   const totalLikert = allQuestions.filter((q) => isLikertType(q.type)).length
   const answeredLikert = Object.entries(answers).filter(([, v]) => typeof v === 'number').length
