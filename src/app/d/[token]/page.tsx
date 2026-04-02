@@ -188,7 +188,6 @@ export default async function DistributionEntryPage({ params }: {
       survey={data.survey}
       groupToken={null}
       distributionToken={data.distribution.token}
-      prefillRespondent={data.prefillRespondent}
     />
   )
 }

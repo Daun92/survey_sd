@@ -268,7 +268,7 @@ export default function SurveyForm({ survey, groupToken, distributionToken, pref
   if (step === 'landing') {
     const hasConsent = !!survey.settings.privacy_consent_text
     const needsConsent = hasConsent && survey.settings.require_consent
-    const requiredFieldsFilled = !distributionToken && survey.settings.collect_respondent_info !== false
+    const requiredFieldsFilled = survey.settings.collect_respondent_info !== false
       ? respondentFields.filter((f) => f.required).every((f) => (respondentInfo[f.id] ?? '').trim() !== '')
       : true
     const canStart = (!needsConsent || consentChecked) && requiredFieldsFilled
@@ -341,8 +341,8 @@ export default function SurveyForm({ survey, groupToken, distributionToken, pref
             </div>
           )}
 
-          {/* Dynamic Respondent Fields — 개별 링크일 때는 숨김 (자동 식별) */}
-          {!distributionToken && survey.settings.collect_respondent_info !== false && respondentFields.length > 0 && (
+          {/* Dynamic Respondent Fields */}
+          {survey.settings.collect_respondent_info !== false && respondentFields.length > 0 && (
             <div className="space-y-2.5">
               <p className="text-[11px] font-semibold text-stone-500 uppercase tracking-widest">응답자 정보</p>
               <div className={`grid gap-2 ${respondentFields.length === 1 ? 'grid-cols-1' : 'grid-cols-2'}`}>
