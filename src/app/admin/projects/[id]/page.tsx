@@ -8,12 +8,7 @@ import {
   Calendar,
   User,
   Hash,
-  BookOpen,
-  Users,
-  ClipboardList,
-  FolderOpen,
   StickyNote,
-  Plus,
 } from "lucide-react";
 import { ProjectActions } from "./ProjectActions";
 import { SessionManager } from "./SessionManager";
@@ -25,15 +20,6 @@ const statusLabels: Record<string, { label: string; className: string }> = {
   completed: { label: "완료", className: "bg-rose-100 text-rose-800" },
   draft: {
     label: "준비중",
-    className: "border border-stone-200 text-stone-700 bg-white",
-  },
-};
-
-const surveyStatusLabels: Record<string, { label: string; className: string }> = {
-  active: { label: "진행중", className: "bg-emerald-100 text-emerald-800" },
-  closed: { label: "마감", className: "bg-rose-100 text-rose-800" },
-  draft: {
-    label: "초안",
     className: "border border-stone-200 text-stone-700 bg-white",
   },
 };
@@ -99,75 +85,16 @@ export default async function ProjectDetailPage({
     0
   );
 
-  // 세션별 설문 수 계산 (SessionManager 삭제 안전장치용)
-  const sessionSurveyCounts: Record<string, number> = {};
-  for (const s of surveys) {
-    if (s.session_id) {
-      sessionSurveyCounts[s.session_id] = (sessionSurveyCounts[s.session_id] || 0) + 1;
-    }
-  }
-
-  // 설문을 과정 > 세션 트리 구조로 그룹핑
-  type SurveyItem = typeof surveys[number];
-  const sessionToCourse = new Map<string, { courseId: string; courseName: string; educationType: string | null }>();
-  for (const course of courses) {
-    const sessions = Array.isArray(course.sessions) ? course.sessions : [];
-    for (const session of sessions) {
-      sessionToCourse.set(session.id, {
-        courseId: course.id,
-        courseName: course.name,
-        educationType: course.education_type,
-      });
-    }
-  }
-
-  // 과정별 → 세션별 → 설문 그룹
-  const courseGroups = new Map<string, {
-    courseName: string;
-    educationType: string | null;
-    sessions: Map<string, { sessionNumber: number; sessionName: string | null; surveys: SurveyItem[] }>;
-  }>();
-  const ungrouped: SurveyItem[] = [];
-
-  for (const survey of surveys) {
-    if (!survey.session_id) {
-      ungrouped.push(survey);
-      continue;
-    }
-    const courseInfo = sessionToCourse.get(survey.session_id);
-    if (!courseInfo) {
-      ungrouped.push(survey);
-      continue;
-    }
-    if (!courseGroups.has(courseInfo.courseId)) {
-      courseGroups.set(courseInfo.courseId, {
-        courseName: courseInfo.courseName,
-        educationType: courseInfo.educationType,
-        sessions: new Map(),
-      });
-    }
-    const group = courseGroups.get(courseInfo.courseId)!;
-    if (!group.sessions.has(survey.session_id)) {
-      const session = Array.isArray(survey.sessions) ? survey.sessions[0] : null;
-      group.sessions.set(survey.session_id, {
-        sessionNumber: session?.session_number ?? 0,
-        sessionName: session?.name ?? null,
-        surveys: [],
-      });
-    }
-    group.sessions.get(survey.session_id)!.surveys.push(survey);
-  }
-
-  const educationTypeLabels: Record<string, string> = {
-    classroom: "집합",
-    remote: "원격",
-    elearning: "이러닝",
-    blended: "혼합",
-  };
-
-  const sortedCourseGroups = [...courseGroups.entries()].sort((a, b) =>
-    a[1].courseName.localeCompare(b[1].courseName)
-  );
+  // surveys를 SessionManager에 전달할 형태로 변환
+  const surveyItems = surveys.map((s: any) => ({
+    id: s.id as string,
+    title: s.title as string,
+    status: s.status as string,
+    url_token: s.url_token as string | null,
+    starts_at: s.starts_at as string | null,
+    ends_at: s.ends_at as string | null,
+    session_id: s.session_id as string | null,
+  }));
 
   return (
     <div>
@@ -269,166 +196,12 @@ export default async function ProjectDetailPage({
         <ProjectActions project={project} />
       </div>
 
-      {/* Courses & Sessions — Interactive Manager */}
+      {/* 통합 트리: 과정 · 세션 · 설문 */}
       <SessionManager
         projectId={project.id}
         courses={courses as { id: string; name: string; education_type: string | null; sessions: { id: string; session_number: number; name: string | null; start_date: string | null; end_date: string | null; capacity: number | null; status: string }[] }[]}
-        sessionSurveyCounts={sessionSurveyCounts}
+        surveys={surveyItems}
       />
-
-      {/* Surveys — 과정 > 세션 트리 구조 */}
-      <div className="rounded-xl border border-stone-200 bg-white shadow-sm">
-        <div className="p-5 border-b border-stone-100 flex items-center justify-between">
-          <div>
-            <h2 className="text-base font-semibold text-stone-900">설문 목록</h2>
-            <p className="text-sm text-stone-500 mt-0.5">
-              총 {surveys.length}개 설문
-            </p>
-          </div>
-          <Link
-            href={`/admin/quick-create?project=${project.id}`}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-teal-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-teal-700 transition-colors"
-          >
-            <Plus size={13} />
-            설문 추가
-          </Link>
-        </div>
-
-        {surveys.length === 0 ? (
-          <div className="p-12 text-center">
-            <div className="flex justify-center mb-4">
-              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-stone-100 text-stone-400">
-                <ClipboardList size={24} />
-              </div>
-            </div>
-            <h3 className="text-sm font-medium text-stone-800 mb-1">
-              등록된 설문이 없습니다
-            </h3>
-            <p className="text-sm text-stone-500">
-              이 프로젝트에 설문을 추가해 주세요.
-            </p>
-          </div>
-        ) : (
-          <div className="divide-y divide-stone-100">
-            {/* 과정별 그룹 */}
-            {sortedCourseGroups.map(([courseId, group]) => (
-              <div key={courseId}>
-                {/* 과정 헤더 */}
-                <div className="px-5 py-3 bg-stone-50/80 border-b border-stone-100">
-                  <div className="flex items-center gap-2">
-                    <FolderOpen size={15} className="text-indigo-500" />
-                    <span className="text-sm font-semibold text-stone-800">
-                      {group.courseName}
-                    </span>
-                    {group.educationType && (
-                      <span className="inline-flex items-center rounded-md bg-indigo-50 px-1.5 py-0.5 text-[11px] font-medium text-indigo-600">
-                        {educationTypeLabels[group.educationType] ?? group.educationType}
-                      </span>
-                    )}
-                    <span className="text-[11px] text-stone-400">
-                      {[...group.sessions.values()].reduce((sum, s) => sum + s.surveys.length, 0)}개 설문
-                    </span>
-                  </div>
-                </div>
-                {/* 세션별 서브그룹 */}
-                {[...group.sessions.entries()]
-                  .sort((a, b) => a[1].sessionNumber - b[1].sessionNumber)
-                  .map(([sessionId, sessionGroup]) => (
-                    <div key={sessionId}>
-                      {/* 세션 서브헤더 */}
-                      <div className="px-5 py-2 pl-10 bg-stone-50/40 border-b border-stone-50">
-                        <div className="flex items-center gap-1.5">
-                          <BookOpen size={12} className="text-stone-400" />
-                          <span className="text-xs font-medium text-stone-600">
-                            제{sessionGroup.sessionNumber}차
-                            {sessionGroup.sessionName ? ` · ${sessionGroup.sessionName}` : ""}
-                          </span>
-                          <span className="text-[11px] text-stone-400">
-                            ({sessionGroup.surveys.length}개)
-                          </span>
-                        </div>
-                      </div>
-                      {/* 설문 행 */}
-                      {sessionGroup.surveys.map((survey) => {
-                        const sStatus =
-                          surveyStatusLabels[survey.status] ?? surveyStatusLabels.draft;
-                        return (
-                          <Link
-                            key={survey.id}
-                            href={`/admin/surveys/${survey.id}`}
-                            className="flex items-center gap-4 px-5 pl-14 py-3.5 border-b border-stone-100 last:border-0 hover:bg-stone-50/50 transition-colors"
-                          >
-                            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-teal-50 text-teal-600 shrink-0">
-                              <ClipboardList size={14} />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <p className="text-sm font-medium text-stone-800 truncate">
-                                {survey.title}
-                              </p>
-                              <span className="text-xs text-stone-400">
-                                {formatDate(survey.starts_at)} ~ {formatDate(survey.ends_at)}
-                              </span>
-                            </div>
-                            <span
-                              className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium shrink-0 ${sStatus.className}`}
-                            >
-                              {sStatus.label}
-                            </span>
-                          </Link>
-                        );
-                      })}
-                    </div>
-                  ))}
-              </div>
-            ))}
-
-            {/* 미분류 (세션 미연결) 설문 */}
-            {ungrouped.length > 0 && (
-              <div>
-                <div className="px-5 py-3 bg-amber-50/60 border-b border-stone-100">
-                  <div className="flex items-center gap-2">
-                    <ClipboardList size={15} className="text-amber-500" />
-                    <span className="text-sm font-semibold text-stone-700">
-                      미분류
-                    </span>
-                    <span className="text-[11px] text-stone-400">
-                      세션 미연결 · {ungrouped.length}개 설문
-                    </span>
-                  </div>
-                </div>
-                {ungrouped.map((survey) => {
-                  const sStatus =
-                    surveyStatusLabels[survey.status] ?? surveyStatusLabels.draft;
-                  return (
-                    <Link
-                      key={survey.id}
-                      href={`/admin/surveys/${survey.id}`}
-                      className="flex items-center gap-4 px-5 pl-10 py-3.5 border-b border-stone-100 last:border-0 hover:bg-stone-50/50 transition-colors"
-                    >
-                      <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-teal-50 text-teal-600 shrink-0">
-                        <ClipboardList size={14} />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-stone-800 truncate">
-                          {survey.title}
-                        </p>
-                        <span className="text-xs text-stone-400">
-                          {formatDate(survey.starts_at)} ~ {formatDate(survey.ends_at)}
-                        </span>
-                      </div>
-                      <span
-                        className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium shrink-0 ${sStatus.className}`}
-                      >
-                        {sStatus.label}
-                      </span>
-                    </Link>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        )}
-      </div>
     </div>
   );
 }

@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { formatDate } from "@/lib/utils";
 import {
   BookOpen,
@@ -11,6 +12,10 @@ import {
   Check,
   X,
   Users,
+  ClipboardList,
+  ChevronRight,
+  AlertTriangle,
+  FolderOpen,
 } from "lucide-react";
 import {
   addSessionToCourse,
@@ -29,7 +34,6 @@ interface Session {
   end_date: string | null;
   capacity: number | null;
   status: string;
-  survey_count?: number;
 }
 
 interface Course {
@@ -39,10 +43,20 @@ interface Course {
   sessions: Session[];
 }
 
+interface SurveyItem {
+  id: string;
+  title: string;
+  status: string;
+  url_token: string | null;
+  starts_at: string | null;
+  ends_at: string | null;
+  session_id: string | null;
+}
+
 interface Props {
   projectId: string;
   courses: Course[];
-  sessionSurveyCounts: Record<string, number>; // session_id → survey count
+  surveys: SurveyItem[];
 }
 
 const eduTypeLabels: Record<string, string> = {
@@ -52,16 +66,35 @@ const eduTypeLabels: Record<string, string> = {
   blended: "블렌디드",
 };
 
-const statusLabels: Record<string, { label: string; className: string }> = {
+const sessionStatusLabels: Record<string, { label: string; className: string }> = {
   scheduled: { label: "예정", className: "bg-blue-100 text-blue-800" },
   in_progress: { label: "진행중", className: "bg-emerald-100 text-emerald-800" },
-  completed: { label: "완료", className: "bg-rose-100 text-rose-800" },
+  completed: { label: "완료", className: "bg-stone-100 text-stone-600" },
   cancelled: { label: "취소", className: "bg-red-100 text-red-800" },
 };
 
-export function SessionManager({ projectId, courses, sessionSurveyCounts }: Props) {
+const surveyStatusLabels: Record<string, { label: string; className: string }> = {
+  active: { label: "진행중", className: "bg-emerald-100 text-emerald-800" },
+  closed: { label: "마감", className: "bg-rose-100 text-rose-800" },
+  draft: { label: "초안", className: "border border-stone-200 text-stone-600 bg-white" },
+  paused: { label: "일시중지", className: "bg-amber-100 text-amber-800" },
+};
+
+export function SessionManager({ projectId, courses, surveys }: Props) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
+
+  // 세션별 설문 매핑
+  const surveysBySession = new Map<string, SurveyItem[]>();
+  const ungroupedSurveys: SurveyItem[] = [];
+  for (const s of surveys) {
+    if (s.session_id) {
+      if (!surveysBySession.has(s.session_id)) surveysBySession.set(s.session_id, []);
+      surveysBySession.get(s.session_id)!.push(s);
+    } else {
+      ungroupedSurveys.push(s);
+    }
+  }
 
   // ─── Add Session ───
   const [addingSessionFor, setAddingSessionFor] = useState<string | null>(null);
@@ -174,19 +207,28 @@ export function SessionManager({ projectId, courses, sessionSurveyCounts }: Prop
     });
   }
 
+  const totalSessions = courses.reduce((sum, c) => sum + (c.sessions?.length || 0), 0);
+
   return (
-    <div className="rounded-xl border border-stone-200 bg-white shadow-sm mb-8">
+    <div className="rounded-xl border border-stone-200 bg-white shadow-sm">
+      {/* Header */}
       <div className="p-5 border-b border-stone-100 flex items-center justify-between">
         <div>
-          <h2 className="text-base font-semibold text-stone-900">과정 및 세션</h2>
+          <h2 className="text-base font-semibold text-stone-900">과정 · 세션 · 설문</h2>
           <p className="text-sm text-stone-500 mt-0.5">
-            총 {courses.length}개 과정,{" "}
-            {courses.reduce((sum, c) => sum + (c.sessions?.length || 0), 0)}개 세션
+            {courses.length}개 과정 · {totalSessions}개 세션 · {surveys.length}개 설문
           </p>
         </div>
+        <Link
+          href={`/admin/quick-create?project=${projectId}`}
+          className="inline-flex items-center gap-1.5 rounded-lg bg-teal-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-teal-700 transition-colors"
+        >
+          <Plus size={13} />
+          설문 추가
+        </Link>
       </div>
 
-      {courses.length === 0 && !showAddCourse ? (
+      {courses.length === 0 && !showAddCourse && ungroupedSurveys.length === 0 ? (
         <div className="p-12 text-center">
           <div className="flex justify-center mb-4">
             <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-stone-100 text-stone-400">
@@ -194,7 +236,7 @@ export function SessionManager({ projectId, courses, sessionSurveyCounts }: Prop
             </div>
           </div>
           <h3 className="text-sm font-medium text-stone-800 mb-1">등록된 과정이 없습니다</h3>
-          <p className="text-sm text-stone-500 mb-4">과정을 추가하여 세션을 관리하세요.</p>
+          <p className="text-sm text-stone-500 mb-4">과정을 추가하여 세션과 설문을 관리하세요.</p>
           <button
             onClick={() => setShowAddCourse(true)}
             className="inline-flex items-center gap-1.5 rounded-lg bg-teal-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-teal-700 transition-colors"
@@ -205,16 +247,18 @@ export function SessionManager({ projectId, courses, sessionSurveyCounts }: Prop
         </div>
       ) : (
         <div>
+          {/* ─── Course Tree ─── */}
           {courses.map((course) => {
             const sessions = Array.isArray(course.sessions)
               ? [...course.sessions].sort((a, b) => a.session_number - b.session_number)
               : [];
             const isEditingThisCourse = editingCourse === course.id;
+            const courseSurveyCount = sessions.reduce((sum, s) => sum + (surveysBySession.get(s.id)?.length || 0), 0);
 
             return (
               <div key={course.id}>
-                {/* Course Header */}
-                <div className="px-5 py-2.5 bg-stone-50/80 border-b border-stone-100">
+                {/* ── Course Header ── */}
+                <div className="px-5 py-2.5 bg-stone-50 border-b border-stone-100">
                   {isEditingThisCourse ? (
                     <div className="flex items-center gap-2">
                       <input
@@ -232,11 +276,7 @@ export function SessionManager({ projectId, courses, sessionSurveyCounts }: Prop
                         <option value="remote">원격</option>
                         <option value="blended">블렌디드</option>
                       </select>
-                      <button
-                        onClick={() => handleUpdateCourse(course.id)}
-                        disabled={isPending}
-                        className="p-1 text-teal-600 hover:text-teal-800"
-                      >
+                      <button onClick={() => handleUpdateCourse(course.id)} disabled={isPending} className="p-1 text-teal-600 hover:text-teal-800">
                         <Check size={14} />
                       </button>
                       <button onClick={() => setEditingCourse(null)} className="p-1 text-stone-400 hover:text-stone-600">
@@ -245,31 +285,22 @@ export function SessionManager({ projectId, courses, sessionSurveyCounts }: Prop
                     </div>
                   ) : (
                     <div className="flex items-center gap-2">
-                      <BookOpen size={14} className="text-teal-600" />
-                      <span className="text-xs font-semibold text-stone-600 uppercase tracking-wide">
-                        {course.name}
-                      </span>
-                      <span className="text-xs text-stone-400 ml-1">({sessions.length}세션)</span>
+                      <FolderOpen size={14} className="text-indigo-500 shrink-0" />
+                      <span className="text-sm font-semibold text-stone-800">{course.name}</span>
                       {course.education_type && (
-                        <span className="inline-flex items-center rounded-md bg-teal-50 px-2 py-0.5 text-xs font-medium text-teal-700">
+                        <span className="inline-flex items-center rounded-md bg-indigo-50 px-1.5 py-0.5 text-[11px] font-medium text-indigo-600">
                           {eduTypeLabels[course.education_type] || course.education_type}
                         </span>
                       )}
+                      <span className="text-[11px] text-stone-400">
+                        {sessions.length}세션 · {courseSurveyCount}설문
+                      </span>
                       <div className="ml-auto flex items-center gap-1">
-                        <button
-                          onClick={() => startEditCourse(course)}
-                          className="p-1 text-stone-400 hover:text-stone-600 transition-colors"
-                          title="과정 수정"
-                        >
+                        <button onClick={() => startEditCourse(course)} className="p-1 text-stone-400 hover:text-stone-600 transition-colors" title="과정 수정">
                           <Pencil size={12} />
                         </button>
                         {sessions.length === 0 && (
-                          <button
-                            onClick={() => handleDeleteCourse(course.id)}
-                            disabled={isPending}
-                            className="p-1 text-stone-300 hover:text-red-500 transition-colors"
-                            title="과정 삭제"
-                          >
+                          <button onClick={() => handleDeleteCourse(course.id)} disabled={isPending} className="p-1 text-stone-300 hover:text-red-500 transition-colors" title="과정 삭제">
                             <Trash2 size={12} />
                           </button>
                         )}
@@ -278,177 +309,122 @@ export function SessionManager({ projectId, courses, sessionSurveyCounts }: Prop
                   )}
                 </div>
 
-                {/* Session Rows */}
+                {/* ── Session Rows ── */}
                 {sessions.map((session) => {
-                  const sStatus = statusLabels[session.status] ?? statusLabels.scheduled;
-                  const surveyCount = sessionSurveyCounts[session.id] || 0;
+                  const sStatus = sessionStatusLabels[session.status] ?? sessionStatusLabels.scheduled;
+                  const sessionSurveys = surveysBySession.get(session.id) || [];
                   const isEditing = editingSession === session.id;
 
-                  return isEditing ? (
-                    <div key={session.id} className="px-5 py-3 border-b border-stone-100 bg-amber-50/30">
-                      <div className="grid grid-cols-[3rem_1fr_1fr_1fr_5rem_6rem_auto] gap-2 items-center text-xs">
-                        <span className="font-mono text-stone-400">#{session.session_number}</span>
-                        <input
-                          className="rounded border border-stone-300 px-2 py-1"
-                          placeholder="세션명"
-                          value={editData.name}
-                          onChange={(e) => setEditData({ ...editData, name: e.target.value })}
-                        />
-                        <input
-                          type="date"
-                          className="rounded border border-stone-300 px-2 py-1"
-                          value={editData.start_date}
-                          onChange={(e) => setEditData({ ...editData, start_date: e.target.value })}
-                        />
-                        <input
-                          type="date"
-                          className="rounded border border-stone-300 px-2 py-1"
-                          value={editData.end_date}
-                          onChange={(e) => setEditData({ ...editData, end_date: e.target.value })}
-                        />
-                        <input
-                          type="number"
-                          className="rounded border border-stone-300 px-2 py-1"
-                          placeholder="정원"
-                          value={editData.capacity}
-                          onChange={(e) => setEditData({ ...editData, capacity: e.target.value })}
-                        />
-                        <select
-                          className="rounded border border-stone-300 px-2 py-1"
-                          value={editData.status}
-                          onChange={(e) => setEditData({ ...editData, status: e.target.value })}
-                        >
-                          <option value="scheduled">예정</option>
-                          <option value="in_progress">진행중</option>
-                          <option value="completed">완료</option>
-                          <option value="cancelled">취소</option>
-                        </select>
-                        <div className="flex items-center gap-1">
-                          <button
-                            onClick={() => handleUpdateSession(session.id)}
-                            disabled={isPending}
-                            className="p-1 text-teal-600 hover:text-teal-800"
-                          >
-                            <Check size={14} />
-                          </button>
-                          <button onClick={() => setEditingSession(null)} className="p-1 text-stone-400 hover:text-stone-600">
-                            <X size={14} />
-                          </button>
+                  return (
+                    <div key={session.id}>
+                      {/* Session Row */}
+                      {isEditing ? (
+                        <div className="px-5 py-3 pl-9 border-b border-stone-100 bg-amber-50/30">
+                          <div className="grid grid-cols-[3rem_1fr_1fr_1fr_5rem_6rem_auto] gap-2 items-center text-xs">
+                            <span className="font-mono text-stone-400">#{session.session_number}</span>
+                            <input className="rounded border border-stone-300 px-2 py-1" placeholder="세션명" value={editData.name} onChange={(e) => setEditData({ ...editData, name: e.target.value })} />
+                            <input type="date" className="rounded border border-stone-300 px-2 py-1" value={editData.start_date} onChange={(e) => setEditData({ ...editData, start_date: e.target.value })} />
+                            <input type="date" className="rounded border border-stone-300 px-2 py-1" value={editData.end_date} onChange={(e) => setEditData({ ...editData, end_date: e.target.value })} />
+                            <input type="number" className="rounded border border-stone-300 px-2 py-1" placeholder="정원" value={editData.capacity} onChange={(e) => setEditData({ ...editData, capacity: e.target.value })} />
+                            <select className="rounded border border-stone-300 px-2 py-1" value={editData.status} onChange={(e) => setEditData({ ...editData, status: e.target.value })}>
+                              <option value="scheduled">예정</option>
+                              <option value="in_progress">진행중</option>
+                              <option value="completed">완료</option>
+                              <option value="cancelled">취소</option>
+                            </select>
+                            <div className="flex items-center gap-1">
+                              <button onClick={() => handleUpdateSession(session.id)} disabled={isPending} className="p-1 text-teal-600 hover:text-teal-800"><Check size={14} /></button>
+                              <button onClick={() => setEditingSession(null)} className="p-1 text-stone-400 hover:text-stone-600"><X size={14} /></button>
+                            </div>
+                          </div>
                         </div>
-                      </div>
-                    </div>
-                  ) : (
-                    <div
-                      key={session.id}
-                      className="flex items-center gap-4 px-5 py-3 border-b border-stone-100 last:border-0 group"
-                    >
-                      <span className="text-xs font-mono text-stone-400 shrink-0 w-12">
-                        #{session.session_number}
-                      </span>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm text-stone-800">
-                          {session.name || `세션 ${session.session_number}`}
-                        </p>
-                        <div className="flex items-center gap-3 mt-0.5">
-                          <span className="text-xs text-stone-400">
-                            {formatDate(session.start_date)} ~ {formatDate(session.end_date)}
-                          </span>
-                          {session.capacity ? (
-                            <span className="flex items-center gap-1 text-xs text-stone-400">
-                              <Users size={11} />
-                              {session.capacity}명
+                      ) : (
+                        <div className="flex items-center gap-3 px-5 py-2.5 pl-9 border-b border-stone-50 group hover:bg-stone-50/40 transition-colors">
+                          <BookOpen size={13} className="text-stone-400 shrink-0" />
+                          <span className="text-xs font-mono text-stone-400 shrink-0 w-8">#{session.session_number}</span>
+                          <div className="flex-1 min-w-0">
+                            <span className="text-sm text-stone-800">
+                              {session.name || `세션 ${session.session_number}`}
                             </span>
-                          ) : null}
-                        </div>
-                      </div>
-                      <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium shrink-0 ${sStatus.className}`}>
-                        {sStatus.label}
-                      </span>
-                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button
-                          onClick={() => startEditSession(session)}
-                          className="p-1 text-stone-400 hover:text-stone-600"
-                          title="세션 수정"
-                        >
-                          <Pencil size={13} />
-                        </button>
-                        {surveyCount === 0 ? (
-                          <button
-                            onClick={() => handleDeleteSession(session.id)}
-                            disabled={isPending}
-                            className="p-1 text-stone-300 hover:text-red-500"
-                            title="세션 삭제"
-                          >
-                            <Trash2 size={13} />
-                          </button>
-                        ) : (
-                          <span className="p-1 text-stone-200 cursor-not-allowed" title={`설문 ${surveyCount}개 연결됨`}>
-                            <Trash2 size={13} />
+                            <span className="text-xs text-stone-400 ml-3">
+                              {formatDate(session.start_date)} ~ {formatDate(session.end_date)}
+                            </span>
+                            {session.capacity ? (
+                              <span className="inline-flex items-center gap-1 text-xs text-stone-400 ml-2">
+                                <Users size={10} />{session.capacity}명
+                              </span>
+                            ) : null}
+                          </div>
+                          <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium shrink-0 ${sStatus.className}`}>
+                            {sStatus.label}
                           </span>
-                        )}
-                      </div>
+                          {sessionSurveys.length > 0 && (
+                            <span className="text-[11px] text-teal-600 font-medium shrink-0">{sessionSurveys.length}설문</span>
+                          )}
+                          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button onClick={() => startEditSession(session)} className="p-1 text-stone-400 hover:text-stone-600" title="세션 수정">
+                              <Pencil size={12} />
+                            </button>
+                            {sessionSurveys.length === 0 ? (
+                              <button onClick={() => handleDeleteSession(session.id)} disabled={isPending} className="p-1 text-stone-300 hover:text-red-500" title="세션 삭제">
+                                <Trash2 size={12} />
+                              </button>
+                            ) : (
+                              <span className="p-1 text-stone-200 cursor-not-allowed" title={`설문 ${sessionSurveys.length}개 연결됨`}>
+                                <Trash2 size={12} />
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Surveys under this session */}
+                      {sessionSurveys.map((survey) => {
+                        const svStatus = surveyStatusLabels[survey.status] ?? surveyStatusLabels.draft;
+                        return (
+                          <Link
+                            key={survey.id}
+                            href={`/admin/surveys/${survey.id}`}
+                            className="flex items-center gap-3 px-5 py-2 pl-[4.5rem] border-b border-stone-50 hover:bg-teal-50/30 transition-colors"
+                          >
+                            <ClipboardList size={13} className="text-teal-500 shrink-0" />
+                            <span className="text-[13px] text-stone-700 truncate flex-1">{survey.title}</span>
+                            <span className="text-[11px] text-stone-400 shrink-0">
+                              {formatDate(survey.starts_at)} ~ {formatDate(survey.ends_at)}
+                            </span>
+                            <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium shrink-0 ${svStatus.className}`}>
+                              {svStatus.label}
+                            </span>
+                            <ChevronRight size={13} className="text-stone-300 shrink-0" />
+                          </Link>
+                        );
+                      })}
                     </div>
                   );
                 })}
 
-                {/* Add Session Inline Form */}
+                {/* Add Session */}
                 {addingSessionFor === course.id ? (
-                  <div className="px-5 py-3 border-b border-stone-100 bg-teal-50/30">
+                  <div className="px-5 py-3 pl-9 border-b border-stone-100 bg-teal-50/30">
                     <div className="grid grid-cols-[1fr_1fr_1fr_5rem_auto] gap-2 items-center text-xs">
-                      <input
-                        className="rounded border border-stone-300 px-2 py-1.5"
-                        placeholder="세션명 (자동: N차수)"
-                        value={newSession.name}
-                        onChange={(e) => setNewSession({ ...newSession, name: e.target.value })}
-                      />
-                      <input
-                        type="date"
-                        className="rounded border border-stone-300 px-2 py-1.5"
-                        value={newSession.start_date}
-                        onChange={(e) => setNewSession({ ...newSession, start_date: e.target.value })}
-                      />
-                      <input
-                        type="date"
-                        className="rounded border border-stone-300 px-2 py-1.5"
-                        value={newSession.end_date}
-                        onChange={(e) => setNewSession({ ...newSession, end_date: e.target.value })}
-                      />
-                      <input
-                        type="number"
-                        className="rounded border border-stone-300 px-2 py-1.5"
-                        placeholder="정원"
-                        value={newSession.capacity}
-                        onChange={(e) => setNewSession({ ...newSession, capacity: e.target.value })}
-                      />
+                      <input className="rounded border border-stone-300 px-2 py-1.5" placeholder="세션명 (자동: N차수)" value={newSession.name} onChange={(e) => setNewSession({ ...newSession, name: e.target.value })} />
+                      <input type="date" className="rounded border border-stone-300 px-2 py-1.5" value={newSession.start_date} onChange={(e) => setNewSession({ ...newSession, start_date: e.target.value })} />
+                      <input type="date" className="rounded border border-stone-300 px-2 py-1.5" value={newSession.end_date} onChange={(e) => setNewSession({ ...newSession, end_date: e.target.value })} />
+                      <input type="number" className="rounded border border-stone-300 px-2 py-1.5" placeholder="정원" value={newSession.capacity} onChange={(e) => setNewSession({ ...newSession, capacity: e.target.value })} />
                       <div className="flex items-center gap-1">
-                        <button
-                          onClick={() => handleAddSession(course.id)}
-                          disabled={isPending}
-                          className="inline-flex items-center gap-1 rounded bg-teal-600 px-2.5 py-1.5 text-xs font-medium text-white hover:bg-teal-700 disabled:opacity-50"
-                        >
-                          <Check size={12} />
-                          추가
+                        <button onClick={() => handleAddSession(course.id)} disabled={isPending} className="inline-flex items-center gap-1 rounded bg-teal-600 px-2.5 py-1.5 text-xs font-medium text-white hover:bg-teal-700 disabled:opacity-50">
+                          <Check size={12} /> 추가
                         </button>
-                        <button
-                          onClick={() => {
-                            setAddingSessionFor(null);
-                            setNewSession({ name: "", start_date: "", end_date: "", capacity: "" });
-                          }}
-                          className="p-1.5 text-stone-400 hover:text-stone-600"
-                        >
+                        <button onClick={() => { setAddingSessionFor(null); setNewSession({ name: "", start_date: "", end_date: "", capacity: "" }); }} className="p-1.5 text-stone-400 hover:text-stone-600">
                           <X size={14} />
                         </button>
                       </div>
                     </div>
                   </div>
                 ) : (
-                  <div className="px-5 py-2 border-b border-stone-100">
-                    <button
-                      onClick={() => setAddingSessionFor(course.id)}
-                      className="inline-flex items-center gap-1 text-xs text-teal-600 hover:text-teal-800 font-medium transition-colors"
-                    >
-                      <Plus size={12} />
-                      세션 추가
+                  <div className="px-5 py-1.5 pl-9 border-b border-stone-100">
+                    <button onClick={() => setAddingSessionFor(course.id)} className="inline-flex items-center gap-1 text-xs text-teal-600 hover:text-teal-800 font-medium transition-colors">
+                      <Plus size={12} /> 세션 추가
                     </button>
                   </div>
                 )}
@@ -456,53 +432,62 @@ export function SessionManager({ projectId, courses, sessionSurveyCounts }: Prop
             );
           })}
 
+          {/* ─── Ungrouped Surveys ─── */}
+          {ungroupedSurveys.length > 0 && (
+            <div>
+              <div className="px-5 py-2.5 bg-amber-50/60 border-b border-stone-100">
+                <div className="flex items-center gap-2">
+                  <AlertTriangle size={14} className="text-amber-500" />
+                  <span className="text-sm font-semibold text-stone-700">미분류</span>
+                  <span className="text-[11px] text-stone-400">세션 미연결 · {ungroupedSurveys.length}개 설문</span>
+                </div>
+              </div>
+              {ungroupedSurveys.map((survey) => {
+                const svStatus = surveyStatusLabels[survey.status] ?? surveyStatusLabels.draft;
+                return (
+                  <Link
+                    key={survey.id}
+                    href={`/admin/surveys/${survey.id}`}
+                    className="flex items-center gap-3 px-5 py-2.5 pl-9 border-b border-stone-50 hover:bg-teal-50/30 transition-colors"
+                  >
+                    <ClipboardList size={13} className="text-amber-500 shrink-0" />
+                    <span className="text-[13px] text-stone-700 truncate flex-1">{survey.title}</span>
+                    <span className="text-[11px] text-stone-400 shrink-0">
+                      {formatDate(survey.starts_at)} ~ {formatDate(survey.ends_at)}
+                    </span>
+                    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium shrink-0 ${svStatus.className}`}>
+                      {svStatus.label}
+                    </span>
+                    <ChevronRight size={13} className="text-stone-300 shrink-0" />
+                  </Link>
+                );
+              })}
+            </div>
+          )}
+
           {/* Add Course */}
           {showAddCourse ? (
             <div className="px-5 py-3 bg-teal-50/30">
               <div className="flex items-center gap-2 text-xs">
-                <input
-                  className="flex-1 rounded border border-stone-300 px-2 py-1.5"
-                  placeholder="과정명"
-                  value={newCourse.name}
-                  onChange={(e) => setNewCourse({ ...newCourse, name: e.target.value })}
-                />
-                <select
-                  className="rounded border border-stone-300 px-2 py-1.5"
-                  value={newCourse.education_type}
-                  onChange={(e) => setNewCourse({ ...newCourse, education_type: e.target.value })}
-                >
+                <input className="flex-1 rounded border border-stone-300 px-2 py-1.5" placeholder="과정명" value={newCourse.name} onChange={(e) => setNewCourse({ ...newCourse, name: e.target.value })} />
+                <select className="rounded border border-stone-300 px-2 py-1.5" value={newCourse.education_type} onChange={(e) => setNewCourse({ ...newCourse, education_type: e.target.value })}>
                   <option value="classroom">집합</option>
                   <option value="online">온라인</option>
                   <option value="remote">원격</option>
                   <option value="blended">블렌디드</option>
                 </select>
-                <button
-                  onClick={handleAddCourse}
-                  disabled={isPending || !newCourse.name.trim()}
-                  className="inline-flex items-center gap-1 rounded bg-teal-600 px-2.5 py-1.5 text-xs font-medium text-white hover:bg-teal-700 disabled:opacity-50"
-                >
-                  <Check size={12} />
-                  추가
+                <button onClick={handleAddCourse} disabled={isPending || !newCourse.name.trim()} className="inline-flex items-center gap-1 rounded bg-teal-600 px-2.5 py-1.5 text-xs font-medium text-white hover:bg-teal-700 disabled:opacity-50">
+                  <Check size={12} /> 추가
                 </button>
-                <button
-                  onClick={() => {
-                    setShowAddCourse(false);
-                    setNewCourse({ name: "", education_type: "classroom" });
-                  }}
-                  className="p-1.5 text-stone-400 hover:text-stone-600"
-                >
+                <button onClick={() => { setShowAddCourse(false); setNewCourse({ name: "", education_type: "classroom" }); }} className="p-1.5 text-stone-400 hover:text-stone-600">
                   <X size={14} />
                 </button>
               </div>
             </div>
           ) : (
             <div className="px-5 py-3">
-              <button
-                onClick={() => setShowAddCourse(true)}
-                className="inline-flex items-center gap-1.5 text-xs text-stone-500 hover:text-teal-600 font-medium transition-colors"
-              >
-                <Plus size={13} />
-                과정 추가
+              <button onClick={() => setShowAddCourse(true)} className="inline-flex items-center gap-1.5 text-xs text-stone-500 hover:text-teal-600 font-medium transition-colors">
+                <Plus size={13} /> 과정 추가
               </button>
             </div>
           )}
