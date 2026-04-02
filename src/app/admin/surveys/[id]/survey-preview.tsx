@@ -92,8 +92,10 @@ function LandingPreview({ title, description, settings, questionCount }: { title
       {/* Center-aligned content */}
       <div className="flex-1 flex flex-col justify-center">
 
-      {/* 내부용 제목은 응답자에게 미표시 */}
-      <div className="pt-5" />
+      {/* Title (표기용 제목) */}
+      <div className="px-5 pt-5 text-center">
+        <h2 className="text-[15px] font-bold text-stone-800 leading-snug">{title || "설문 제목"}</h2>
+      </div>
 
       {/* Welcome */}
       <div className="px-5 pt-2 pb-1">
