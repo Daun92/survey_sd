@@ -246,7 +246,7 @@ export default function SmsProviderSettings() {
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="text-xs text-stone-500 mb-1 block">
-                      {formType === 'ppurio' ? '비밀번호 (인증키)' : 'API Key'}
+                      {formType === 'ppurio' ? 'API 토큰' : 'API Key'}
                     </label>
                     <input
                       type="password"
@@ -280,7 +280,7 @@ export default function SmsProviderSettings() {
                 </div>
                 <p className="text-[11px] text-stone-400">
                   {formType === 'ppurio'
-                    ? '비즈뿌리오 관리자 페이지에서 계정 비밀번호 확인 및 연동 IP 등록이 필요합니다.'
+                    ? '뿌리오(ppurio.com)에서 API 토큰 확인 및 발신번호 등록이 필요합니다.'
                     : '발신번호는 알리고 대시보드에서 사전 등록이 필요합니다. 미등록 번호로는 발송이 거부됩니다.'}
                 </p>
               </>
