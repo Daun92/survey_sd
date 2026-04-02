@@ -38,6 +38,33 @@ export const LIKERT_5_AGREE_LABELS: Record<number, string> = {
   5: "매우 그렇다",
 };
 
+/** 동의/비동의 라벨 */
+export const LIKERT_5_AGREE_DISAGREE_LABELS: Record<number, string> = {
+  1: "전혀 동의하지 않음",
+  2: "비동의",
+  3: "보통",
+  4: "동의",
+  5: "매우 동의",
+};
+
+/** 빈도 라벨 */
+export const LIKERT_5_FREQUENCY_LABELS: Record<number, string> = {
+  1: "전혀 없음",
+  2: "드물게",
+  3: "보통",
+  4: "자주",
+  5: "매우 자주",
+};
+
+/** 중요도 라벨 */
+export const LIKERT_5_IMPORTANCE_LABELS: Record<number, string> = {
+  1: "전혀 중요하지 않음",
+  2: "중요하지 않음",
+  3: "보통",
+  4: "중요",
+  5: "매우 중요",
+};
+
 /** 6점 라벨 */
 export const LIKERT_6_LABELS: Record<number, string> = {
   1: "전혀 아니다",

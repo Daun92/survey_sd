@@ -72,6 +72,7 @@ export interface Question {
   sort_order: number;
   options: string[] | string | null;
   skip_logic?: SkipLogic | null;
+  metadata?: Record<string, unknown> | null;
 }
 
 export interface EditorProps {
@@ -119,13 +120,21 @@ export const questionTypeLabels: Record<string, string> = {
   info_block: "안내 블록",
 };
 
-export const likertLabels: Record<number, string> = {
-  5: "매우 만족",
-  4: "만족",
-  3: "보통",
-  2: "불만족",
-  1: "매우 불만족",
-};
+export const LIKERT_LABEL_PRESETS: { id: string; name: string; labels: Record<number, string> }[] = [
+  { id: "satisfaction", name: "만족도", labels: { 5: "매우 만족", 4: "만족", 3: "보통", 2: "불만족", 1: "매우 불만족" } },
+  { id: "agreement", name: "동의도", labels: { 5: "매우 그렇다", 4: "그렇다", 3: "보통", 2: "그렇지 않다", 1: "전혀 그렇지 않다" } },
+  { id: "agree_disagree", name: "동의/비동의", labels: { 5: "매우 동의", 4: "동의", 3: "보통", 2: "비동의", 1: "전혀 동의하지 않음" } },
+  { id: "frequency", name: "빈도", labels: { 5: "매우 자주", 4: "자주", 3: "보통", 2: "드물게", 1: "전혀 없음" } },
+  { id: "importance", name: "중요도", labels: { 5: "매우 중요", 4: "중요", 3: "보통", 2: "중요하지 않음", 1: "전혀 중요하지 않음" } },
+];
+
+export const likertLabels: Record<number, string> = LIKERT_LABEL_PRESETS[0].labels;
+
+export function getLikertLabels(presetId?: string): Record<number, string> {
+  if (!presetId) return likertLabels;
+  const preset = LIKERT_LABEL_PRESETS.find(p => p.id === presetId);
+  return preset ? preset.labels : likertLabels;
+}
 
 // ─── Utils ───
 
