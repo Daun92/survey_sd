@@ -134,6 +134,7 @@ export async function createDistributionBatch(input: CreateBatchInput) {
     respondent_id: respondentIds[idx] ?? null,
     recipient_email: row.email || null,
     recipient_name: row.name,
+    recipient_phone: row.phoneNormalized || null,
     channel: "personal_link",
     status: "pending",
   }))
@@ -270,6 +271,7 @@ export async function addToDistributionBatch(input: {
     respondent_id: respondentIds[idx] ?? null,
     recipient_email: row.email || null,
     recipient_name: row.name,
+    recipient_phone: row.phoneNormalized || null,
     channel: "personal_link",
     status: "pending",
   }))
