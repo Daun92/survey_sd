@@ -336,19 +336,22 @@ function QuestionsPreview({ title, questions, settings }: { title: string; quest
 
             {q.question_type === "likert_5" && (() => {
               const qLabels = getLikertLabels(q.metadata?.likert_label_preset as string | undefined);
+              const pts = [1, 2, 3, 4, 5];
               return (
                 <div className="space-y-0.5">
                   <div className="flex gap-1">
-                    {[5, 4, 3, 2, 1].map((v) => (
+                    {pts.map((v) => (
                       <div key={v} className="flex-1 flex items-center justify-center py-2 rounded-lg border border-stone-200 bg-white">
                         <span className="text-[13px] text-stone-500">{v}</span>
                       </div>
                     ))}
                   </div>
-                  <div className="flex justify-between px-0.5">
-                    <span className="text-[7px] text-stone-400">{qLabels[1]}</span>
-                    <span className="text-[7px] text-stone-400">{qLabels[3]}</span>
-                    <span className="text-[7px] text-stone-400">{qLabels[5]}</span>
+                  <div className="flex gap-1">
+                    {pts.map((v) => (
+                      <span key={v} className="flex-1 text-center text-[7px] text-stone-400 leading-tight">
+                        {v === 1 || v === 3 || v === 5 ? qLabels[v] : ""}
+                      </span>
+                    ))}
                   </div>
                 </div>
               );
@@ -356,7 +359,7 @@ function QuestionsPreview({ title, questions, settings }: { title: string; quest
 
             {q.question_type === "likert_7" && (
               <div className="flex gap-0.5">
-                {[7, 6, 5, 4, 3, 2, 1].map((v) => (
+                {[1, 2, 3, 4, 5, 6, 7].map((v) => (
                   <div key={v} className="flex-1 flex items-center justify-center py-2 rounded border border-stone-200 bg-white text-[12px] text-stone-500">{v}</div>
                 ))}
               </div>

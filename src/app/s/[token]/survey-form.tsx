@@ -685,9 +685,9 @@ export default function SurveyForm({ survey, groupToken, distributionToken, pref
 
             {(question.type === 'likert_5' || question.type === 'likert_6') && (() => {
               const qLabels = getLikertLabelsForQuestion(question)
-              const points = [5, 4, 3, 2, 1]
+              const points = [1, 2, 3, 4, 5]
               return (
-                <div className="space-y-1.5">
+                <div className="space-y-1">
                   <div className="flex gap-1.5">
                     {points.map((value) => (
                       <button
@@ -704,10 +704,12 @@ export default function SurveyForm({ survey, groupToken, distributionToken, pref
                       </button>
                     ))}
                   </div>
-                  <div className="flex justify-between px-1">
-                    <span className="text-[10px] text-stone-400">{qLabels[points[points.length - 1]]}</span>
-                    <span className="text-[10px] text-stone-400">{qLabels[3]}</span>
-                    <span className="text-[10px] text-stone-400">{qLabels[points[0]]}</span>
+                  <div className="flex gap-1.5">
+                    {points.map((value) => (
+                      <span key={value} className="flex-1 text-center text-[10px] text-stone-400 leading-tight">
+                        {value === 1 || value === 3 || value === 5 ? qLabels[value] : ''}
+                      </span>
+                    ))}
                   </div>
                 </div>
               )

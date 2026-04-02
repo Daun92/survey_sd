@@ -939,18 +939,24 @@ function TemplatePreviewModal({
                   {/* Likert Scale */}
                   {(q.questionType === "likert_5" ||
                     q.questionType === "likert_6") && (
-                    <div className="flex gap-1.5">
-                      {[5, 4, 3, 2, 1].map((value) => (
-                        <div
-                          key={value}
-                          className="flex-1 flex flex-col items-center gap-1.5 py-3 rounded-xl text-sm font-medium border-[1.5px] bg-white text-stone-500 border-stone-200"
-                        >
-                          <span className="text-[16px]">{value}</span>
-                          <span className="text-[9px] leading-tight text-stone-400">
-                            {likertLabels[value] ?? ""}
+                    <div className="space-y-1">
+                      <div className="flex gap-1.5">
+                        {[1, 2, 3, 4, 5].map((value) => (
+                          <div
+                            key={value}
+                            className="flex-1 flex items-center justify-center py-3 rounded-xl text-sm font-medium border-[1.5px] bg-white text-stone-500 border-stone-200"
+                          >
+                            {value}
+                          </div>
+                        ))}
+                      </div>
+                      <div className="flex gap-1.5">
+                        {[1, 2, 3, 4, 5].map((value) => (
+                          <span key={value} className="flex-1 text-center text-[9px] text-stone-400 leading-tight">
+                            {value === 1 || value === 3 || value === 5 ? (likertLabels[value] ?? "") : ""}
                           </span>
-                        </div>
-                      ))}
+                        ))}
+                      </div>
                     </div>
                   )}
 

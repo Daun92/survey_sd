@@ -209,19 +209,27 @@ function QuestionsPreview({ title, questions }: { title: string; questions: CSQu
             </p>
 
             {(q.question_type === "likert_5") && (
-              <div className="flex gap-1">
-                {[5, 4, 3, 2, 1].map((v) => (
-                  <div key={v} className="flex-1 flex flex-col items-center gap-1 py-2 rounded-lg border border-stone-200 bg-white">
-                    <span className="text-[13px] text-stone-500">{v}</span>
-                    <span className="text-[8px] text-stone-400 leading-tight">{likertLabels[v]}</span>
-                  </div>
-                ))}
+              <div className="space-y-0.5">
+                <div className="flex gap-1">
+                  {[1, 2, 3, 4, 5].map((v) => (
+                    <div key={v} className="flex-1 flex items-center justify-center py-2 rounded-lg border border-stone-200 bg-white">
+                      <span className="text-[13px] text-stone-500">{v}</span>
+                    </div>
+                  ))}
+                </div>
+                <div className="flex gap-1">
+                  {[1, 2, 3, 4, 5].map((v) => (
+                    <span key={v} className="flex-1 text-center text-[7px] text-stone-400 leading-tight">
+                      {v === 1 || v === 3 || v === 5 ? likertLabels[v] : ""}
+                    </span>
+                  ))}
+                </div>
               </div>
             )}
 
             {(q.question_type === "likert_6") && (
               <div className="flex gap-0.5">
-                {[6, 5, 4, 3, 2, 1].map((v) => (
+                {[1, 2, 3, 4, 5, 6].map((v) => (
                   <div key={v} className="flex-1 flex items-center justify-center py-2 rounded border border-stone-200 bg-white text-[12px] text-stone-500">{v}</div>
                 ))}
               </div>
@@ -229,7 +237,7 @@ function QuestionsPreview({ title, questions }: { title: string; questions: CSQu
 
             {(q.question_type === "likert_7") && (
               <div className="flex gap-0.5">
-                {[7, 6, 5, 4, 3, 2, 1].map((v) => (
+                {[1, 2, 3, 4, 5, 6, 7].map((v) => (
                   <div key={v} className="flex-1 flex items-center justify-center py-2 rounded border border-stone-200 bg-white text-[12px] text-stone-500">{v}</div>
                 ))}
               </div>

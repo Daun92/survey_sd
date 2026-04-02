@@ -127,14 +127,16 @@ export function LikertScale({
           </button>
         ))}
       </div>
-      <div className="flex justify-between px-1">
-        <span className="text-[10px] text-gray-400">{labels[1] || ""}</span>
-        {labels[Math.ceil(scale / 2)] && (
-          <span className="text-[10px] text-gray-400">{labels[Math.ceil(scale / 2)]}</span>
-        )}
-        <span className="text-[10px] text-gray-400">
-          {labels[scale] || ""}
-        </span>
+      <div className="flex gap-1.5">
+        {options.map((n) => {
+          const mid = Math.ceil(scale / 2);
+          const show = n === 1 || n === mid || n === scale;
+          return (
+            <span key={n} className="flex-1 text-center text-[10px] text-gray-400 leading-tight">
+              {show ? labels[n] || "" : ""}
+            </span>
+          );
+        })}
       </div>
     </div>
   );
