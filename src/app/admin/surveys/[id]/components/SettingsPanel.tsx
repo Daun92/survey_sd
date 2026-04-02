@@ -246,7 +246,7 @@ export function SettingsPanel({ surveyId, initialSettings, onSettingsChange, onS
             </div>
           </div>
           <label className="flex items-center gap-2.5 rounded-lg border border-stone-200 px-3 py-2.5 cursor-pointer hover:bg-stone-50 transition-colors">
-            <input type="checkbox" checked={settings.show_ending_stats ?? false} onChange={(e) => update({ show_ending_stats: e.target.checked })} className="accent-teal-600" />
+            <input type="checkbox" checked={settings.show_ending_stats === true} onChange={(e) => update({ show_ending_stats: e.target.checked })} className="accent-teal-600" />
             <span className="text-sm text-stone-700">마감 화면에 응답 수 · 소요시간 표시</span>
           </label>
           </div>{/* end 마감 화면 블록 */}

@@ -34,6 +34,16 @@ export interface LoadedSurvey {
 /**
  * edu_surveys 레코드로부터 문항을 로드하고 섹션별로 그룹핑하여 반환
  */
+/** 설문 settings 기본값 — undefined 필드를 안전하게 처리 */
+const DEFAULT_SURVEY_SETTINGS = {
+  collect_respondent_info: true,
+  show_meta_info: true,
+  show_progress: true,
+  show_ending_stats: false,
+  require_consent: false,
+  anonymous: false,
+}
+
 export async function loadSurveyWithQuestions(
   supabase: { from: (table: string) => any },
   surveyRecord: {
@@ -89,7 +99,7 @@ export async function loadSurveyWithQuestions(
     description: surveyRecord.description ?? '',
     status: surveyRecord.status,
     token: surveyRecord.url_token,
-    settings: (surveyRecord.settings as any) ?? {},
+    settings: { ...DEFAULT_SURVEY_SETTINGS, ...((surveyRecord.settings as any) ?? {}) },
     sessionName: sessionName ? `${courseName} - ${sessionName}` : courseName,
     sections: Array.from(sectionMap.values()),
   }

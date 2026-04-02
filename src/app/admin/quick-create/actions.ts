@@ -247,6 +247,14 @@ export async function quickCreateSurvey(formData: FormData): Promise<QuickCreate
         starts_at: input.startDate,
         ends_at: input.endDate,
         owner_id: user.id,
+        settings: {
+          collect_respondent_info: true,
+          show_meta_info: true,
+          show_progress: true,
+          show_ending_stats: false,
+          require_consent: false,
+          anonymous: false,
+        },
       })
       .select("id, url_token")
       .single();
