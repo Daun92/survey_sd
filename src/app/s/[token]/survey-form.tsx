@@ -91,7 +91,17 @@ const INTRO_STYLE_MAP: Record<string, { bg: string; border: string; borderLeft: 
   amber:       { bg: '#faf5f0',  border: '#e8ddd0', borderLeft: '#d97706', color: '#92400e', bar: '#d97706' },
 }
 
-const likertLabels: Record<number, string> = { 5: '매우 만족', 4: '만족', 3: '보통', 2: '불만족', 1: '매우 불만족' }
+const LIKERT_PRESETS: Record<string, Record<number, string>> = {
+  satisfaction: { 5: '매우 만족', 4: '만족', 3: '보통', 2: '불만족', 1: '매우 불만족' },
+  agreement: { 5: '매우 그렇다', 4: '그렇다', 3: '보통', 2: '그렇지 않다', 1: '전혀 그렇지 않다' },
+  agree_disagree: { 5: '매우 동의', 4: '동의', 3: '보통', 2: '비동의', 1: '전혀 동의하지 않음' },
+  frequency: { 5: '매우 자주', 4: '자주', 3: '보통', 2: '드물게', 1: '전혀 없음' },
+  importance: { 5: '매우 중요', 4: '중요', 3: '보통', 2: '중요하지 않음', 1: '전혀 중요하지 않음' },
+}
+const getLikertLabelsForQuestion = (q: SurveyQuestion): Record<number, string> => {
+  const presetId = (q.metadata?.likert_label_preset as string) || 'satisfaction'
+  return LIKERT_PRESETS[presetId] || LIKERT_PRESETS.satisfaction
+}
 
 function shouldShowQuestion(q: SurveyQuestion, answers: Record<string, number | string | number[]>): boolean {
   if (!q.skip_logic?.show_when) return true
@@ -331,7 +341,7 @@ export default function SurveyForm({ survey, groupToken, distributionToken, pref
           {!distributionToken && survey.settings.collect_respondent_info !== false && respondentFields.length > 0 && (
             <div className="space-y-2.5">
               <p className="text-[11px] font-semibold text-stone-500 uppercase tracking-widest">응답자 정보</p>
-              <div className="grid grid-cols-2 gap-2">
+              <div className={`grid gap-2 ${respondentFields.length === 1 ? 'grid-cols-1' : respondentFields.length === 3 ? 'grid-cols-3' : respondentFields.length >= 4 ? 'grid-cols-2' : 'grid-cols-2'}`}>
                 {respondentFields.map((field) => {
                   const isPrefilled = !!prefillRespondent && !!(prefillRespondent as any)[field.id]
                   return (
@@ -643,15 +653,18 @@ export default function SurveyForm({ survey, groupToken, distributionToken, pref
                   </div>
                 )
               }
-              const blockColors = style === 'warning'
-                ? 'bg-amber-50 border-amber-200 text-amber-800'
-                : 'bg-blue-50 border-blue-200 text-blue-800'
-              const iconColor = style === 'warning' ? 'text-amber-500' : 'text-blue-500'
+              const blockMap: Record<string, { colors: string; icon: string; iconColor: string }> = {
+                info: { colors: 'bg-blue-50 border-blue-200 text-blue-800', icon: 'ℹ', iconColor: 'text-blue-500' },
+                warning: { colors: 'bg-amber-50 border-amber-200 text-amber-800', icon: '⚠', iconColor: 'text-amber-500' },
+                success: { colors: 'bg-emerald-50 border-emerald-200 text-emerald-800', icon: '✓', iconColor: 'text-emerald-500' },
+                tip: { colors: 'bg-violet-50 border-violet-200 text-violet-800', icon: '💡', iconColor: 'text-violet-500' },
+              }
+              const b = blockMap[style] || blockMap.info
               return (
-                <div key={question.id} id={`q-${question.id}`} className={`rounded-xl border px-4 py-3 ${blockColors}`}>
+                <div key={question.id} id={`q-${question.id}`} className={`rounded-xl border px-4 py-3 ${b.colors}`}>
                   <div className="flex items-start gap-2.5">
-                    <span className={`mt-0.5 shrink-0 ${iconColor}`}>
-                      {style === 'warning' ? '⚠' : 'ℹ'}
+                    <span className={`mt-0.5 shrink-0 ${b.iconColor}`}>
+                      {b.icon}
                     </span>
                     <p className="text-sm leading-relaxed whitespace-pre-line">{String(question.text ?? '')}</p>
                   </div>
@@ -670,29 +683,32 @@ export default function SurveyForm({ survey, groupToken, distributionToken, pref
               {question.required === true && <span className="text-rose-400 ml-1">*</span>}
             </p>
 
-            {(question.type === 'likert_5' || question.type === 'likert_6') && (
-              <div className="flex gap-1.5">
-                {[5, 4, 3, 2, 1].map((value) => (
-                  <button
-                    key={value}
-                    type="button"
-                    onClick={() => handleLikertChangeWithScroll(question.id, value)}
-                    className={`flex-1 flex flex-col items-center gap-1.5 py-3 rounded-xl text-sm font-medium border-[1.5px] transition-all ${
-                      answers[question.id] === value
-                        ? 'bg-teal-600 text-white border-teal-600 shadow-sm'
-                        : 'bg-white text-stone-500 border-stone-200 hover:border-teal-300 hover:bg-teal-50'
-                    }`}
-                  >
-                    <span className="text-[16px]">{value}</span>
-                    <span className={`text-[9px] leading-tight ${
-                      answers[question.id] === value ? 'text-white/80' : 'text-stone-400'
-                    }`}>
-                      {likertLabels[value]}
-                    </span>
-                  </button>
-                ))}
-              </div>
-            )}
+            {(question.type === 'likert_5' || question.type === 'likert_6') && (() => {
+              const qLabels = getLikertLabelsForQuestion(question)
+              return (
+                <div className="flex gap-1.5">
+                  {[5, 4, 3, 2, 1].map((value) => (
+                    <button
+                      key={value}
+                      type="button"
+                      onClick={() => handleLikertChangeWithScroll(question.id, value)}
+                      className={`flex-1 flex flex-col items-center gap-1.5 py-3 rounded-xl text-sm font-medium border-[1.5px] transition-all ${
+                        answers[question.id] === value
+                          ? 'bg-teal-600 text-white border-teal-600 shadow-sm'
+                          : 'bg-white text-stone-500 border-stone-200 hover:border-teal-300 hover:bg-teal-50'
+                      }`}
+                    >
+                      <span className="text-[16px]">{value}</span>
+                      <span className={`text-[9px] leading-tight ${
+                        answers[question.id] === value ? 'text-white/80' : 'text-stone-400'
+                      }`}>
+                        {qLabels[value]}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              )
+            })()}
 
             {question.type === 'single_choice' && question.options && (
               <div className="space-y-1.5">

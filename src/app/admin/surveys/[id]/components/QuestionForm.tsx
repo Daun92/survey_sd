@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import { Check, X, Plus, Loader2, Trash2 } from "lucide-react";
 import { addQuestion, updateQuestion, deleteQuestion } from "../actions";
-import { type Question, type SkipLogic, questionTypeOptions, needsOptions, parseOptions } from "./types";
+import { type Question, type SkipLogic, questionTypeOptions, needsOptions, parseOptions, LIKERT_LABEL_PRESETS, getLikertLabels } from "./types";
 
 interface Props {
   surveyId: string;
@@ -42,6 +42,7 @@ export function QuestionForm({ surveyId, question, allQuestions, sectionNames, d
   // Info block metadata
   const existingMeta = (question as any)?.metadata as Record<string, unknown> | undefined;
   const [blockStyle, setBlockStyle] = useState<string>((existingMeta?.block_style as string) || "info");
+  const [likertLabelPreset, setLikertLabelPreset] = useState<string>((existingMeta?.likert_label_preset as string) || "satisfaction");
 
   const isInfoBlock = questionType === "info_block";
 
@@ -69,8 +70,11 @@ export function QuestionForm({ surveyId, question, allQuestions, sectionNames, d
         options: needsOptions(questionType) ? options.filter((o) => o.trim()) : null,
         skip_logic: skipLogic,
       };
+      const isLikert = questionType === "likert_5" || questionType === "likert_7";
       const payload = isInfoBlock
         ? { ...base, metadata: { block_style: blockStyle } }
+        : isLikert
+        ? { ...base, metadata: { likert_label_preset: likertLabelPreset } }
         : base;
       if (isEdit && question) {
         await updateQuestion(question.id, surveyId, payload);
@@ -169,9 +173,11 @@ export function QuestionForm({ surveyId, question, allQuestions, sectionNames, d
           <label className="block text-[13px] font-medium text-stone-600 mb-1.5">블록 스타일</label>
           <div className="flex gap-2">
             {[
-              { value: "info", label: "정보", className: "border-blue-300 bg-blue-50 text-blue-700" },
-              { value: "warning", label: "주의", className: "border-amber-300 bg-amber-50 text-amber-700" },
-              { value: "divider", label: "구분선", className: "border-stone-300 bg-stone-50 text-stone-600" },
+              { value: "info", label: "ℹ 정보", className: "border-blue-300 bg-blue-50 text-blue-700" },
+              { value: "warning", label: "⚠ 주의", className: "border-amber-300 bg-amber-50 text-amber-700" },
+              { value: "success", label: "✓ 완료", className: "border-emerald-300 bg-emerald-50 text-emerald-700" },
+              { value: "tip", label: "💡 팁", className: "border-violet-300 bg-violet-50 text-violet-700" },
+              { value: "divider", label: "― 구분선", className: "border-stone-300 bg-stone-50 text-stone-600" },
             ].map((s) => (
               <button
                 key={s.value}
@@ -182,6 +188,29 @@ export function QuestionForm({ surveyId, question, allQuestions, sectionNames, d
                 }`}
               >
                 {s.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+      {/* 리커트 척도 라벨 프리셋 선택 */}
+      {(questionType === "likert_5" || questionType === "likert_7") && (
+        <div>
+          <label className="block text-[13px] font-medium text-stone-600 mb-1.5">척도 설명</label>
+          <div className="flex flex-wrap gap-2">
+            {LIKERT_LABEL_PRESETS.map((p) => (
+              <button
+                key={p.id}
+                type="button"
+                onClick={() => setLikertLabelPreset(p.id)}
+                className={`rounded-lg border-[1.5px] px-3 py-2 text-xs font-medium transition-all ${
+                  likertLabelPreset === p.id
+                    ? "border-teal-400 bg-teal-50 text-teal-700"
+                    : "border-stone-200 bg-white text-stone-400 hover:border-stone-300"
+                }`}
+              >
+                {p.name}
+                <span className="block text-[10px] font-normal mt-0.5 opacity-70">{p.labels[5]}~{p.labels[1]}</span>
               </button>
             ))}
           </div>

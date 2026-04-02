@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Image from "next/image";
 import { Eye, ChevronLeft, ChevronRight, CheckCircle2, Clock, FileText, Shield } from "lucide-react";
-import { type Question, type SurveySettings, type PreviewTab, type RespondentFieldConfig, RESPONDENT_FIELD_PRESETS, likertLabels, parseOptions, groupQuestionsBySection } from "./components/types";
+import { type Question, type SurveySettings, type PreviewTab, type RespondentFieldConfig, RESPONDENT_FIELD_PRESETS, likertLabels, getLikertLabels, parseOptions, groupQuestionsBySection } from "./components/types";
 
 interface PreviewProps {
   surveyTitle: string;
@@ -139,7 +139,7 @@ function LandingPreview({ title, description, settings, questionCount }: { title
         {settings.collect_respondent_info !== false && fields.length > 0 && (
           <div className="space-y-1.5">
             <p className="text-[8px] font-semibold text-stone-400 uppercase tracking-widest">응답자 정보</p>
-            <div className="grid grid-cols-2 gap-1.5">
+            <div className={`grid gap-1.5 ${fields.length === 1 ? 'grid-cols-1' : fields.length === 3 ? 'grid-cols-3' : 'grid-cols-2'}`}>
               {fields.map((f) => (
                 <div key={f.id} className="rounded-lg border border-stone-200 bg-white px-2 py-2">
                   <span className="text-[10px] text-stone-400">{f.label}{f.required ? ' *' : ''}</span>
@@ -291,24 +291,62 @@ function QuestionsPreview({ title, questions, settings }: { title: string; quest
 
       {/* Questions */}
       <div className="flex-1 px-5 py-4 space-y-4 overflow-y-auto">
-        {sectionQuestions.map((q, qIdx) => (
+        {(() => {
+          let visibleIdx = 0;
+          return sectionQuestions.map((q, qIdx) => {
+          // 안내 블록 미리보기
+          if (q.question_type === "info_block") {
+            const style = (q.metadata?.block_style as string) || "info";
+            if (style === "divider") {
+              return (
+                <div key={q.id} className="py-1">
+                  <div className="flex items-center gap-2">
+                    <div className="flex-1 h-px bg-stone-200" />
+                    {q.question_text && <span className="text-[9px] text-stone-400 shrink-0">{q.question_text}</span>}
+                    <div className="flex-1 h-px bg-stone-200" />
+                  </div>
+                </div>
+              );
+            }
+            const blockMap: Record<string, { bg: string; border: string; text: string; icon: string }> = {
+              info: { bg: "bg-blue-50", border: "border-blue-200", text: "text-blue-800", icon: "ℹ" },
+              warning: { bg: "bg-amber-50", border: "border-amber-200", text: "text-amber-800", icon: "⚠" },
+              success: { bg: "bg-emerald-50", border: "border-emerald-200", text: "text-emerald-800", icon: "✓" },
+              tip: { bg: "bg-violet-50", border: "border-violet-200", text: "text-violet-800", icon: "💡" },
+            };
+            const b = blockMap[style] || blockMap.info;
+            return (
+              <div key={q.id} className={`rounded-lg border px-3 py-2 ${b.bg} ${b.border}`}>
+                <div className="flex items-start gap-1.5">
+                  <span className={`shrink-0 text-[10px] ${b.text}`}>{b.icon}</span>
+                  <p className={`text-[10px] leading-relaxed ${b.text}`}>{q.question_text}</p>
+                </div>
+              </div>
+            );
+          }
+
+          visibleIdx++;
+          return (
           <div key={q.id} className="space-y-2">
             <p className="text-[13px] text-stone-800 leading-relaxed">
-              <span className="text-[11px] font-semibold text-teal-600 mr-1.5">{String(qIdx + 1).padStart(2, "0")}</span>
+              <span className="text-[11px] font-semibold text-teal-600 mr-1.5">{String(visibleIdx).padStart(2, "0")}</span>
               {q.question_text}
               {q.is_required && <span className="text-rose-400 ml-0.5">*</span>}
             </p>
 
-            {q.question_type === "likert_5" && (
-              <div className="flex gap-1">
-                {[5, 4, 3, 2, 1].map((v) => (
-                  <div key={v} className="flex-1 flex flex-col items-center gap-1 py-2 rounded-lg border border-stone-200 bg-white">
-                    <span className="text-[13px] text-stone-500">{v}</span>
-                    <span className="text-[8px] text-stone-400 leading-tight">{likertLabels[v]}</span>
-                  </div>
-                ))}
-              </div>
-            )}
+            {q.question_type === "likert_5" && (() => {
+              const qLabels = getLikertLabels(q.metadata?.likert_label_preset as string | undefined);
+              return (
+                <div className="flex gap-1">
+                  {[5, 4, 3, 2, 1].map((v) => (
+                    <div key={v} className="flex-1 flex flex-col items-center gap-1 py-2 rounded-lg border border-stone-200 bg-white">
+                      <span className="text-[13px] text-stone-500">{v}</span>
+                      <span className="text-[8px] text-stone-400 leading-tight">{qLabels[v]}</span>
+                    </div>
+                  ))}
+                </div>
+              );
+            })()}
 
             {q.question_type === "likert_7" && (
               <div className="flex gap-0.5">
@@ -352,7 +390,9 @@ function QuestionsPreview({ title, questions, settings }: { title: string; quest
 
             {qIdx < sectionQuestions.length - 1 && <div className="h-px bg-stone-100 mt-1" />}
           </div>
-        ))}
+          );
+        });
+        })()}
       </div>
 
       {/* Bottom nav (section) */}
