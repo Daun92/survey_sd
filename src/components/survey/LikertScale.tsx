@@ -129,6 +129,9 @@ export function LikertScale({
       </div>
       <div className="flex justify-between px-1">
         <span className="text-[10px] text-gray-400">{labels[1] || ""}</span>
+        {labels[Math.ceil(scale / 2)] && (
+          <span className="text-[10px] text-gray-400">{labels[Math.ceil(scale / 2)]}</span>
+        )}
         <span className="text-[10px] text-gray-400">
           {labels[scale] || ""}
         </span>
