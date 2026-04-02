@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createAdminClient } from "@/lib/supabase/admin"
-import { getSmsSender } from "@/lib/sms/sender"
+import { getSmsSenderFromDB } from "@/lib/sms/sender"
 
 export const dynamic = "force-dynamic"
 
@@ -12,10 +12,10 @@ export async function GET(request: NextRequest) {
   }
 
   const supabase = createAdminClient()
-  const sender = getSmsSender()
+  const sender = await getSmsSenderFromDB()
 
   if (sender.isMock) {
-    console.error("[CRON] SMS sender is in mock mode. Set ALIGO_API_KEY, ALIGO_USER_ID, ALIGO_SENDER_PHONE.")
+    console.error("[CRON] SMS sender is in mock mode. Set PPURIO_USERNAME/PPURIO_TOKEN/PPURIO_SENDER_PHONE or configure DB provider.")
     return NextResponse.json({ error: "SMS not configured", processed: 0, succeeded: 0, failed: 0 }, { status: 503 })
   }
 
