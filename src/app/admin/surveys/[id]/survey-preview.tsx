@@ -337,7 +337,7 @@ function QuestionsPreview({ title, questions, settings }: { title: string; quest
 
             {q.question_type === "likert_5" && (() => {
               const qLabels = getLikertLabels(q.metadata?.likert_label_preset as string | undefined);
-              const pts = [1, 2, 3, 4, 5];
+              const pts = [5, 4, 3, 2, 1];
               return (
                 <div className="space-y-0.5">
                   <div className="flex gap-1">
@@ -350,7 +350,7 @@ function QuestionsPreview({ title, questions, settings }: { title: string; quest
                   <div className="flex gap-1">
                     {pts.map((v) => (
                       <span key={v} className="flex-1 text-center text-[7px] text-stone-400 leading-tight">
-                        {v === 1 || v === 3 || v === 5 ? qLabels[v] : ""}
+                        {v === 5 || v === 3 || v === 1 ? qLabels[v] : ""}
                       </span>
                     ))}
                   </div>
@@ -360,7 +360,7 @@ function QuestionsPreview({ title, questions, settings }: { title: string; quest
 
             {q.question_type === "likert_7" && (
               <div className="flex gap-0.5">
-                {[1, 2, 3, 4, 5, 6, 7].map((v) => (
+                {[7, 6, 5, 4, 3, 2, 1].map((v) => (
                   <div key={v} className="flex-1 flex items-center justify-center py-2 rounded border border-stone-200 bg-white text-[12px] text-stone-500">{v}</div>
                 ))}
               </div>

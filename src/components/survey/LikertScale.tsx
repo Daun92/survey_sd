@@ -83,7 +83,7 @@ export function LikertScale({
   direction = "horizontal",
   disabled = false,
 }: LikertScaleProps) {
-  const options = Array.from({ length: scale }, (_, i) => i + 1);
+  const options = Array.from({ length: scale }, (_, i) => scale - i);
 
   if (direction === "vertical") {
     return (

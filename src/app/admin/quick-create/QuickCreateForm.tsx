@@ -941,7 +941,7 @@ function TemplatePreviewModal({
                     q.questionType === "likert_6") && (
                     <div className="space-y-1">
                       <div className="flex gap-1.5">
-                        {[1, 2, 3, 4, 5].map((value) => (
+                        {[5, 4, 3, 2, 1].map((value) => (
                           <div
                             key={value}
                             className="flex-1 flex items-center justify-center py-3 rounded-xl text-sm font-medium border-[1.5px] bg-white text-stone-500 border-stone-200"
@@ -951,9 +951,9 @@ function TemplatePreviewModal({
                         ))}
                       </div>
                       <div className="flex gap-1.5">
-                        {[1, 2, 3, 4, 5].map((value) => (
+                        {[5, 4, 3, 2, 1].map((value) => (
                           <span key={value} className="flex-1 text-center text-[9px] text-stone-400 leading-tight">
-                            {value === 1 || value === 3 || value === 5 ? (likertLabels[value] ?? "") : ""}
+                            {value === 5 || value === 3 || value === 1 ? (likertLabels[value] ?? "") : ""}
                           </span>
                         ))}
                       </div>
