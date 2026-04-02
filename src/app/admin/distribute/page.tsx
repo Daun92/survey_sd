@@ -39,23 +39,41 @@ async function getPersonalLinkBatches(supabase: Awaited<ReturnType<typeof create
     .from("distribution_batches")
     .select(`
       id, survey_id, channel, total_count, sent_count, opened_count, completed_count, created_at,
-      edu_surveys ( title, status )
+      edu_surveys (
+        title, status, education_type,
+        sessions ( name, session_number,
+          courses ( name,
+            projects ( name )
+          )
+        )
+      )
     `)
     .eq("channel", "personal_link")
     .order("created_at", { ascending: false });
 
-  return (batches ?? []).map((b: any) => ({
-    id: b.id,
-    surveyId: b.survey_id,
-    surveyTitle: b.edu_surveys?.title ?? "(삭제된 설문)",
-    surveyStatus: b.edu_surveys?.status ?? "unknown",
-    channel: b.channel,
-    totalCount: b.total_count,
-    sentCount: b.sent_count,
-    openedCount: b.opened_count,
-    completedCount: b.completed_count,
-    createdAt: b.created_at,
-  }));
+  return (batches ?? []).map((b: any) => {
+    const survey = b.edu_surveys;
+    const session = survey?.sessions;
+    const course = session?.courses;
+    const project = course?.projects;
+    return {
+      id: b.id,
+      surveyId: b.survey_id,
+      surveyTitle: survey?.title ?? "(삭제된 설문)",
+      surveyStatus: survey?.status ?? "unknown",
+      educationType: survey?.education_type ?? null,
+      sessionName: session?.name ?? null,
+      sessionNumber: session?.session_number ?? null,
+      courseName: course?.name ?? null,
+      projectName: project?.name ?? null,
+      channel: b.channel,
+      totalCount: b.total_count,
+      sentCount: b.sent_count,
+      openedCount: b.opened_count,
+      completedCount: b.completed_count,
+      createdAt: b.created_at,
+    };
+  });
 }
 
 export default async function DistributePage() {

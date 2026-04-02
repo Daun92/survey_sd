@@ -66,6 +66,11 @@ interface BatchItem {
   surveyId: string
   surveyTitle: string
   surveyStatus: string
+  educationType: string | null
+  sessionName: string | null
+  sessionNumber: number | null
+  courseName: string | null
+  projectName: string | null
   channel: string
   totalCount: number
   sentCount: number
@@ -831,8 +836,23 @@ export default function DistributeTabs({ surveys, batches: initialBatches }: { s
                           className={`text-stone-400 transition-transform flex-shrink-0 ${isExpanded ? 'rotate-90' : ''}`}
                         />
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-1.5 flex-wrap">
                             <span className="text-sm font-medium text-stone-800 truncate">{batch.surveyTitle}</span>
+                            {batch.educationType && educationTypeLabel[batch.educationType] && (
+                              <span className="inline-flex items-center rounded-md bg-indigo-50 px-1.5 py-0.5 text-[10px] font-medium text-indigo-600 shrink-0">
+                                {educationTypeLabel[batch.educationType]}
+                              </span>
+                            )}
+                            {batch.projectName && (
+                              <span className="inline-flex items-center rounded-md bg-stone-100 px-1.5 py-0.5 text-[10px] font-medium text-stone-600 shrink-0">
+                                {batch.projectName}
+                              </span>
+                            )}
+                            {(batch.sessionName || batch.sessionNumber != null) && (
+                              <span className="inline-flex items-center rounded-md bg-teal-50 px-1.5 py-0.5 text-[10px] font-medium text-teal-600 shrink-0">
+                                {batch.sessionName || `${batch.sessionNumber}차`}
+                              </span>
+                            )}
                             <Badge variant="outline" className="text-[10px] flex-shrink-0">{batch.totalCount}건</Badge>
                           </div>
                           <div className="flex items-center gap-3 mt-0.5 text-[11px] text-stone-400">
