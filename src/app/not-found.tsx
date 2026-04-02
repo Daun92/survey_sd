@@ -1,4 +1,4 @@
-import Link from "next/link";
+"use client";
 
 export default function NotFound() {
   return (
@@ -11,12 +11,12 @@ export default function NotFound() {
         <p className="text-sm text-stone-500 mb-6">
           요청하신 페이지가 존재하지 않거나 이동되었습니다.
         </p>
-        <Link
-          href="/admin"
-          className="inline-block px-4 py-2.5 rounded-lg bg-teal-600 text-white text-sm font-medium hover:bg-teal-700 transition-colors"
+        <button
+          onClick={() => typeof window !== 'undefined' && window.history.length > 1 ? window.history.back() : window.location.assign('/')}
+          className="inline-block px-4 py-2.5 rounded-lg bg-teal-600 text-white text-sm font-medium hover:bg-teal-700 transition-colors cursor-pointer"
         >
-          대시보드로 이동
-        </Link>
+          처음으로 돌아가기
+        </button>
       </div>
     </div>
   );

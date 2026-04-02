@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import Image from 'next/image'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
@@ -140,9 +140,37 @@ export default function SurveyForm({ survey, groupToken, distributionToken, pref
   distributionToken?: string
   prefillRespondent?: PrefillRespondent
 }) {
-  const [step, setStep] = useState<Step>('landing')
-  const [answers, setAnswers] = useState<Record<string, number | string | number[]>>({})
+  // ─── sessionStorage 키 (설문별 고유) ───
+  const storageKey = `survey_draft_${survey.id}`
+
+  const loadDraft = useCallback(() => {
+    try {
+      const raw = sessionStorage.getItem(storageKey)
+      if (!raw) return null
+      return JSON.parse(raw) as {
+        answers: Record<string, number | string | number[]>
+        respondentInfo: Record<string, string>
+        sectionIdx: number
+        step: Step
+      }
+    } catch { return null }
+  }, [storageKey])
+
+  const [step, setStep] = useState<Step>(() => {
+    if (typeof window === 'undefined') return 'landing'
+    const draft = (() => { try { const r = sessionStorage.getItem(`survey_draft_${survey.id}`); return r ? JSON.parse(r) : null } catch { return null } })()
+    return draft?.step ?? 'landing'
+  })
+  const [answers, setAnswers] = useState<Record<string, number | string | number[]>>(() => {
+    if (typeof window === 'undefined') return {}
+    const draft = (() => { try { const r = sessionStorage.getItem(`survey_draft_${survey.id}`); return r ? JSON.parse(r) : null } catch { return null } })()
+    return draft?.answers ?? {}
+  })
   const [respondentInfo, setRespondentInfo] = useState<Record<string, string>>(() => {
+    if (typeof window !== 'undefined') {
+      const draft = (() => { try { const r = sessionStorage.getItem(`survey_draft_${survey.id}`); return r ? JSON.parse(r) : null } catch { return null } })()
+      if (draft?.respondentInfo && Object.keys(draft.respondentInfo).length > 0) return draft.respondentInfo
+    }
     const initial: Record<string, string> = {}
     if (prefillRespondent?.name) initial.name = prefillRespondent.name
     if (prefillRespondent?.department) initial.department = prefillRespondent.department
@@ -155,8 +183,37 @@ export default function SurveyForm({ survey, groupToken, distributionToken, pref
   const startTimeRef = useRef<number>(0)
   const scrollContainerRef = useRef<HTMLDivElement>(null)
   const [elapsedTime, setElapsedTime] = useState('')
-  const [currentSectionIdx, setCurrentSectionIdx] = useState(0)
+  const [currentSectionIdx, setCurrentSectionIdx] = useState(() => {
+    if (typeof window === 'undefined') return 0
+    const draft = (() => { try { const r = sessionStorage.getItem(`survey_draft_${survey.id}`); return r ? JSON.parse(r) : null } catch { return null } })()
+    return draft?.sectionIdx ?? 0
+  })
   const [toast, setToast] = useState<string | null>(null)
+
+  // ─── 응답 상태를 sessionStorage에 자동 저장 ───
+  useEffect(() => {
+    if (step === 'ending') {
+      sessionStorage.removeItem(storageKey)
+      return
+    }
+    const hasAnswers = Object.keys(answers).length > 0
+    if (!hasAnswers && step === 'landing') return
+    try {
+      sessionStorage.setItem(storageKey, JSON.stringify({
+        answers, respondentInfo, sectionIdx: currentSectionIdx, step,
+      }))
+    } catch { /* storage full — 무시 */ }
+  }, [answers, respondentInfo, currentSectionIdx, step, storageKey])
+
+  // ─── 이탈 경고 (beforeunload) ───
+  useEffect(() => {
+    const handler = (e: BeforeUnloadEvent) => {
+      if (step === 'ending' || Object.keys(answers).length === 0) return
+      e.preventDefault()
+    }
+    window.addEventListener('beforeunload', handler)
+    return () => window.removeEventListener('beforeunload', handler)
+  }, [step, answers])
 
   const respondentFields: RespondentFieldConfig[] =
     survey.settings.respondent_fields?.filter((f) => f.enabled) ?? DEFAULT_RESPONDENT_FIELDS
@@ -168,6 +225,13 @@ export default function SurveyForm({ survey, groupToken, distributionToken, pref
     document.documentElement.scrollTop = 0
     document.body.scrollTop = 0
   }
+
+  // draft에서 questions 단계로 복원된 경우 startTime 설정
+  useEffect(() => {
+    if (step === 'questions' && startTimeRef.current === 0) {
+      startTimeRef.current = Date.now()
+    }
+  }, [step])
 
   const allQuestions = survey.sections.flatMap((s) => s.questions)
   const isLikertType = (t: string) => t === 'likert_5' || t === 'likert_6'
