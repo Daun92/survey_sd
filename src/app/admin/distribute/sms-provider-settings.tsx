@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { getSmsProviders, saveSmsProvider, deleteSmsProvider, testSmsProvider } from "./actions"
 
-type ProviderType = 'aligo' | 'naver_cloud' | 'twilio'
+type ProviderType = 'aligo' | 'ppurio' | 'naver_cloud' | 'twilio'
 
 interface ProviderItem {
   id: string
@@ -20,12 +20,14 @@ interface ProviderItem {
 
 const PROVIDER_LABELS: Record<ProviderType, string> = {
   aligo: '알리고',
+  ppurio: '뿌리오',
   naver_cloud: '네이버 클라우드',
   twilio: 'Twilio',
 }
 
 const PROVIDER_COLORS: Record<ProviderType, string> = {
   aligo: 'bg-green-100 text-green-700',
+  ppurio: 'bg-purple-100 text-purple-700',
   naver_cloud: 'bg-emerald-100 text-emerald-700',
   twilio: 'bg-red-100 text-red-700',
 }
@@ -232,17 +234,20 @@ export default function SmsProviderSettings() {
                   onChange={(e) => setFormType(e.target.value as ProviderType)}
                 >
                   <option value="aligo">알리고</option>
+                  <option value="ppurio">뿌리오</option>
                   <option value="naver_cloud">네이버 클라우드</option>
                   <option value="twilio">Twilio</option>
                 </select>
               </div>
             </div>
 
-            {formType === 'aligo' && (
+            {(formType === 'aligo' || formType === 'ppurio') && (
               <>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="text-xs text-stone-500 mb-1 block">API Key</label>
+                    <label className="text-xs text-stone-500 mb-1 block">
+                      {formType === 'ppurio' ? '비밀번호 (인증키)' : 'API Key'}
+                    </label>
                     <input
                       type="password"
                       className="w-full rounded-md border border-stone-200 bg-white px-3 py-2 text-sm"
@@ -252,7 +257,9 @@ export default function SmsProviderSettings() {
                     />
                   </div>
                   <div>
-                    <label className="text-xs text-stone-500 mb-1 block">User ID</label>
+                    <label className="text-xs text-stone-500 mb-1 block">
+                      {formType === 'ppurio' ? '뿌리오 계정' : 'User ID'}
+                    </label>
                     <input
                       type="text"
                       className="w-full rounded-md border border-stone-200 bg-white px-3 py-2 text-sm"
@@ -272,15 +279,17 @@ export default function SmsProviderSettings() {
                   />
                 </div>
                 <p className="text-[11px] text-stone-400">
-                  발신번호는 알리고 대시보드에서 사전 등록이 필요합니다. 미등록 번호로는 발송이 거부됩니다.
+                  {formType === 'ppurio'
+                    ? '비즈뿌리오 관리자 페이지에서 계정 비밀번호 확인 및 연동 IP 등록이 필요합니다.'
+                    : '발신번호는 알리고 대시보드에서 사전 등록이 필요합니다. 미등록 번호로는 발송이 거부됩니다.'}
                 </p>
               </>
             )}
 
-            {formType !== 'aligo' && (
+            {formType !== 'aligo' && formType !== 'ppurio' && (
               <div className="rounded-md bg-amber-50 border border-amber-200 px-3 py-2">
                 <p className="text-xs text-amber-700">
-                  {PROVIDER_LABELS[formType]} 연동은 준비 중입니다. 현재는 알리고만 지원됩니다.
+                  {PROVIDER_LABELS[formType]} 연동은 준비 중입니다. 현재는 알리고 또는 뿌리오만 지원됩니다.
                 </p>
               </div>
             )}
@@ -304,7 +313,7 @@ export default function SmsProviderSettings() {
                 value={testPhone}
                 onChange={(e) => setTestPhone(e.target.value)}
               />
-              <Button variant="outline" size="sm" onClick={handleTest} disabled={testing || formType !== 'aligo'}>
+              <Button variant="outline" size="sm" onClick={handleTest} disabled={testing || (formType !== 'aligo' && formType !== 'ppurio')}>
                 {testing ? <Loader2 size={13} className="mr-1 animate-spin" /> : <TestTube size={13} className="mr-1" />}
                 테스트
               </Button>

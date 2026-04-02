@@ -20,7 +20,7 @@ export interface SmsSender {
 
 // ─── SMS 프로바이더 설정 ───
 
-export type SmsProviderType = 'aligo' | 'naver_cloud' | 'twilio'
+export type SmsProviderType = 'aligo' | 'ppurio' | 'naver_cloud' | 'twilio'
 
 export interface SmsProviderConfig {
   id: string

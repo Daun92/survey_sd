@@ -74,6 +74,120 @@ class AligoSmsSender implements SmsSender {
   }
 }
 
+// ─── 비즈뿌리오 발송기 ───
+// API: POST https://api.bizppurio.com/v3/message (JSON)
+// 문서: https://bizmessage.zendesk.com/hc/ko/sections/9700693541647
+
+const PPURIO_BASE_URL = 'https://api.bizppurio.com'
+
+class PpurioSmsSender implements SmsSender {
+  private account: string
+  private authKey: string
+  private senderPhone: string
+  private cachedToken: string | null = null
+  private tokenExpiry: Date | null = null
+
+  constructor(account: string, authKey: string, senderPhone: string) {
+    this.account = account
+    this.authKey = authKey
+    this.senderPhone = senderPhone
+  }
+
+  private async getToken(): Promise<string> {
+    // 캐시된 토큰이 유효하면 재사용 (만료 5분 전 갱신)
+    if (this.cachedToken && this.tokenExpiry && this.tokenExpiry.getTime() - Date.now() > 5 * 60 * 1000) {
+      return this.cachedToken
+    }
+
+    const credentials = Buffer.from(`${this.account}:${this.authKey}`).toString('base64')
+
+    const res = await fetch(`${PPURIO_BASE_URL}/v1/token`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Basic ${credentials}`,
+        'Content-type': 'application/json; charset=utf-8',
+      },
+    })
+
+    if (!res.ok) {
+      throw new Error(`뿌리오 토큰 발급 실패: HTTP ${res.status}`)
+    }
+
+    const data = await res.json() as {
+      accesstoken: string
+      type: string
+      expired: string  // "yyyyMMddHHmmss"
+    }
+
+    this.cachedToken = data.accesstoken
+
+    // expired 문자열 파싱: "20230414090407" → Date
+    const exp = data.expired
+    this.tokenExpiry = new Date(
+      parseInt(exp.slice(0, 4)),
+      parseInt(exp.slice(4, 6)) - 1,
+      parseInt(exp.slice(6, 8)),
+      parseInt(exp.slice(8, 10)),
+      parseInt(exp.slice(10, 12)),
+      parseInt(exp.slice(12, 14))
+    )
+
+    return this.cachedToken
+  }
+
+  async send(req: SmsSendRequest): Promise<SmsResult> {
+    try {
+      const token = await this.getToken()
+
+      const content = req.messageType === 'SMS'
+        ? { sms: { message: req.body } }
+        : { lms: { message: req.body } }
+
+      const body = {
+        account: this.account,
+        type: req.messageType,
+        from: this.senderPhone,
+        to: req.to,
+        refkey: crypto.randomUUID().replace(/-/g, '').slice(0, 32),
+        content,
+      }
+
+      const res = await fetch(`${PPURIO_BASE_URL}/v3/message`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-type': 'application/json; charset=utf-8',
+        },
+        body: JSON.stringify(body),
+      })
+
+      const data = await res.json() as {
+        code: string
+        description: string
+        refkey?: string
+        messagekey?: string
+      }
+
+      if (data.code === '1000') {
+        return {
+          success: true,
+          messageId: data.messagekey ?? `ppurio-${Date.now()}`,
+        }
+      }
+
+      return {
+        success: false,
+        error: `뿌리오 발송 실패 [${data.code}]: ${data.description}`,
+      }
+    } catch (err) {
+      return {
+        success: false,
+        error: err instanceof Error ? err.message : '뿌리오 API 호출 실패',
+      }
+    }
+  }
+}
+
 // ─── DB에서 제공자 설정으로 발송기 생성 ───
 export function createSmsFromConfig(config: SmsProviderConfig): SmsSender {
   if (config.provider_type === 'aligo') {
@@ -81,6 +195,13 @@ export function createSmsFromConfig(config: SmsProviderConfig): SmsSender {
       return new MockSmsSender()
     }
     return new AligoSmsSender(config.api_key, config.api_user_id, config.sender_phone)
+  }
+
+  if (config.provider_type === 'ppurio') {
+    if (!config.api_key || !config.api_user_id || !config.sender_phone) {
+      return new MockSmsSender()
+    }
+    return new PpurioSmsSender(config.api_user_id, config.api_key, config.sender_phone)
   }
 
   // naver_cloud, twilio 등 추후 확장
