@@ -204,6 +204,7 @@ export default function DistributeTabs({ surveys, batches: initialBatches }: { s
       const result = await createDistributionBatch({
         surveyId: selectedSurveyId,
         rows: validRows,
+        isTest: false,
       })
       if ('error' in result) {
         setError(result.error as string)
