@@ -83,6 +83,7 @@ interface BatchItem {
 interface DistributionResult {
   name: string
   email: string
+  phone: string
   uniqueToken: string
 }
 
@@ -576,6 +577,7 @@ export default function DistributeTabs({ surveys, batches: initialBatches }: { s
                       <tr className="bg-stone-50 border-b border-stone-200">
                         <th className="text-left px-3 py-2 text-stone-500 font-medium w-10">#</th>
                         <th className="text-left px-3 py-2 text-stone-500 font-medium">담당자</th>
+                        <th className="text-left px-3 py-2 text-stone-500 font-medium">연락처</th>
                         <th className="text-left px-3 py-2 text-stone-500 font-medium">이메일</th>
                         <th className="text-left px-3 py-2 text-stone-500 font-medium">개인 링크</th>
                         <th className="text-center px-3 py-2 text-stone-500 font-medium w-20"></th>
@@ -588,7 +590,8 @@ export default function DistributeTabs({ surveys, batches: initialBatches }: { s
                           <tr key={r.uniqueToken} className="border-b border-stone-100">
                             <td className="px-3 py-2 text-stone-400">{idx + 1}</td>
                             <td className="px-3 py-2 text-stone-700">{r.name}</td>
-                            <td className="px-3 py-2 text-stone-700 font-mono text-xs">{r.email}</td>
+                            <td className="px-3 py-2 text-stone-600 text-xs">{r.phone || '-'}</td>
+                            <td className="px-3 py-2 text-stone-700 font-mono text-xs">{r.email || '-'}</td>
                             <td className="px-3 py-2 font-mono text-xs text-teal-700 truncate max-w-[300px]">{link}</td>
                             <td className="px-3 py-2 text-center">
                               <div className="flex items-center justify-center gap-1.5">
@@ -705,7 +708,7 @@ export default function DistributeTabs({ surveys, batches: initialBatches }: { s
               </CardContent>
             </Card>
             <EmailSendPanel batchId={batchId} surveyId={selectedSurveyId} results={results} />
-            <SmsSendPanel batchId={batchId} surveyId={selectedSurveyId} results={results.map(r => ({ ...r, phone: '' }))} />
+            <SmsSendPanel batchId={batchId} surveyId={selectedSurveyId} results={results.map(r => ({ ...r, phone: r.phone || '' }))} />
           </div>
         )}
       </div>

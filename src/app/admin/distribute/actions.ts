@@ -12,6 +12,7 @@ import { renderTemplate as renderSmsTemplate, getTemplateVariables as getSmsTemp
 interface DistributionResult {
   name: string
   email: string
+  phone: string
   uniqueToken: string
 }
 
@@ -142,7 +143,7 @@ export async function createDistributionBatch(input: CreateBatchInput) {
   const { data: distributions, error: distErr } = await supabase
     .from("distributions")
     .insert(distributionInserts)
-    .select("id, recipient_name, recipient_email, unique_token")
+    .select("id, recipient_name, recipient_email, recipient_phone, unique_token")
 
   if (distErr || !distributions) {
     return { error: "개인 링크 생성에 실패했습니다: " + (distErr?.message ?? "") }
@@ -159,6 +160,7 @@ export async function createDistributionBatch(input: CreateBatchInput) {
   const results: DistributionResult[] = distributions.map((d) => ({
     name: d.recipient_name ?? "",
     email: d.recipient_email ?? "",
+    phone: (d as any).recipient_phone ?? "",
     uniqueToken: d.unique_token,
   }))
 
@@ -279,7 +281,7 @@ export async function addToDistributionBatch(input: {
   const { data: distributions, error: distErr } = await supabase
     .from("distributions")
     .insert(distributionInserts)
-    .select("id, recipient_name, recipient_email, unique_token")
+    .select("id, recipient_name, recipient_email, recipient_phone, unique_token")
 
   if (distErr || !distributions) {
     return { error: "추가 링크 생성 실패: " + (distErr?.message ?? "") }
@@ -301,6 +303,7 @@ export async function addToDistributionBatch(input: {
   const results: DistributionResult[] = distributions.map((d) => ({
     name: d.recipient_name ?? "",
     email: d.recipient_email ?? "",
+    phone: (d as any).recipient_phone ?? "",
     uniqueToken: d.unique_token,
   }))
 
