@@ -33,14 +33,6 @@ export function SurveyStart({
       {/* Main Content */}
       <main className="px-6 pt-20 pb-12">
         <div className="max-w-xl w-full mx-auto flex flex-col items-center text-center space-y-6">
-          {/* Title */}
-          <h1
-            className="text-3xl md:text-4xl font-headline font-extrabold tracking-tight leading-tight"
-            style={{ color: "var(--expert-on-surface)" }}
-          >
-            {survey.title}
-          </h1>
-
           {/* Welcome message */}
           <p
             className="text-base md:text-lg leading-relaxed"

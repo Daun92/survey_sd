@@ -285,15 +285,8 @@ export default function SurveyForm({ survey, groupToken, distributionToken, pref
         {/* Center-aligned content area */}
         <div className="flex-1 flex flex-col justify-center">
 
-        {/* Survey Title */}
-        <div className="flex flex-col items-center pt-8 pb-2 px-6">
-          <h1 className="text-[20px] font-bold text-stone-900 text-center leading-tight tracking-tight">
-            {String(survey.title ?? '')}
-          </h1>
-          {survey.sessionName && (
-            <p className="text-[13px] text-stone-500 mt-1.5">{String(survey.sessionName ?? '')}</p>
-          )}
-        </div>
+        {/* Spacer (내부용 제목은 응답자에게 미표시) */}
+        <div className="pt-8 pb-2" />
 
         {/* Welcome Message */}
         <div className="px-6 pb-2">
