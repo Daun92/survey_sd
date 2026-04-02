@@ -109,6 +109,17 @@ function shouldShowQuestion(q: SurveyQuestion, answers: Record<string, number | 
   const { question_id, operator, value } = q.skip_logic.show_when
   const answer = answers[question_id]
   if (answer === undefined) return false
+
+  // 복수 선택(배열)인 경우: 특정 값 포함 여부로 판단
+  if (Array.isArray(answer)) {
+    const numVal = Number(value)
+    switch (operator) {
+      case 'equals': return answer.includes(numVal)
+      case 'not_equals': return !answer.includes(numVal)
+      default: return true
+    }
+  }
+
   switch (operator) {
     case 'equals': return String(answer) === String(value)
     case 'not_equals': return String(answer) !== String(value)
