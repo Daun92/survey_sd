@@ -685,27 +685,30 @@ export default function SurveyForm({ survey, groupToken, distributionToken, pref
 
             {(question.type === 'likert_5' || question.type === 'likert_6') && (() => {
               const qLabels = getLikertLabelsForQuestion(question)
+              const points = [5, 4, 3, 2, 1]
               return (
-                <div className="flex gap-1.5">
-                  {[5, 4, 3, 2, 1].map((value) => (
-                    <button
-                      key={value}
-                      type="button"
-                      onClick={() => handleLikertChangeWithScroll(question.id, value)}
-                      className={`flex-1 flex flex-col items-center gap-1.5 py-3 rounded-xl text-sm font-medium border-[1.5px] transition-all ${
-                        answers[question.id] === value
-                          ? 'bg-teal-600 text-white border-teal-600 shadow-sm'
-                          : 'bg-white text-stone-500 border-stone-200 hover:border-teal-300 hover:bg-teal-50'
-                      }`}
-                    >
-                      <span className="text-[16px]">{value}</span>
-                      <span className={`text-[9px] leading-tight ${
-                        answers[question.id] === value ? 'text-white/80' : 'text-stone-400'
-                      }`}>
-                        {qLabels[value]}
-                      </span>
-                    </button>
-                  ))}
+                <div className="space-y-1.5">
+                  <div className="flex gap-1.5">
+                    {points.map((value) => (
+                      <button
+                        key={value}
+                        type="button"
+                        onClick={() => handleLikertChangeWithScroll(question.id, value)}
+                        className={`flex-1 py-3 rounded-xl text-sm font-medium border-[1.5px] transition-all ${
+                          answers[question.id] === value
+                            ? 'bg-teal-600 text-white border-teal-600 shadow-sm'
+                            : 'bg-white text-stone-500 border-stone-200 hover:border-teal-300 hover:bg-teal-50'
+                        }`}
+                      >
+                        {value}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="flex justify-between px-1">
+                    <span className="text-[10px] text-stone-400">{qLabels[points[points.length - 1]]}</span>
+                    <span className="text-[10px] text-stone-400">{qLabels[3]}</span>
+                    <span className="text-[10px] text-stone-400">{qLabels[points[0]]}</span>
+                  </div>
                 </div>
               )
             })()}

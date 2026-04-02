@@ -337,13 +337,19 @@ function QuestionsPreview({ title, questions, settings }: { title: string; quest
             {q.question_type === "likert_5" && (() => {
               const qLabels = getLikertLabels(q.metadata?.likert_label_preset as string | undefined);
               return (
-                <div className="flex gap-1">
-                  {[5, 4, 3, 2, 1].map((v) => (
-                    <div key={v} className="flex-1 flex flex-col items-center gap-1 py-2 rounded-lg border border-stone-200 bg-white">
-                      <span className="text-[13px] text-stone-500">{v}</span>
-                      <span className="text-[8px] text-stone-400 leading-tight">{qLabels[v]}</span>
-                    </div>
-                  ))}
+                <div className="space-y-0.5">
+                  <div className="flex gap-1">
+                    {[5, 4, 3, 2, 1].map((v) => (
+                      <div key={v} className="flex-1 flex items-center justify-center py-2 rounded-lg border border-stone-200 bg-white">
+                        <span className="text-[13px] text-stone-500">{v}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="flex justify-between px-0.5">
+                    <span className="text-[7px] text-stone-400">{qLabels[1]}</span>
+                    <span className="text-[7px] text-stone-400">{qLabels[3]}</span>
+                    <span className="text-[7px] text-stone-400">{qLabels[5]}</span>
+                  </div>
                 </div>
               );
             })()}
