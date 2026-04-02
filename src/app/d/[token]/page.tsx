@@ -14,6 +14,7 @@ interface SurveySection {
     required: boolean
     options?: string[] | null
     skip_logic?: { show_when: { question_id: string; operator: 'equals' | 'not_equals' | 'greater_than' | 'less_than'; value: string | number } } | null
+    metadata?: Record<string, unknown> | null
   }[]
 }
 
@@ -75,6 +76,7 @@ async function getDistributionByToken(token: string) {
       required: q.is_required === true,
       options: parsedOptions,
       skip_logic: (q as any).skip_logic ?? null,
+      metadata: (q as any).metadata ?? null,
     })
   }
 
