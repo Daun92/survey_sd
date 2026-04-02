@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Select } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
 import {
-  Copy, Check, Printer, Link2, QrCode, Upload, FileSpreadsheet,
+  Copy, Check, Printer, Link2, QrCode, Upload, FileSpreadsheet, Plus,
   AlertTriangle, CheckCircle2, XCircle, Download, Loader2, ArrowLeft,
   ChevronRight, Eye, Mail, Users, Trash2, UserPlus, ExternalLink, Send,
   FileBarChart,
@@ -113,6 +113,11 @@ export default function DistributeTabs({ surveys, batches: initialBatches }: { s
   const [batchId, setBatchId] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [isDragOver, setIsDragOver] = useState(false)
+
+  // 수동 추가 상태
+  const [showManualForm, setShowManualForm] = useState(false)
+  const [manualRows, setManualRows] = useState<{ company: string; name: string; email: string; phone: string; memo: string }[]>([{ company: '', name: '', email: '', phone: '', memo: '' }])
+  const [manualProcessing, setManualProcessing] = useState(false)
 
   // 추가 대상자 상태
   const [addingMore, setAddingMore] = useState(false)
@@ -224,6 +229,58 @@ export default function DistributeTabs({ surveys, batches: initialBatches }: { s
     } catch {
       setError('링크 생성 중 오류가 발생했습니다')
       setPersonalStep('preview')
+    }
+  }
+
+  const handleManualGenerate = async () => {
+    const validManual = manualRows.filter((r) => r.name.trim())
+    if (!selectedSurveyId || validManual.length === 0) return
+    setManualProcessing(true)
+    setError(null)
+    try {
+      const rows = validManual.map((r, i) => ({
+        company: r.company || '(수동)',
+        name: r.name,
+        email: r.email,
+        phone: r.phone,
+        phoneNormalized: r.phone.replace(/[^0-9]/g, ''),
+        emailValid: true,
+        project: r.memo || '',
+        course: '',
+        am: '',
+        team: '',
+        rowNumber: i + 1,
+      }))
+      const result = await createDistributionBatch({ surveyId: selectedSurveyId, rows })
+      if ('error' in result) {
+        setError(result.error as string)
+        setManualProcessing(false)
+        return
+      }
+      setBatchId(result.batchId)
+      setResults(result.distributions)
+      setBatches((prev) => [{
+        id: result.batchId,
+        surveyId: selectedSurveyId,
+        surveyTitle: selectedSurvey?.title ?? '',
+        surveyStatus: selectedSurvey?.status ?? '',
+        educationType: selectedSurvey?.educationType ?? null,
+        sessionName: selectedSurvey?.sessionName ?? null,
+        sessionNumber: selectedSurvey?.sessionNumber ?? null,
+        courseName: null,
+        projectName: null,
+        channel: 'personal_link',
+        totalCount: result.distributions.length,
+        sentCount: 0, openedCount: 0, completedCount: 0,
+        createdAt: new Date().toISOString(),
+      }, ...prev])
+      setShowManualForm(false)
+      setManualRows([{ company: '', name: '', email: '', phone: '', memo: '' }])
+      setManualProcessing(false)
+      setPersonalStep('result')
+    } catch {
+      setError('수동 링크 생성 중 오류가 발생했습니다')
+      setManualProcessing(false)
     }
   }
 
@@ -787,6 +844,86 @@ export default function DistributeTabs({ surveys, batches: initialBatches }: { s
                 onChange={handleFileInput}
               />
             </div>
+            {/* 수동 추가 토글 */}
+            <div className="mt-4 border-t border-stone-100 pt-4">
+              {!showManualForm ? (
+                <button
+                  onClick={() => setShowManualForm(true)}
+                  className="inline-flex items-center gap-1.5 text-sm text-teal-600 hover:text-teal-800 font-medium transition-colors"
+                >
+                  <UserPlus size={14} />
+                  수동으로 개인 링크 추가
+                </button>
+              ) : (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm font-medium text-stone-700">수동 링크 추가</p>
+                    <button onClick={() => { setShowManualForm(false); setManualRows([{ company: '', name: '', email: '', phone: '', memo: '' }]) }} className="text-xs text-stone-400 hover:text-stone-600">닫기</button>
+                  </div>
+                  <div className="space-y-2">
+                    {manualRows.map((row, idx) => (
+                      <div key={idx} className="grid grid-cols-[1fr_1fr_1fr_8rem_1fr_auto] gap-2 items-center text-xs">
+                        <input
+                          className="rounded border border-stone-300 px-2 py-1.5"
+                          placeholder="회사명"
+                          value={row.company}
+                          onChange={(e) => { const next = [...manualRows]; next[idx] = { ...row, company: e.target.value }; setManualRows(next) }}
+                        />
+                        <input
+                          className="rounded border border-stone-300 px-2 py-1.5"
+                          placeholder="이름 *"
+                          value={row.name}
+                          onChange={(e) => { const next = [...manualRows]; next[idx] = { ...row, name: e.target.value }; setManualRows(next) }}
+                        />
+                        <input
+                          className="rounded border border-stone-300 px-2 py-1.5"
+                          placeholder="이메일"
+                          value={row.email}
+                          onChange={(e) => { const next = [...manualRows]; next[idx] = { ...row, email: e.target.value }; setManualRows(next) }}
+                        />
+                        <input
+                          className="rounded border border-stone-300 px-2 py-1.5"
+                          placeholder="전화번호"
+                          value={row.phone}
+                          onChange={(e) => { const next = [...manualRows]; next[idx] = { ...row, phone: e.target.value }; setManualRows(next) }}
+                        />
+                        <input
+                          className="rounded border border-stone-300 px-2 py-1.5"
+                          placeholder="메모 (용도)"
+                          value={row.memo}
+                          onChange={(e) => { const next = [...manualRows]; next[idx] = { ...row, memo: e.target.value }; setManualRows(next) }}
+                        />
+                        {manualRows.length > 1 && (
+                          <button onClick={() => setManualRows(manualRows.filter((_, i) => i !== idx))} className="p-1 text-stone-300 hover:text-rose-500">
+                            <XCircle size={14} />
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <button
+                      onClick={() => setManualRows([...manualRows, { company: '', name: '', email: '', phone: '', memo: '' }])}
+                      className="inline-flex items-center gap-1 text-xs text-teal-600 hover:text-teal-800 font-medium"
+                    >
+                      <Plus size={12} /> 행 추가
+                    </button>
+                    <div className="flex-1" />
+                    <span className="text-[11px] text-stone-400">{manualRows.filter(r => r.name.trim()).length}건</span>
+                    <Button
+                      size="sm"
+                      onClick={handleManualGenerate}
+                      disabled={manualProcessing || manualRows.filter(r => r.name.trim()).length === 0}
+                      className="bg-teal-600 hover:bg-teal-700 text-white"
+                    >
+                      {manualProcessing ? <Loader2 size={13} className="mr-1 animate-spin" /> : <UserPlus size={13} className="mr-1" />}
+                      링크 생성
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
+
             {error && (
               <div className="mt-3 flex items-center gap-2 text-sm text-rose-600">
                 <AlertTriangle size={14} />{error}
