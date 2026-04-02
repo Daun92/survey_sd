@@ -4,6 +4,7 @@ import { useState } from "react";
 import Image from "next/image";
 import { Eye, ChevronLeft, ChevronRight, CheckCircle2, Clock, FileText, Shield } from "lucide-react";
 import { type Question, type SurveySettings, type PreviewTab, type RespondentFieldConfig, RESPONDENT_FIELD_PRESETS, likertLabels, getLikertLabels, parseOptions, groupQuestionsBySection } from "./components/types";
+import { parseSimpleMarkdown } from "@/lib/simple-markdown";
 
 interface PreviewProps {
   surveyTitle: string;
@@ -319,7 +320,7 @@ function QuestionsPreview({ title, questions, settings }: { title: string; quest
               <div key={q.id} className={`rounded-lg border px-3 py-2 ${b.bg} ${b.border}`}>
                 <div className="flex items-start gap-1.5">
                   <span className={`shrink-0 text-[10px] ${b.text}`}>{b.icon}</span>
-                  <p className={`text-[10px] leading-relaxed ${b.text}`}>{q.question_text}</p>
+                  <div className={`text-[10px] leading-relaxed ${b.text}`}>{parseSimpleMarkdown(q.question_text)}</div>
                 </div>
               </div>
             );

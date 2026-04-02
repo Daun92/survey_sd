@@ -107,7 +107,18 @@ export function QuestionForm({ surveyId, question, allQuestions, sectionNames, d
       <p className="text-sm font-semibold text-stone-800">{isEdit ? "문항 수정" : "새 문항 추가"}</p>
       <div>
         <label className="block text-[13px] font-medium text-stone-600 mb-1">질문 내용 <span className="text-red-400">*</span></label>
-        <textarea ref={textareaRef} value={questionText} onChange={(e) => setQuestionText(e.target.value)} rows={2} placeholder="질문 내용을 입력하세요" className="w-full rounded-lg border border-stone-300 px-3 py-2 text-sm focus:border-teal-500 focus:ring-1 focus:ring-teal-500 outline-none resize-none overflow-hidden" style={{ minHeight: "3.5rem" }} />
+        <textarea ref={textareaRef} value={questionText} onChange={(e) => setQuestionText(e.target.value)} rows={isInfoBlock ? 4 : 2} placeholder={isInfoBlock ? "안내 내용을 입력하세요" : "질문 내용을 입력하세요"} className="w-full rounded-lg border border-stone-300 px-3 py-2 text-sm focus:border-teal-500 focus:ring-1 focus:ring-teal-500 outline-none resize-none overflow-hidden" style={{ minHeight: isInfoBlock ? "5rem" : "3.5rem" }} />
+        {isInfoBlock && (
+          <p className="text-[11px] text-stone-400 mt-1">
+            <span className="font-medium">서식:</span>{" "}
+            <code className="bg-stone-100 px-1 rounded text-[10px]">**굵게**</code>{" "}
+            <code className="bg-stone-100 px-1 rounded text-[10px]">*기울임*</code>{" "}
+            <code className="bg-stone-100 px-1 rounded text-[10px]">~~취소선~~</code>{" "}
+            <code className="bg-stone-100 px-1 rounded text-[10px]">`코드`</code>{" "}
+            <code className="bg-stone-100 px-1 rounded text-[10px]">---</code>
+            <span className="ml-1">(수평선)</span>
+          </p>
+        )}
       </div>
       <div className="grid grid-cols-2 gap-3">
         <div>
