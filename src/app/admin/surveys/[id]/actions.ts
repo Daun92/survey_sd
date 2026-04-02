@@ -180,8 +180,8 @@ export async function updateQuestion(
     updateData.options = data.options ? JSON.stringify(data.options) : null;
   }
   const skipLogicVal = (data as Record<string, unknown>).skip_logic;
-  if (skipLogicVal !== undefined && skipLogicVal !== null) {
-    updateData.skip_logic = skipLogicVal;
+  if (skipLogicVal !== undefined) {
+    updateData.skip_logic = skipLogicVal ?? null;
   }
   const metadataVal = (data as Record<string, unknown>).metadata;
   if (metadataVal !== undefined) {

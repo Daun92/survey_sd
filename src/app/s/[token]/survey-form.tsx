@@ -265,7 +265,10 @@ export default function SurveyForm({ survey, groupToken, distributionToken, pref
   if (step === 'landing') {
     const hasConsent = !!survey.settings.privacy_consent_text
     const needsConsent = hasConsent && survey.settings.require_consent
-    const canStart = !needsConsent || consentChecked
+    const requiredFieldsFilled = !distributionToken && survey.settings.collect_respondent_info !== false
+      ? respondentFields.filter((f) => f.required).every((f) => (respondentInfo[f.id] ?? '').trim() !== '')
+      : true
+    const canStart = (!needsConsent || consentChecked) && requiredFieldsFilled
 
     return (
       <MobileFrame>
@@ -339,7 +342,7 @@ export default function SurveyForm({ survey, groupToken, distributionToken, pref
           {!distributionToken && survey.settings.collect_respondent_info !== false && respondentFields.length > 0 && (
             <div className="space-y-2.5">
               <p className="text-[11px] font-semibold text-stone-500 uppercase tracking-widest">응답자 정보</p>
-              <div className={`grid gap-2 ${respondentFields.length === 1 ? 'grid-cols-1' : respondentFields.length === 3 ? 'grid-cols-3' : respondentFields.length >= 4 ? 'grid-cols-2' : 'grid-cols-2'}`}>
+              <div className={`grid gap-2 ${respondentFields.length === 1 ? 'grid-cols-1' : 'grid-cols-2'}`}>
                 {respondentFields.map((field) => {
                   const isPrefilled = !!prefillRespondent && !!(prefillRespondent as any)[field.id]
                   return (
@@ -448,14 +451,17 @@ export default function SurveyForm({ survey, groupToken, distributionToken, pref
 
   const handleLikertChangeWithScroll = (questionId: string, value: number) => {
     handleLikertChange(questionId, value)
-    // Auto-scroll to next question
+    // Auto-scroll to next VISIBLE question (skip_logic 반영)
     const currentQuestions = currentSection?.questions ?? []
     const idx = currentQuestions.findIndex((q) => q.id === questionId)
-    if (idx >= 0 && idx < currentQuestions.length - 1) {
-      const nextId = currentQuestions[idx + 1].id
-      setTimeout(() => {
-        document.getElementById(`q-${nextId}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
-      }, 150)
+    if (idx >= 0) {
+      const nextAnswers = { ...answers, [questionId]: value }
+      const nextVisible = currentQuestions.slice(idx + 1).find((q) => shouldShowQuestion(q, nextAnswers))
+      if (nextVisible) {
+        setTimeout(() => {
+          document.getElementById(`q-${nextVisible.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+        }, 150)
+      }
     }
   }
 

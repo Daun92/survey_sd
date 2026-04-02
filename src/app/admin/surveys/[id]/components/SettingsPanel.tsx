@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useCallback } from "react";
 import { Settings2, ChevronDown, ChevronUp, Save, Loader2, Upload, X, ImageIcon, Play, Square } from "lucide-react";
 import { updateSurveySettings } from "../actions";
 import { type SurveySettings, type RespondentFieldConfig, RESPONDENT_FIELD_PRESETS } from "./types";
@@ -18,6 +18,11 @@ export function SettingsPanel({ surveyId, initialSettings, onSettingsChange, onS
   const [uploading, setUploading] = useState(false);
   const [settings, setSettings] = useState<SurveySettings>(initialSettings);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const autoResize = useCallback((el: HTMLTextAreaElement) => {
+    el.style.height = 'auto';
+    el.style.height = el.scrollHeight + 'px';
+  }, []);
 
   const respondentFields: RespondentFieldConfig[] =
     settings.respondent_fields ?? RESPONDENT_FIELD_PRESETS;
@@ -150,11 +155,12 @@ export function SettingsPanel({ surveyId, initialSettings, onSettingsChange, onS
           <div>
             <label className="block text-[13px] font-medium text-stone-600 mb-1">환영 인삿말</label>
             <textarea
+              ref={(el) => { if (el) autoResize(el); }}
               value={settings.welcome_message ?? ""}
-              onChange={(e) => update({ welcome_message: e.target.value })}
+              onChange={(e) => { update({ welcome_message: e.target.value }); autoResize(e.target); }}
               placeholder="안녕하세요, 고객님.&#10;귀하의 소중한 의견은 더 나은 교육 서비스를 제공하는 데 큰 도움이 됩니다."
-              rows={3}
-              className="w-full rounded-lg border border-stone-200 px-3 py-2 text-sm focus:border-teal-500 focus:ring-1 focus:ring-teal-500 outline-none resize-none"
+              rows={2}
+              className="w-full rounded-lg border border-stone-200 px-3 py-2 text-sm focus:border-teal-500 focus:ring-1 focus:ring-teal-500 outline-none resize-none overflow-hidden"
             />
           </div>
 
@@ -196,11 +202,12 @@ export function SettingsPanel({ surveyId, initialSettings, onSettingsChange, onS
           <div>
             <label className="block text-[13px] font-medium text-stone-600 mb-1">개인정보 수집 안내</label>
             <textarea
+              ref={(el) => { if (el) autoResize(el); }}
               value={settings.privacy_consent_text ?? ""}
-              onChange={(e) => update({ privacy_consent_text: e.target.value })}
+              onChange={(e) => { update({ privacy_consent_text: e.target.value }); autoResize(e.target); }}
               placeholder="연락처는 소정의 사은품 제공 목적으로 사용하며, 설문 참여 시 개인정보 사용 동의를 전제로 진행합니다."
               rows={2}
-              className="w-full rounded-lg border border-stone-200 px-3 py-2 text-sm focus:border-teal-500 focus:ring-1 focus:ring-teal-500 outline-none resize-none"
+              className="w-full rounded-lg border border-stone-200 px-3 py-2 text-sm focus:border-teal-500 focus:ring-1 focus:ring-teal-500 outline-none resize-none overflow-hidden"
             />
             <label className="flex items-center gap-2 mt-1.5 text-xs text-stone-500">
               <input
@@ -235,7 +242,7 @@ export function SettingsPanel({ surveyId, initialSettings, onSettingsChange, onS
             </div>
             <div>
               <label className="block text-[13px] font-medium text-stone-600 mb-1">감사 메시지</label>
-              <textarea value={settings.thank_you_message ?? ""} onChange={(e) => update({ thank_you_message: e.target.value })} placeholder="소중한 의견에 감사드립니다.&#10;귀하의 응답은 더 나은 서비스를 위해 소중히 활용하겠습니다." rows={3} className="w-full rounded-lg border border-stone-200 px-3 py-2 text-sm focus:border-teal-500 focus:ring-1 focus:ring-teal-500 outline-none resize-none" />
+              <textarea ref={(el) => { if (el) autoResize(el); }} value={settings.thank_you_message ?? ""} onChange={(e) => { update({ thank_you_message: e.target.value }); autoResize(e.target); }} placeholder="소중한 의견에 감사드립니다.&#10;귀하의 응답은 더 나은 서비스를 위해 소중히 활용하겠습니다." rows={2} className="w-full rounded-lg border border-stone-200 px-3 py-2 text-sm focus:border-teal-500 focus:ring-1 focus:ring-teal-500 outline-none resize-none overflow-hidden" />
             </div>
           </div>
           <label className="flex items-center gap-2.5 rounded-lg border border-stone-200 px-3 py-2.5 cursor-pointer hover:bg-stone-50 transition-colors">
