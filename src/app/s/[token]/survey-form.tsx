@@ -5,6 +5,7 @@ import Image from 'next/image'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { CheckCircle2, Loader2, ChevronRight, ChevronLeft, Clock, FileText, Shield } from 'lucide-react'
+import { parseSimpleMarkdown } from '@/lib/simple-markdown'
 
 interface SkipLogicCondition {
   show_when: {
@@ -663,7 +664,7 @@ export default function SurveyForm({ survey, groupToken, distributionToken, pref
                     <span className={`mt-0.5 shrink-0 ${b.iconColor}`}>
                       {b.icon}
                     </span>
-                    <p className="text-sm leading-relaxed whitespace-pre-line">{String(question.text ?? '')}</p>
+                    <div className="text-sm leading-relaxed">{parseSimpleMarkdown(String(question.text ?? ''))}</div>
                   </div>
                 </div>
               )
