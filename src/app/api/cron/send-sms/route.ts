@@ -61,7 +61,7 @@ export async function GET(request: NextRequest) {
       succeeded++
       await supabase
         .from("sms_queue")
-        .update({ status: "sent", sent_at: new Date().toISOString(), provider_message_id: result.messageId ?? null })
+        .update({ status: "sent", sent_at: new Date().toISOString(), provider_message_id: result.messageId ?? null, provider_message_key: result.messageKey ?? null })
         .eq("id", item.id)
 
       // distribution 상태 업데이트

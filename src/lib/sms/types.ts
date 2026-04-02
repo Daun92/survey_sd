@@ -11,12 +11,19 @@ export interface SmsSendRequest {
 export interface SmsResult {
   success: boolean
   messageId?: string
+  messageKey?: string  // 뿌리오 예약 취소용 키
+  error?: string
+}
+
+export interface SmsCancelResult {
+  success: boolean
   error?: string
 }
 
 export interface SmsSender {
   readonly isMock?: boolean
   send(req: SmsSendRequest): Promise<SmsResult>
+  cancel?(account: string, messageKey: string): Promise<SmsCancelResult>
 }
 
 // ─── SMS 프로바이더 설정 ───

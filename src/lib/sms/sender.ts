@@ -1,4 +1,4 @@
-import type { SmsSendRequest, SmsResult, SmsSender, SmsProviderConfig } from './types'
+import type { SmsSendRequest, SmsResult, SmsSender, SmsCancelResult, SmsProviderConfig } from './types'
 import { createAdminClient } from '@/lib/supabase/admin'
 
 // ─── Mock 발송기 (개발/테스트용) ───
@@ -190,6 +190,7 @@ class PpurioSmsSender implements SmsSender {
         return {
           success: true,
           messageId: data.messageKey ?? `ppurio-${Date.now()}`,
+          messageKey: data.messageKey,  // 예약 취소용
         }
       }
 
@@ -201,6 +202,41 @@ class PpurioSmsSender implements SmsSender {
       return {
         success: false,
         error: err instanceof Error ? err.message : '뿌리오 API 호출 실패',
+      }
+    }
+  }
+
+  /** 예약 발송 취소 (발송 1분 전까지만 가능) */
+  async cancel(account: string, messageKey: string): Promise<SmsCancelResult> {
+    try {
+      const accessToken = await this.getAccessToken()
+
+      const res = await fetch(`${PPURIO_BASE_URL}/v1/cancel`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ account, messageKey }),
+      })
+
+      const data = await res.json() as {
+        code: number | string
+        description?: string
+      }
+
+      if (String(data.code) === '1000') {
+        return { success: true }
+      }
+
+      return {
+        success: false,
+        error: `예약 취소 실패 [${data.code}]: ${data.description ?? ''}`,
+      }
+    } catch (err) {
+      return {
+        success: false,
+        error: err instanceof Error ? err.message : '뿌리오 예약 취소 API 호출 실패',
       }
     }
   }
