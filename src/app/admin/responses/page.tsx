@@ -1,32 +1,34 @@
 import { createClient } from "@/lib/supabase/server";
-import { formatDate } from "@/lib/utils";
-import Link from "next/link";
-import { Eye, MessageSquare, Inbox } from "lucide-react";
+import { Inbox } from "lucide-react";
+import ResponsesView from "./responses-view";
 
 export const revalidate = 30;
-
-const statusLabels: Record<string, { label: string; className: string }> = {
-  active: { label: "진행중", className: "bg-emerald-100 text-emerald-800" },
-  closed: { label: "마감", className: "bg-rose-100 text-rose-800" },
-};
 
 interface SurveyWithResponses {
   id: string;
   title: string;
   status: string;
-  session_id: string | null;
   session_name: string | null;
   session_capacity: number | null;
+  course_name: string | null;
+  project_name: string | null;
   submission_count: number;
   avg_score: number | null;
 }
 
 async function getSurveysWithResponses(supabase: Awaited<ReturnType<typeof createClient>>): Promise<SurveyWithResponses[]> {
-  // 설문 목록 + submission count를 관계 count로 가져옴 (answers JSONB 불필요)
   const [{ data: surveys }, { data: submissions }] = await Promise.all([
     supabase
       .from("edu_surveys")
-      .select("id, title, status, session_id, sessions(name, capacity), edu_submissions(count)")
+      .select(`
+        id, title, status, session_id,
+        sessions(name, capacity,
+          courses(name,
+            projects(name)
+          )
+        ),
+        edu_submissions(count)
+      `)
       .order("created_at", { ascending: false })
       .limit(500),
     supabase
@@ -37,7 +39,6 @@ async function getSurveysWithResponses(supabase: Awaited<ReturnType<typeof creat
 
   if (!surveys) return [];
 
-  // total_score 기반으로 평균 계산 (answers JSONB 파싱 불필요)
   const statsMap: Record<string, { totalScore: number; scoreCount: number }> = {};
   (submissions ?? []).forEach((sub) => {
     if (!statsMap[sub.survey_id]) {
@@ -51,7 +52,9 @@ async function getSurveysWithResponses(supabase: Awaited<ReturnType<typeof creat
 
   return surveys
     .map((s) => {
-      const session = s.sessions as unknown as { name: string; capacity: number | null } | null;
+      const session = s.sessions as any;
+      const course = session?.courses as any;
+      const project = course?.projects as any;
       const submissionCount =
         (s.edu_submissions as unknown as { count: number }[])?.[0]?.count ?? 0;
       const stats = statsMap[s.id];
@@ -59,9 +62,10 @@ async function getSurveysWithResponses(supabase: Awaited<ReturnType<typeof creat
         id: s.id,
         title: s.title,
         status: s.status,
-        session_id: s.session_id,
         session_name: session?.name ?? null,
         session_capacity: session?.capacity ?? null,
+        course_name: course?.name ?? null,
+        project_name: project?.name ?? null,
         submission_count: submissionCount,
         avg_score:
           stats && stats.scoreCount > 0
@@ -76,134 +80,25 @@ export default async function ResponsesPage() {
   const supabase = await createClient();
   const surveys = await getSurveysWithResponses(supabase);
 
-  return (
-    <div>
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-stone-800">응답 및 리포트</h1>
-        <p className="text-sm text-stone-500 mt-1">
-          수집된 설문 응답을 확인하고 분석하세요
-        </p>
-      </div>
-
-      {surveys.length === 0 ? (
+  if (surveys.length === 0) {
+    return (
+      <div>
+        <div className="mb-8">
+          <h1 className="text-2xl font-bold text-stone-800">응답 및 리포트</h1>
+          <p className="text-sm text-stone-500 mt-1">수집된 설문 응답을 확인하고 분석하세요</p>
+        </div>
         <div className="rounded-xl border border-stone-200 bg-white shadow-sm p-12 text-center">
           <div className="flex justify-center mb-4">
             <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-stone-100 text-stone-400">
               <Inbox size={24} />
             </div>
           </div>
-          <h3 className="text-sm font-medium text-stone-800 mb-1">
-            수집된 응답이 없습니다
-          </h3>
-          <p className="text-sm text-stone-500">
-            설문이 배포되면 응답이 이곳에 표시됩니다.
-          </p>
+          <h3 className="text-sm font-medium text-stone-800 mb-1">수집된 응답이 없습니다</h3>
+          <p className="text-sm text-stone-500">설문이 배포되면 응답이 이곳에 표시됩니다.</p>
         </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-          {surveys.map((survey) => {
-            const status =
-              statusLabels[survey.status] ?? statusLabels.closed;
-            const responseRate =
-              survey.session_capacity && survey.session_capacity > 0
-                ? Math.round(
-                    (survey.submission_count / survey.session_capacity) *
-                      100
-                  )
-                : null;
+      </div>
+    );
+  }
 
-            return (
-              <div
-                key={survey.id}
-                className="rounded-xl border border-stone-200 bg-white shadow-sm hover:shadow-md transition-shadow"
-              >
-                <div className="p-5">
-                  <div className="flex items-start justify-between mb-2">
-                    <div className="min-w-0 flex-1 pr-2">
-                      <h3 className="text-sm font-semibold text-stone-800 leading-snug line-clamp-2">
-                        {survey.title}
-                      </h3>
-                      {survey.session_name && (
-                        <p className="text-[13px] text-stone-500 mt-0.5 truncate">
-                          {survey.session_name}
-                        </p>
-                      )}
-                    </div>
-                    <span
-                      className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium shrink-0 ${status.className}`}
-                    >
-                      {status.label}
-                    </span>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-3 mt-4 mb-4">
-                    <div>
-                      <p className="text-xs text-stone-500 mb-0.5">응답 수</p>
-                      <p className="text-lg font-bold text-stone-800">
-                        {survey.submission_count}
-                        <span className="text-xs font-normal text-stone-400 ml-0.5">
-                          건
-                        </span>
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-stone-500 mb-0.5">
-                        평균 점수
-                      </p>
-                      <p className="text-lg font-bold text-teal-600">
-                        {survey.avg_score !== null
-                          ? survey.avg_score.toFixed(1)
-                          : "-"}
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Response Rate Progress Bar */}
-                  <div className="mb-4">
-                    <div className="flex items-center justify-between mb-1.5">
-                      <span className="text-xs text-stone-500">응답률</span>
-                      <span className="text-xs font-medium text-stone-700">
-                        {responseRate !== null ? `${responseRate}%` : "-"}
-                      </span>
-                    </div>
-                    <div className="h-2 rounded-full bg-stone-100 overflow-hidden">
-                      <div
-                        className="h-full rounded-full bg-teal-500 transition-all"
-                        style={{
-                          width: `${responseRate !== null ? Math.min(responseRate, 100) : 0}%`,
-                        }}
-                      />
-                    </div>
-                    {survey.session_capacity && (
-                      <p className="text-[11px] text-stone-400 mt-1">
-                        {survey.submission_count} / {survey.session_capacity}명
-                      </p>
-                    )}
-                  </div>
-
-                  {/* Action Buttons */}
-                  <div className="flex items-center gap-2 pt-3 border-t border-stone-100">
-                    <Link
-                      href={`/admin/responses/${survey.id}`}
-                      className="inline-flex items-center gap-1.5 rounded-lg border border-stone-200 bg-white px-3 py-2 text-[13px] font-medium text-stone-700 hover:bg-stone-50 transition-colors flex-1 justify-center"
-                    >
-                      <Eye size={14} />
-                      응답 보기
-                    </Link>
-                    <Link
-                      href={`/admin/reports?survey=${survey.id}`}
-                      className="inline-flex items-center gap-1.5 rounded-lg bg-teal-600 px-3 py-2 text-[13px] font-medium text-white hover:bg-teal-700 transition-colors flex-1 justify-center"
-                    >
-                      <MessageSquare size={14} />
-                      리포트
-                    </Link>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
-    </div>
-  );
+  return <ResponsesView surveys={surveys} />;
 }
