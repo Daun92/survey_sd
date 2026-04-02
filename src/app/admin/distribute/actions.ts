@@ -21,7 +21,7 @@ export async function createDistributionBatch(input: CreateBatchInput) {
     return { error: parsed.error.issues[0].message }
   }
 
-  const { surveyId, rows } = parsed.data
+  const { surveyId, rows, isTest } = parsed.data
   const supabase = createAdminClient()
 
   // 1. 설문 존재 확인
@@ -118,6 +118,7 @@ export async function createDistributionBatch(input: CreateBatchInput) {
       survey_id: surveyId,
       channel: "personal_link",
       total_count: respondentIds.length,
+      is_test: isTest,
     })
     .select("id")
     .single()

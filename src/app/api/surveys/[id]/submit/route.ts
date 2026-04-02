@@ -56,6 +56,7 @@ export const POST = withAuth({ type: "public" }, async (request: NextRequest, ct
     // 개별 링크(distribution) 정보 조회
     let distRespondentName = respondent_name
     let distributionId: string | null = null
+    let isTestSubmission = false
     if (distribution_token) {
       const { data: dist } = await supabase
         .from('distributions')
@@ -70,6 +71,15 @@ export const POST = withAuth({ type: "public" }, async (request: NextRequest, ct
         }
         distributionId = dist.id
         distRespondentName = dist.recipient_name || respondent_name
+        // 테스트 배치 여부 확인
+        if (dist.batch_id) {
+          const { data: batch } = await supabase
+            .from('distribution_batches')
+            .select('is_test')
+            .eq('id', dist.batch_id)
+            .single()
+          if (batch?.is_test) isTestSubmission = true
+        }
       }
     }
 
@@ -95,6 +105,7 @@ export const POST = withAuth({ type: "public" }, async (request: NextRequest, ct
         total_score: totalScore,
         channel: 'online',
         is_complete: true,
+        is_test: isTestSubmission,
         ip_address: request.headers.get('x-forwarded-for')?.split(',')[0] || null,
         user_agent: request.headers.get('user-agent') || null,
         submitted_at: new Date().toISOString(),

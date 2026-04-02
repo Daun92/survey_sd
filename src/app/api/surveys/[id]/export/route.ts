@@ -39,6 +39,7 @@ export async function GET(
       .from('edu_submissions')
       .select('id, respondent_name, respondent_department, respondent_position, answers, submitted_at, total_score')
       .eq('survey_id', surveyId)
+      .eq('is_test', false)
       .order('submitted_at', { ascending: true })
 
     const submissionList = submissions ?? []

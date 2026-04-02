@@ -71,6 +71,7 @@ interface BatchItem {
   sessionNumber: number | null
   courseName: string | null
   projectName: string | null
+  isTest: boolean
   channel: string
   totalCount: number
   sentCount: number
@@ -117,6 +118,7 @@ export default function DistributeTabs({ surveys, batches: initialBatches }: { s
   // 수동 추가 상태
   const [showManualForm, setShowManualForm] = useState(false)
   const [manualRows, setManualRows] = useState<{ company: string; name: string; email: string; phone: string; memo: string }[]>([{ company: '', name: '', email: '', phone: '', memo: '' }])
+  const [manualIsTest, setManualIsTest] = useState(false)
   const [manualProcessing, setManualProcessing] = useState(false)
 
   // 추가 대상자 상태
@@ -220,6 +222,7 @@ export default function DistributeTabs({ surveys, batches: initialBatches }: { s
         sessionNumber: selectedSurvey?.sessionNumber ?? null,
         courseName: null,
         projectName: null,
+        isTest: false,
         channel: 'personal_link',
         totalCount: result.distributions.length,
         sentCount: 0, openedCount: 0, completedCount: 0,
@@ -251,7 +254,7 @@ export default function DistributeTabs({ surveys, batches: initialBatches }: { s
         team: '',
         rowNumber: i + 1,
       }))
-      const result = await createDistributionBatch({ surveyId: selectedSurveyId, rows })
+      const result = await createDistributionBatch({ surveyId: selectedSurveyId, rows, isTest: manualIsTest })
       if ('error' in result) {
         setError(result.error as string)
         setManualProcessing(false)
@@ -269,12 +272,14 @@ export default function DistributeTabs({ surveys, batches: initialBatches }: { s
         sessionNumber: selectedSurvey?.sessionNumber ?? null,
         courseName: null,
         projectName: null,
+        isTest: manualIsTest,
         channel: 'personal_link',
         totalCount: result.distributions.length,
         sentCount: 0, openedCount: 0, completedCount: 0,
         createdAt: new Date().toISOString(),
       }, ...prev])
       setShowManualForm(false)
+      setManualIsTest(false)
       setManualRows([{ company: '', name: '', email: '', phone: '', memo: '' }])
       setManualProcessing(false)
       setPersonalStep('result')
@@ -908,6 +913,10 @@ export default function DistributeTabs({ surveys, batches: initialBatches }: { s
                     >
                       <Plus size={12} /> 행 추가
                     </button>
+                    <label className="flex items-center gap-1.5 text-xs text-stone-600 cursor-pointer ml-3">
+                      <input type="checkbox" checked={manualIsTest} onChange={(e) => setManualIsTest(e.target.checked)} className="accent-amber-500 w-3.5 h-3.5" />
+                      테스트/참조용 <span className="text-[10px] text-stone-400">(리포트 미집계)</span>
+                    </label>
                     <div className="flex-1" />
                     <span className="text-[11px] text-stone-400">{manualRows.filter(r => r.name.trim()).length}건</span>
                     <Button
@@ -980,6 +989,11 @@ export default function DistributeTabs({ surveys, batches: initialBatches }: { s
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-1.5 flex-wrap">
                             <span className="text-sm font-medium text-stone-800 truncate">{batch.surveyTitle}</span>
+                            {batch.isTest && (
+                              <span className="inline-flex items-center rounded-md bg-amber-100 px-1.5 py-0.5 text-[10px] font-medium text-amber-700 shrink-0">
+                                테스트
+                              </span>
+                            )}
                             {batch.educationType && educationTypeLabel[batch.educationType] && (
                               <span className="inline-flex items-center rounded-md bg-indigo-50 px-1.5 py-0.5 text-[10px] font-medium text-indigo-600 shrink-0">
                                 {educationTypeLabel[batch.educationType]}

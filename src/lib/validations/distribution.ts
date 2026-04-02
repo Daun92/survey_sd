@@ -19,6 +19,7 @@ export const distributionRowSchema = z.object({
 export const createBatchSchema = z.object({
   surveyId: z.string().uuid("유효한 설문 ID가 필요합니다"),
   rows: z.array(distributionRowSchema).min(1, "최소 1건의 데이터가 필요합니다"),
+  isTest: z.boolean().optional().default(false),
 });
 
 export type DistributionRow = z.infer<typeof distributionRowSchema>;

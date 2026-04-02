@@ -31,7 +31,8 @@ async function getSurveysWithResponses(supabase: Awaited<ReturnType<typeof creat
       .limit(500),
     supabase
       .from("edu_submissions")
-      .select("survey_id, total_score"),
+      .select("survey_id, total_score")
+      .eq("is_test", false),
   ]);
 
   if (!surveys) return [];

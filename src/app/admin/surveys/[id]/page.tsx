@@ -47,7 +47,8 @@ async function getSurveyDetail(supabase: Awaited<ReturnType<typeof createClient>
     supabase
       .from("edu_submissions")
       .select("*", { count: "exact", head: true })
-      .eq("survey_id", id),
+      .eq("survey_id", id)
+      .eq("is_test", false),
   ]);
 
   if (surveyError || !survey) {

@@ -82,6 +82,7 @@ async function getSurveyReport(surveyId: string) {
       .from("edu_submissions")
       .select("id, total_score, answers, respondent_name, respondent_department, respondent_position, created_at")
       .eq("survey_id", surveyId)
+      .eq("is_test", false)
       .order("created_at", { ascending: true }),
     supabase
       .from("edu_questions")

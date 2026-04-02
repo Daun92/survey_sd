@@ -19,7 +19,8 @@ async function getSidebarBadges() {
     supabase
       .from("edu_submissions")
       .select("*", { count: "exact", head: true })
-      .gte("submitted_at", dayAgo.toISOString()),
+      .gte("submitted_at", dayAgo.toISOString())
+      .eq("is_test", false),
     supabase
       .from("distributions")
       .select("*", { count: "exact", head: true })

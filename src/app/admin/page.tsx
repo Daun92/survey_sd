@@ -48,18 +48,21 @@ async function getDashboardData() {
     // 총 응답 수
     supabase
       .from("edu_submissions")
-      .select("*", { count: "exact", head: true }),
+      .select("*", { count: "exact", head: true })
+      .eq("is_test", false),
     // 이번 주 응답
     supabase
       .from("edu_submissions")
       .select("id, survey_id, submitted_at")
-      .gte("submitted_at", weekAgo.toISOString()),
+      .gte("submitted_at", weekAgo.toISOString())
+      .eq("is_test", false),
     // 지난주 응답 (비교용)
     supabase
       .from("edu_submissions")
       .select("id")
       .gte("submitted_at", twoWeeksAgo.toISOString())
-      .lt("submitted_at", weekAgo.toISOString()),
+      .lt("submitted_at", weekAgo.toISOString())
+      .eq("is_test", false),
     // 전체 배포 현황
     supabase
       .from("distributions")
@@ -80,7 +83,8 @@ async function getDashboardData() {
     // 설문별 응답 수 집계
     supabase
       .from("edu_submissions")
-      .select("survey_id"),
+      .select("survey_id")
+      .eq("is_test", false),
   ]);
 
   const submissionBySurvey: Record<string, number> = {};
