@@ -1,22 +1,9 @@
 import { createClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
 import SurveyForm from '@/app/s/[token]/survey-form'
+import { loadSurveyWithQuestions, SURVEY_SELECT_FIELDS } from '@/lib/survey-loader'
 
 export const dynamic = 'force-dynamic'
-
-interface SurveySection {
-  name: string
-  questions: {
-    id: string
-    code: string
-    text: string
-    type: string
-    required: boolean
-    options?: string[] | null
-    skip_logic?: { show_when: { question_id: string; operator: 'equals' | 'not_equals' | 'greater_than' | 'less_than'; value: string | number } } | null
-    metadata?: Record<string, unknown> | null
-  }[]
-}
 
 async function getDistributionByToken(token: string) {
   const supabase = await createClient()
@@ -33,76 +20,16 @@ async function getDistributionByToken(token: string) {
   // 2. survey 데이터 조회
   const { data: survey, error: surveyErr } = await supabase
     .from('edu_surveys')
-    .select(`
-      id, title, description, status, url_token, settings,
-      education_type, session_id,
-      sessions ( id, name, course_id,
-        courses ( name, project_id,
-          projects ( name, customers ( company_name ) )
-        )
-      )
-    `)
+    .select(SURVEY_SELECT_FIELDS)
     .eq('id', dist.survey_id)
     .single()
 
   if (surveyErr || !survey) return null
 
-  // 3. 문항 로드
-  const { data: questions } = await supabase
-    .from('edu_questions')
-    .select('id, section, question_code, question_text, question_type, is_required, sort_order, options, metadata, skip_logic')
-    .eq('survey_id', survey.id)
-    .order('sort_order', { ascending: true })
+  // 3. 공통 함수로 문항 로드 + 섹션 그룹핑
+  const loadedSurvey = await loadSurveyWithQuestions(supabase, survey)
 
-  // 4. 섹션 그룹핑
-  const sectionMap = new Map<string, SurveySection>()
-  for (const q of (questions ?? [])) {
-    const sectionName = q.section || '기타'
-    if (!sectionMap.has(sectionName)) {
-      sectionMap.set(sectionName, { name: sectionName, questions: [] })
-    }
-    let parsedOptions: string[] | null = null
-    if (q.options) {
-      try {
-        const o = typeof q.options === 'string' ? JSON.parse(q.options) : q.options
-        parsedOptions = Array.isArray(o) ? o.map(String) : null
-      } catch { parsedOptions = null }
-    }
-    sectionMap.get(sectionName)!.questions.push({
-      id: q.id,
-      code: q.question_code,
-      text: String(q.question_text ?? ''),
-      type: String(q.question_type ?? 'text'),
-      required: q.is_required === true,
-      options: parsedOptions,
-      skip_logic: (q as any).skip_logic ?? null,
-      metadata: (q as any).metadata ?? null,
-    })
-  }
-
-  // 5. 응답자 정보 조회
-  let prefillRespondent: { name?: string; department?: string; position?: string } = {}
-  if (dist.respondent_id) {
-    const { data: respondent } = await supabase
-      .from('respondents')
-      .select('name, department, position')
-      .eq('id', dist.respondent_id)
-      .single()
-    if (respondent) {
-      prefillRespondent = {
-        name: respondent.name ?? undefined,
-        department: respondent.department ?? undefined,
-        position: respondent.position ?? undefined,
-      }
-    }
-  }
-
-  // Fallback: if no respondent record, use recipient_name from distribution
-  if (!prefillRespondent.name && dist.recipient_name) {
-    prefillRespondent.name = dist.recipient_name
-  }
-
-  // 6. opened 상태 업데이트 (pending → opened)
+  // 4. opened 상태 업데이트 (pending → opened)
   if (dist.status === 'pending' || dist.status === 'sent') {
     await supabase
       .from('distributions')
@@ -110,27 +37,13 @@ async function getDistributionByToken(token: string) {
       .eq('id', dist.id)
   }
 
-  const sessionInfo = survey.sessions as any
-  const sessionName = sessionInfo?.name ?? ''
-  const courseName = sessionInfo?.courses?.name ?? ''
-
   return {
     distribution: {
       id: dist.id,
       token: dist.unique_token,
       status: dist.status,
     },
-    survey: {
-      id: survey.id,
-      title: survey.title,
-      description: survey.description ?? '',
-      status: survey.status,
-      token: survey.url_token,
-      settings: (survey.settings as any) ?? {},
-      sessionName: sessionName ? `${courseName} - ${sessionName}` : courseName,
-      sections: Array.from(sectionMap.values()),
-    },
-    prefillRespondent,
+    survey: loadedSurvey,
   }
 }
 

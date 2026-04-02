@@ -1,94 +1,24 @@
 import { createClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
 import SurveyForm from './survey-form'
+import { loadSurveyWithQuestions, SURVEY_SELECT_FIELDS } from '@/lib/survey-loader'
 
 // 설문 데이터는 항상 최신 상태를 반영해야 함
 export const dynamic = 'force-dynamic'
-
-interface SurveySection {
-  name: string
-  questions: {
-    id: string
-    code: string
-    text: string
-    type: string
-    required: boolean
-    options?: string[] | null
-    skip_logic?: { show_when: { question_id: string; operator: 'equals' | 'not_equals' | 'greater_than' | 'less_than'; value: string | number } } | null
-    metadata?: Record<string, unknown> | null
-  }[]
-}
 
 async function getSurveyByToken(token: string) {
   try {
     const supabase = await createClient()
 
-    // 설문 기본 정보
     const { data: survey, error } = await supabase
       .from('edu_surveys')
-      .select(`
-        id, title, description, status, url_token, settings,
-        education_type, session_id,
-        sessions ( id, name, course_id,
-          courses ( name, project_id,
-            projects ( name, customers ( company_name ) )
-          )
-        )
-      `)
+      .select(SURVEY_SELECT_FIELDS)
       .eq('url_token', token)
       .single()
 
     if (error || !survey) return null
 
-    // 설문 문항
-    const { data: questions } = await supabase
-      .from('edu_questions')
-      .select('id, section, question_code, question_text, question_type, is_required, sort_order, options, metadata, skip_logic')
-      .eq('survey_id', survey.id)
-      .order('sort_order', { ascending: true })
-
-    // 섹션별로 그룹핑
-    const sectionMap = new Map<string, SurveySection>()
-    for (const q of (questions ?? [])) {
-      const sectionName = q.section || '기타'
-      if (!sectionMap.has(sectionName)) {
-        sectionMap.set(sectionName, { name: sectionName, questions: [] })
-      }
-      // Parse options safely
-      let parsedOptions: string[] | null = null
-      if (q.options) {
-        try {
-          const o = typeof q.options === 'string' ? JSON.parse(q.options) : q.options
-          parsedOptions = Array.isArray(o) ? o.map(String) : null
-        } catch { parsedOptions = null }
-      }
-
-      sectionMap.get(sectionName)!.questions.push({
-        id: q.id,
-        code: q.question_code,
-        text: String(q.question_text ?? ''),
-        type: String(q.question_type ?? 'text'),
-        required: q.is_required === true,
-        options: parsedOptions,
-        skip_logic: (q as any).skip_logic ?? null,
-        metadata: (q as any).metadata ?? null,
-      })
-    }
-
-    const sessionInfo = survey.sessions as any
-    const sessionName = sessionInfo?.name ?? ''
-    const courseName = sessionInfo?.courses?.name ?? ''
-
-    return {
-      id: survey.id,
-      title: survey.title,
-      description: survey.description ?? '',
-      status: survey.status,
-      token: survey.url_token,
-      settings: (survey.settings as any) ?? {},
-      sessionName: sessionName ? `${courseName} - ${sessionName}` : courseName,
-      sections: Array.from(sectionMap.values()),
-    }
+    return await loadSurveyWithQuestions(supabase, survey)
   } catch (e) {
     console.error('Survey fetch error:', e)
     return null
