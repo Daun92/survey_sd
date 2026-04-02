@@ -221,7 +221,7 @@ export function HrdSurveyForm({ respondent, round, parts, existingResponses, tok
           {/* 5점 척도 */}
           {item.answer_type === 'likert_5' && (
             <div className="flex gap-2">
-              {[1, 2, 3, 4, 5].map(n => (
+              {[5, 4, 3, 2, 1].map(n => (
                 <button
                   key={n}
                   onClick={() => setAnswer(item.id, n)}
@@ -235,9 +235,9 @@ export function HrdSurveyForm({ respondent, round, parts, existingResponses, tok
                 </button>
               ))}
               <div className="ml-2 flex items-center text-xs text-stone-400">
-                <span>1=매우 낮음</span>
-                <span className="mx-2">~</span>
                 <span>5=매우 높음</span>
+                <span className="mx-2">~</span>
+                <span>1=매우 낮음</span>
               </div>
             </div>
           )}
@@ -248,7 +248,7 @@ export function HrdSurveyForm({ respondent, round, parts, existingResponses, tok
               <div className="flex items-center gap-3">
                 <span className="w-16 text-xs text-stone-500">중요도</span>
                 <div className="flex gap-1.5">
-                  {[1, 2, 3, 4, 5].map(n => (
+                  {[5, 4, 3, 2, 1].map(n => (
                     <button
                       key={n}
                       onClick={() => {
@@ -269,7 +269,7 @@ export function HrdSurveyForm({ respondent, round, parts, existingResponses, tok
               <div className="flex items-center gap-3">
                 <span className="w-16 text-xs text-stone-500">수행도</span>
                 <div className="flex gap-1.5">
-                  {[1, 2, 3, 4, 5].map(n => (
+                  {[5, 4, 3, 2, 1].map(n => (
                     <button
                       key={n}
                       onClick={() => {
