@@ -1206,7 +1206,7 @@ export default function DistributeTabs({ surveys, batches: initialBatches }: { s
                             </div>
                             <Button variant="outline" size="sm" onClick={() => {
                               const text = batchDistributions
-                                .map((d: any) => `${d.recipient_name}\t${d.recipient_email ?? ''}\t${BASE_URL}/d/${d.unique_token}`)
+                                .map((d: any) => `${d.recipient_name}\t${d.recipient_company ?? ''}\t${d.recipient_phone ?? ''}\t${d.recipient_email ?? ''}`)
                                 .join('\n')
                               copyToClipboard(text, `batch-${batch.id}`)
                             }}>
@@ -1215,9 +1215,10 @@ export default function DistributeTabs({ surveys, batches: initialBatches }: { s
                             </Button>
                             <Button variant="outline" size="sm" onClick={() => {
                               const bom = '\uFEFF'
-                              const header = '담당자,이메일,개인 링크,상태\n'
+                              const header = '담당자,회사,연락처,이메일\n'
                               const body = batchDistributions
-                                .map((d: any) => `"${d.recipient_name}","${d.recipient_email ?? ''}","${BASE_URL}/d/${d.unique_token}","${d.status}"`)
+                                .map((d: any) => `"${d.recipient_name}","${d.recipient_company ?? ''}","${d.recipient_phone ?? ''}","${d.recipient_email ?? ''}"`)
+
                                 .join('\n')
                               const blob = new Blob([bom + header + body], { type: 'text/csv;charset=utf-8' })
                               const url = URL.createObjectURL(blob)
