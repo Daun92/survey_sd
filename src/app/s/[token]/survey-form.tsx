@@ -162,8 +162,11 @@ export default function SurveyForm({ survey, groupToken, distributionToken, pref
     survey.settings.respondent_fields?.filter((f) => f.enabled) ?? DEFAULT_RESPONDENT_FIELDS
 
   const scrollToTop = () => {
-    scrollContainerRef.current?.scrollTo({ top: 0, behavior: 'smooth' })
-    window.scrollTo({ top: 0, behavior: 'smooth' })
+    scrollContainerRef.current?.scrollTo({ top: 0, behavior: 'instant' })
+    window.scrollTo({ top: 0, behavior: 'instant' })
+    // Safari 및 모바일 브라우저 호환
+    document.documentElement.scrollTop = 0
+    document.body.scrollTop = 0
   }
 
   const allQuestions = survey.sections.flatMap((s) => s.questions)
@@ -353,7 +356,7 @@ export default function SurveyForm({ survey, groupToken, distributionToken, pref
                       value={respondentInfo[field.id] || ''}
                       onChange={(e) => setRespondentInfo(prev => ({ ...prev, [field.id]: e.target.value }))}
                       readOnly={isPrefilled}
-                      className={`h-10 rounded-xl text-sm ${isPrefilled ? 'bg-stone-100 text-stone-500' : 'bg-white border-stone-300'}`}
+                      className={`h-10 w-full rounded-xl text-sm ${isPrefilled ? 'bg-stone-100 text-stone-500' : 'bg-white border-stone-300'}`}
                     />
                   )
                 })}
