@@ -88,17 +88,52 @@ export async function duplicateSurvey(surveyId: string) {
 
   if (createError || !newSurvey) throw new Error("설문 복제 실패: " + createError?.message);
 
-  // 문항 복제
+  // 문항 복제 (skip_logic의 question_id 참조를 새 ID로 매핑)
   const { data: questions } = await supabase
     .from("edu_questions")
-    .select("question_text, question_type, question_code, section, is_required, sort_order, options, skip_logic, metadata")
+    .select("id, question_text, question_type, question_code, section, is_required, sort_order, options, skip_logic, metadata")
     .eq("survey_id", surveyId)
     .order("sort_order", { ascending: true });
 
   if (questions && questions.length > 0) {
-    const copied = questions.map((q) => ({ ...q, survey_id: newSurvey.id }));
-    const { error: insertError } = await supabase.from("edu_questions").insert(copied);
+    // skip_logic 제외하고 insert → 새 ID 획득
+    const toInsert = questions.map(({ id, skip_logic, ...rest }) => ({
+      ...rest,
+      survey_id: newSurvey.id,
+    }));
+    const { data: inserted, error: insertError } = await supabase
+      .from("edu_questions")
+      .insert(toInsert)
+      .select("id, sort_order");
     if (insertError) throw new Error("문항 복제 실패: " + insertError.message);
+
+    // 구 ID → 신 ID 매핑
+    const idMap = new Map<string, string>();
+    for (const orig of questions) {
+      const dup = inserted!.find((n) => n.sort_order === orig.sort_order);
+      if (dup) idMap.set(orig.id, dup.id);
+    }
+
+    // skip_logic의 question_id를 새 ID로 치환하여 update
+    for (const orig of questions) {
+      if (!(orig.skip_logic as any)?.show_when?.question_id) continue;
+      const newId = idMap.get(orig.id);
+      const sl = orig.skip_logic as any;
+      const mappedTargetId = idMap.get(sl.show_when.question_id);
+      if (newId && mappedTargetId) {
+        await supabase
+          .from("edu_questions")
+          .update({
+            skip_logic: {
+              show_when: {
+                ...sl.show_when,
+                question_id: mappedTargetId,
+              },
+            },
+          })
+          .eq("id", newId);
+      }
+    }
   }
 
   revalidatePath("/admin/surveys");
