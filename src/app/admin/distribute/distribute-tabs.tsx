@@ -371,16 +371,16 @@ export default function DistributeTabs({ surveys, batches: initialBatches }: { s
 
   const copyAllLinks = async () => {
     const text = results
-      .map((r) => `${r.name}\t${r.email}\t${BASE_URL}/d/${r.uniqueToken}`)
+      .map((r) => `${r.name}\t${r.company ?? ''}\t${r.phone ?? ''}\t${r.email}\t${BASE_URL}/d/${r.uniqueToken}`)
       .join('\n')
     await copyToClipboard(text, 'all')
   }
 
   const downloadCSV = () => {
     const bom = '\uFEFF'
-    const header = '담당자,이메일,개인 링크\n'
+    const header = '담당자,회사명,연락처,이메일,개인 링크\n'
     const body = results
-      .map((r) => `"${r.name}","${r.email}","${BASE_URL}/d/${r.uniqueToken}"`)
+      .map((r) => `"${r.name}","${r.company ?? ''}","${r.phone ?? ''}","${r.email}","${BASE_URL}/d/${r.uniqueToken}"`)
       .join('\n')
     const blob = new Blob([bom + header + body], { type: 'text/csv;charset=utf-8' })
     const url = URL.createObjectURL(blob)
