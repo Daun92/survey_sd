@@ -21,7 +21,7 @@ async function getResponseDetail(supabase: Awaited<ReturnType<typeof createClien
         .order("sort_order", { ascending: true }),
       supabase
         .from("edu_submissions")
-        .select("id, respondent_name, respondent_department, respondent_position, answers, submitted_at, total_score")
+        .select("id, respondent_name, respondent_department, respondent_position, answers, submitted_at, total_score, distribution_id")
         .eq("survey_id", surveyId)
         .eq("is_test", false)
         .order("submitted_at", { ascending: false }),
@@ -32,10 +32,28 @@ async function getResponseDetail(supabase: Awaited<ReturnType<typeof createClien
     return null;
   }
 
+  // 배부 정보 조회 (불일치 비교용)
+  const distIds = (submissions ?? [])
+    .map((s) => s.distribution_id)
+    .filter((id): id is string => !!id);
+  let distMap = new Map<string, { recipient_name: string; recipient_company: string }>();
+  if (distIds.length > 0) {
+    const { data: dists } = await supabase
+      .from("distributions")
+      .select("id, recipient_name, recipient_company")
+      .in("id", distIds);
+    if (dists) {
+      for (const d of dists) {
+        distMap.set(d.id, { recipient_name: d.recipient_name ?? "", recipient_company: d.recipient_company ?? "" });
+      }
+    }
+  }
+
   return {
     survey,
     questions: questions ?? [],
     submissions: submissions ?? [],
+    distMap: Object.fromEntries(distMap),
   };
 }
 
@@ -50,7 +68,7 @@ export default async function ResponseDetailPage({
 
   if (!data) return notFound();
 
-  const { survey, questions, submissions } = data;
+  const { survey, questions, submissions, distMap } = data;
 
   return (
     <div>
@@ -153,6 +171,9 @@ export default async function ResponseDetailPage({
               <tbody>
                 {submissions.map((sub, idx) => {
                   const answers = (sub.answers ?? {}) as Record<string, string | number>;
+                  const dist = sub.distribution_id ? (distMap as Record<string, { recipient_name: string; recipient_company: string }>)[sub.distribution_id] : null;
+                  const nameMismatch = dist && dist.recipient_name && sub.respondent_name && dist.recipient_name !== sub.respondent_name;
+                  const deptMismatch = dist && dist.recipient_company && sub.respondent_department && dist.recipient_company !== sub.respondent_department;
                   return (
                     <tr
                       key={sub.id}
@@ -162,11 +183,19 @@ export default async function ResponseDetailPage({
                       <td className="sticky left-[40px] z-10 bg-white px-4 py-3 text-stone-700 whitespace-nowrap border-r border-stone-100">
                         {sub.submitted_at ? formatDateTime(sub.submitted_at) : "-"}
                       </td>
-                      <td className="sticky left-[180px] z-10 bg-white px-4 py-3 text-stone-800 font-medium whitespace-nowrap border-r border-stone-100">
+                      <td
+                        className={`sticky left-[180px] z-10 px-4 py-3 font-medium whitespace-nowrap border-r border-stone-100 ${nameMismatch ? "bg-amber-50 text-amber-800" : "bg-white text-stone-800"}`}
+                        title={nameMismatch ? `배부: ${dist.recipient_name}` : undefined}
+                      >
                         {sub.respondent_name || "익명"}
+                        {nameMismatch && <span className="ml-1 text-[10px] text-amber-500">*</span>}
                       </td>
-                      <td className="sticky left-[260px] z-10 bg-white px-4 py-3 text-stone-500 whitespace-nowrap border-r border-stone-200 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.08)]">
+                      <td
+                        className={`sticky left-[260px] z-10 px-4 py-3 whitespace-nowrap border-r border-stone-200 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.08)] ${deptMismatch ? "bg-amber-50 text-amber-800" : "bg-white text-stone-500"}`}
+                        title={deptMismatch ? `배부: ${dist.recipient_company}` : undefined}
+                      >
                         {sub.respondent_department || "-"}
+                        {deptMismatch && <span className="ml-1 text-[10px] text-amber-500">*</span>}
                       </td>
                       {questions.map((q) => (
                         <td key={q.id} className="text-center px-3 py-3 text-stone-700 whitespace-nowrap">

@@ -37,12 +37,29 @@ export async function GET(
     // 응답 조회
     const { data: submissions } = await supabase
       .from('edu_submissions')
-      .select('id, respondent_name, respondent_department, respondent_position, answers, submitted_at, total_score')
+      .select('id, respondent_name, respondent_department, respondent_position, answers, submitted_at, total_score, distribution_id')
       .eq('survey_id', surveyId)
       .eq('is_test', false)
       .order('submitted_at', { ascending: true })
 
     const submissionList = submissions ?? []
+
+    // 배부 정보 조회
+    const distIds = submissionList
+      .map((s) => s.distribution_id)
+      .filter((id): id is string => !!id)
+    const distMap = new Map<string, { recipient_name: string; recipient_company: string }>()
+    if (distIds.length > 0) {
+      const { data: dists } = await supabase
+        .from('distributions')
+        .select('id, recipient_name, recipient_company')
+        .in('id', distIds)
+      if (dists) {
+        for (const d of dists) {
+          distMap.set(d.id, { recipient_name: d.recipient_name ?? '', recipient_company: d.recipient_company ?? '' })
+        }
+      }
+    }
 
     // CSV 헤더 구성
     const headers = [
@@ -51,6 +68,8 @@ export async function GET(
       '응답자명',
       '소속',
       '직위',
+      '배부_이름',
+      '배부_회사',
       ...questionList.map((q) => q.question_code || q.question_text.slice(0, 30)),
       '총점',
     ]
@@ -63,6 +82,7 @@ export async function GET(
         if (val === undefined || val === null) return ''
         return String(val)
       })
+      const dist = sub.distribution_id ? distMap.get(sub.distribution_id) : null
 
       return [
         String(idx + 1),
@@ -70,6 +90,8 @@ export async function GET(
         sub.respondent_name ?? '',
         sub.respondent_department ?? '',
         sub.respondent_position ?? '',
+        dist?.recipient_name ?? '',
+        dist?.recipient_company ?? '',
         ...questionAnswers,
         sub.total_score != null ? String(sub.total_score) : '',
       ]
