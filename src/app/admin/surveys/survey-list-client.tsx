@@ -166,10 +166,18 @@ function StatusDropdown({ surveyId, status }: { surveyId: string; status: string
 
       {open && transitions.length > 0 && (
         <>
-          <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
-          <div className={`absolute left-0 z-20 min-w-[140px] rounded-lg border border-stone-200 bg-white shadow-lg py-1 ${
-            openUpward ? "bottom-full mb-1" : "top-full mt-1"
-          }`}>
+          <div className="fixed inset-0 z-[9998]" onClick={() => setOpen(false)} />
+          <div
+            className="fixed z-[9999] min-w-[140px] rounded-lg border border-stone-200 bg-white shadow-lg py-1"
+            style={(() => {
+              if (!buttonRef.current) return {};
+              const rect = buttonRef.current.getBoundingClientRect();
+              if (openUpward) {
+                return { left: rect.left, bottom: window.innerHeight - rect.top + 4 };
+              }
+              return { left: rect.left, top: rect.bottom + 4 };
+            })()}
+          >
             {transitions.map((t) => (
               <button
                 key={t.next}
