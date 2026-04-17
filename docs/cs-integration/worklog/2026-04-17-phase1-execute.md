@@ -78,8 +78,18 @@ DETAIL: Key columns "survey_id" and "id" are of incompatible types: uuid and int
 - **ADR-008** (기존): edu_surveys 기준
 - fix 방어 패턴: env 값에 literal `\n` 섞일 수 있음 → `.replace(/\\n/g,"")` + `.replace(/[\r\n\s]+/g,"")` 필수
 
+## Step F — Playwright E2E (완료)
+- `e2e/cs-bridge.spec.ts` 작성 — 8 테스트
+  1. 401 no key · 2. 401 wrong key · 3. 400 bad payload · 4. 404 unknown batch
+  5. 405 GET · 6. 200 happy path (3 dispatched) · 7. 200 재호출 (3 skipped) · 8. DB writeback 검증
+- beforeAll: cs_target_batches + cs_survey_targets 3건 seed
+- afterAll: 전체 cleanup (DB 완전 원복 확인)
+- 실행: `npx playwright test e2e/cs-bridge.spec.ts --reporter=list` — localhost:3000 대상 4.3s 8/8 통과
+- dotenv 직접 로드 (Git Bash MSYS path conversion 회피)
+- 이슈 2개 해결: env path conversion (`\n` → `/n`), regex escape (`/\\n/g` literal 매칭 실패)
+
 ## Next
-- **Step F** (선택): Playwright E2E 자동화 — preview 환경 활용
+- **Step F** 완료
 - **Step G**: Production 롤아웃
   - main 머지 (PR #72)
   - Production env `CS_BRIDGE_API_KEY` 세팅 (preview 와 분리된 값 권장)
