@@ -53,15 +53,40 @@ DETAIL: Key columns "survey_id" and "id" are of incompatible types: uuid and int
 ## Decisions (append 결정)
 - **ADR-008**: 실운영 설문 = `edu_surveys`. Bridge API도 Supabase client 단일화 (Prisma 사용 제거, ADR-007 강화)
 
-## Next
-- **Step C**: Bridge API 구현 (`src/app/api/distributions/cs-bridge/route.ts`)
-  - Supabase client 기반 (service_role)
-  - Zod payload 검증
-  - cs_survey_targets 재검증 → distributions insert → writeback 결과 응답
-  - smoke test (curl)
+## Step C — Bridge API 구현 (완료)
+- `src/app/api/distributions/cs-bridge/route.ts` 401줄, Supabase service_role 단일
+- 수동 payload 검증 (zod 의존 미추가), UUID regex, 500건 cap
+- cs_target_batches → survey_id, cs_survey_targets 재검증 (is_eligible + step5_confirmed + distribution_id null)
+- distribution_batches upsert (`source='cs-bridge'`, `source_batch_id=batchId`)
+- distributions insert (unique_token DB default, channel auto→email→sms 폴백)
+- cs_survey_targets writeback 6 필드
+- `npm run build` 통과, dev smoke 5/5 통과 (401/400/404/405)
+- 커밋 `11b72f9`
 
-## Open Items (실행 중 발견)
-- R1 (RLS 신규 컬럼 anon write 허용) → Step E preview 테스트에서 확인
-- D1 (cs_dashboard.html survey_id 지정 UI 부재) → 초기 테스트는 SQL 수동 UPDATE
-- D2 (Prisma DistributionBatch.source 반영 여부) → **해소**: Supabase client 단일화로 불필요
-- D3 (unique 제약) → Step C 구현 후 판단. 일단은 서버측 `distribution_id IS NULL` 체크로 방어
+## Step E — Preview 배포 + E2E (완료)
+- 브랜치 push `feature/cs-bridge-phase1`
+- Vercel Preview env `CS_BRIDGE_API_KEY` (scope = feature 브랜치)
+- PR #72 생성
+- 첫 빌드는 env 주입 안 됨 (env 추가 전 트리거된 빌드). 빈 커밋 `9c3d674` 로 재배포
+- **1차 E2E 이슈**: `surveyUrl` 에 `\n` 포함 — Preview env `NEXT_PUBLIC_APP_URL` 값이 `"https://exc-survey.vercel.app\n"` (literal `\n` 2자) 로 저장돼 있음
+- 방어 fix 2번 (trim → replace 강화): `d8a5c23`, `f3a5c98`
+- **최종 E2E**: dispatched=1 / skipped=1 (already_dispatched, 중복방지 정상) / errors=0, `surveyUrl` 깨끗
+- DB 검증: distributions writeback / cs_survey_targets writeback / distribution_batches source='cs-bridge' 모두 정확
+- 테스트 데이터 cleanup 완료 (DB는 테스트 전 상태)
+
+## Decisions (append)
+- **ADR-008** (기존): edu_surveys 기준
+- fix 방어 패턴: env 값에 literal `\n` 섞일 수 있음 → `.replace(/\\n/g,"")` + `.replace(/[\r\n\s]+/g,"")` 필수
+
+## Next
+- **Step F** (선택): Playwright E2E 자동화 — preview 환경 활용
+- **Step G**: Production 롤아웃
+  - main 머지 (PR #72)
+  - Production env `CS_BRIDGE_API_KEY` 세팅 (preview 와 분리된 값 권장)
+  - `NEXT_PUBLIC_APP_URL` production 값 확인 (newline 없는지)
+  - cs_dashboard.html `BRIDGE_KEY` placeholder 교체 + 실 발송 E2E
+- **Step H**: 문서 마무리 + runbook 완료 체크
+
+## Open Items
+- (Vercel env 근본 수정) Preview/Production `NEXT_PUBLIC_APP_URL` 값에 `\n` 있는지 dashboard에서 확인·제거. code가 방어하지만 다른 코드 경로가 영향 받을 수 있음
+- D1 (cs_dashboard.html survey_id 지정 UI) 미결. 운영 전까지 SQL 수동 UPDATE로 대체
