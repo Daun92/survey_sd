@@ -1,6 +1,6 @@
 # Phase 1 Runbook — 실행 순서
 
-**상태**: Draft · 2026-04-17
+**상태**: ✅ 완료 · 2026-04-17 (main `7fccef2` production deploy)
 **목표**: phase1-spec.md 에 정의된 Phase 1-a 를 **실제 실행 가능한 순서**로 분해.
 
 관련 ADR: ADR-001, ADR-005, ADR-006, ADR-007
@@ -14,6 +14,21 @@
 - [x] Supabase 프로젝트 `cs-survey` / `gdwhbacuzhynvegkfoga` 접근 가능
 - [ ] Vercel CLI 설치 (`npm i -g vercel`) — env pull 필요
 - [ ] 로컬 dev 환경 부팅 가능 (`npm run dev` → `http://localhost:3000` 200)
+
+---
+
+## 0.5. 완료 체크리스트 (2026-04-17)
+
+- [x] Step A: 브랜치 · Vercel 링크 · `.env.local` · `CS_BRIDGE_API_KEY` (local)
+- [x] Step B: `028_cs_bridge_phase1.sql` (FK 수정 포함 — surveys → edu_surveys)
+- [x] Step C: `/api/distributions/cs-bridge` route — Supabase client 단일
+- [~] Step D: 단위 테스트 → Step F 통합 (runner 신규 도입 없이 Playwright API test로 커버)
+- [x] Step E: Preview 배포 + cs_dashboard 시뮬레이션 E2E (surveyUrl `\n` 버그 fix 2회)
+- [x] Step F: Playwright E2E 8/8 (`e2e/cs-bridge.spec.ts`, 4.3s)
+- [x] Step G: PR #72 merge → `7fccef2` production → smoke 4/4 → cs_dashboard.html `BRIDGE_KEY` 주입
+- [x] Step H: worklog / runbook / INDEX 정리
+
+**Production**: `https://exc-survey.vercel.app/api/distributions/cs-bridge`
 
 ---
 

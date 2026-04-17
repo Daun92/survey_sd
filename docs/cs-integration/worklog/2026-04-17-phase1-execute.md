@@ -1,4 +1,4 @@
-# 2026-04-17 · Phase 1 실행 (Step A · B 완료 · C 착수)
+# 2026-04-17 · Phase 1 실행 ✅ 완료
 
 **Goal**: runbook Step A~C 실제 실행. 설계는 모두 완료(이전 세션 파일), 이제 착수.
 
@@ -88,15 +88,30 @@ DETAIL: Key columns "survey_id" and "id" are of incompatible types: uuid and int
 - dotenv 직접 로드 (Git Bash MSYS path conversion 회피)
 - 이슈 2개 해결: env path conversion (`\n` → `/n`), regex escape (`/\\n/g` literal 매칭 실패)
 
-## Next
-- **Step F** 완료
-- **Step G**: Production 롤아웃
-  - main 머지 (PR #72)
-  - Production env `CS_BRIDGE_API_KEY` 세팅 (preview 와 분리된 값 권장)
-  - `NEXT_PUBLIC_APP_URL` production 값 확인 (newline 없는지)
-  - cs_dashboard.html `BRIDGE_KEY` placeholder 교체 + 실 발송 E2E
-- **Step H**: 문서 마무리 + runbook 완료 체크
+## Step G — Production 롤아웃 (완료)
+- Production `CS_BRIDGE_API_KEY` vercel env add (preview와 분리된 새 값)
+- PR #72 squash merge → main `7fccef2`
+- Vercel production 자동 배포 `dpl_BGAeCiRqkdEsQ16cU7oY7NH6kCsM` READY
+- Production smoke 4/4 통과: 401(no key) / 400(bad payload) / 404(fake batch) / 405(GET)
+- `02. 대상자관리/참고/cs_dashboard.html` 의 `BRIDGE_KEY` 를 production 값으로 inline 주입 (`sed -i`)
+- Local main 정리:
+  - `ad708cc`(settings.local untrack)가 squash 안에 포함됨 → `git reset --hard origin/main`
+  - `feature/cs-bridge-phase1` 브랜치 로컬·원격 삭제
+  - `/tmp/cs-bridge-*-key.txt` 정리
 
-## Open Items
-- (Vercel env 근본 수정) Preview/Production `NEXT_PUBLIC_APP_URL` 값에 `\n` 있는지 dashboard에서 확인·제거. code가 방어하지만 다른 코드 경로가 영향 받을 수 있음
-- D1 (cs_dashboard.html survey_id 지정 UI) 미결. 운영 전까지 SQL 수동 UPDATE로 대체
+## Step H — 문서 마무리 (완료)
+- 본 worklog 헤더·Step G/H 추가
+- `phase1-runbook.md` 상태 헤더 + 완료 체크리스트 tick
+- `worklog/INDEX.md` 상태 표기 업데이트
+
+---
+
+## Production endpoint live
+`https://exc-survey.vercel.app/api/distributions/cs-bridge`
+
+cs_dashboard.html의 "설문 발송" 버튼이 이제 실제로 distributions를 생성합니다. 실 운영 발송 1회 검증은 사용자 담당 (별도 batch에 survey_id 세팅 → 대상자 선택 → 발송 → cs_survey_targets writeback 확인).
+
+## Open Items (Phase 2 범위로 이월)
+- (R1) anon 키로 `cs_survey_targets` 확장 컬럼 update 시 RLS 동작 — cs_dashboard.html에서 실 운영 시 검증 필요
+- (Vercel env 근본 수정) Preview/Production `NEXT_PUBLIC_APP_URL` 값에 literal `\n` 있음. code 방어 중이지만 다른 경로 영향 위험 → Phase 2에서 dashboard에서 제거 권장
+- (D1) `cs_dashboard.html` 에서 `cs_target_batches.survey_id` 지정하는 UI 없음 → 초기 운영은 SQL 수동 UPDATE. Phase 2에서 앱 UI로 이관.
