@@ -12,6 +12,7 @@ docs/cs-integration/
 ├── phase1-spec.md        ← Phase 1 상세 설계 (스키마·API·UI)
 ├── phase1-runbook.md     ← Phase 1 단계별 실행 순서·명령어
 ├── phase2-spec.md        ← Phase 2 상세 설계
+├── phase2-kickoff-prompt.md ← Phase 2 새 세션 시작점 (복사용 프롬프트 + 읽기 순서)
 └── worklog/
     ├── INDEX.md          ← 세션 인덱스 (최신 위)
     └── YYYY-MM-DD-*.md   ← 세션별 작업 기록
