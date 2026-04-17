@@ -204,7 +204,7 @@ export async function POST(req: NextRequest) {
   }
 
   // 6. base URL (survey URL 조립용)
-  const baseUrl = (process.env.NEXT_PUBLIC_APP_URL ?? "https://exc-survey.vercel.app").replace(/\/$/, "");
+  const baseUrl = (process.env.NEXT_PUBLIC_APP_URL ?? "https://exc-survey.vercel.app").trim().replace(/\/$/, "");
 
   // 7. targets 순회
   const results: DispatchResult[] = [];
