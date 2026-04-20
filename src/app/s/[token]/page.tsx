@@ -27,10 +27,11 @@ async function getSurveyByToken(token: string) {
 
 export default async function SurveyResponsePage({ params, searchParams }: {
   params: Promise<{ token: string }>
-  searchParams: Promise<{ group?: string }>
+  searchParams: Promise<{ group?: string; test?: string }>
 }) {
   const { token } = await params
-  const { group } = await searchParams
+  const { group, test } = await searchParams
+  const isTestMode = test === '1'
 
   const survey = await getSurveyByToken(token)
 
@@ -54,5 +55,5 @@ export default async function SurveyResponsePage({ params, searchParams }: {
     )
   }
 
-  return <SurveyForm survey={survey} groupToken={group ?? null} />
+  return <SurveyForm survey={survey} groupToken={group ?? null} isTestMode={isTestMode} />
 }

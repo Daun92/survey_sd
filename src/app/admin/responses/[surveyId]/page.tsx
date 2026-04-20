@@ -3,10 +3,21 @@ import { formatDateTime } from "@/lib/utils";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, Download, Users, FileText } from "lucide-react";
+import { TestFlagToggle } from "./test-flag-toggle";
 
 export const dynamic = "force-dynamic";
 
-async function getResponseDetail(supabase: Awaited<ReturnType<typeof createClient>>, surveyId: string) {
+async function getResponseDetail(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  surveyId: string,
+  includeTest: boolean
+) {
+  const submissionQuery = supabase
+    .from("edu_submissions")
+    .select("id, respondent_name, respondent_department, respondent_position, answers, submitted_at, total_score, distribution_id, is_test")
+    .eq("survey_id", surveyId)
+    .order("submitted_at", { ascending: false });
+
   const [{ data: survey, error: surveyError }, { data: questions }, { data: submissions }] =
     await Promise.all([
       supabase
@@ -19,12 +30,7 @@ async function getResponseDetail(supabase: Awaited<ReturnType<typeof createClien
         .select("id, question_code, question_text, question_type, section, sort_order")
         .eq("survey_id", surveyId)
         .order("sort_order", { ascending: true }),
-      supabase
-        .from("edu_submissions")
-        .select("id, respondent_name, respondent_department, respondent_position, answers, submitted_at, total_score, distribution_id")
-        .eq("survey_id", surveyId)
-        .eq("is_test", false)
-        .order("submitted_at", { ascending: false }),
+      includeTest ? submissionQuery : submissionQuery.eq("is_test", false),
     ]);
 
   if (surveyError || !survey) {
@@ -36,7 +42,7 @@ async function getResponseDetail(supabase: Awaited<ReturnType<typeof createClien
   const distIds = (submissions ?? [])
     .map((s) => s.distribution_id)
     .filter((id): id is string => !!id);
-  let distMap = new Map<string, { recipient_name: string; recipient_company: string }>();
+  const distMap = new Map<string, { recipient_name: string; recipient_company: string }>();
   if (distIds.length > 0) {
     const { data: dists } = await supabase
       .from("distributions")
@@ -59,16 +65,21 @@ async function getResponseDetail(supabase: Awaited<ReturnType<typeof createClien
 
 export default async function ResponseDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ surveyId: string }>;
+  searchParams: Promise<{ includeTest?: string }>;
 }) {
   const supabase = await createClient();
   const { surveyId } = await params;
-  const data = await getResponseDetail(supabase, surveyId);
+  const { includeTest: includeTestRaw } = await searchParams;
+  const includeTest = includeTestRaw === "1";
+  const data = await getResponseDetail(supabase, surveyId, includeTest);
 
   if (!data) return notFound();
 
   const { survey, questions, submissions, distMap } = data;
+  const testCount = submissions.filter((s) => (s as { is_test?: boolean }).is_test).length;
 
   return (
     <div>
@@ -90,6 +101,17 @@ export default async function ResponseDetailPage({
             </p>
           </div>
           <div className="flex items-center gap-3">
+            <Link
+              href={`/admin/responses/${surveyId}${includeTest ? "" : "?includeTest=1"}`}
+              className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-medium transition-colors shadow-sm ${
+                includeTest
+                  ? "border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100"
+                  : "border-stone-200 bg-white text-stone-600 hover:bg-stone-50"
+              }`}
+              title={includeTest ? "테스트 제외 보기로 전환" : "테스트 포함 보기로 전환"}
+            >
+              {includeTest ? `테스트 포함 (${testCount})` : "테스트 포함 보기"}
+            </Link>
             <a
               href={`/api/surveys/${surveyId}/export`}
               className="inline-flex items-center gap-1.5 rounded-lg border border-stone-200 bg-white px-3.5 py-2 text-sm font-medium text-stone-700 hover:bg-stone-50 transition-colors shadow-sm"
@@ -184,11 +206,20 @@ export default async function ResponseDetailPage({
                         {sub.submitted_at ? formatDateTime(sub.submitted_at) : "-"}
                       </td>
                       <td
-                        className={`sticky left-[180px] z-10 px-4 py-3 font-medium whitespace-nowrap border-r border-stone-100 ${nameMismatch ? "bg-amber-50 text-amber-800" : "bg-white text-stone-800"}`}
+                        className={`sticky left-[180px] z-10 px-4 py-3 font-medium whitespace-nowrap border-r border-stone-100 ${nameMismatch ? "bg-amber-50 text-amber-800" : (sub as { is_test?: boolean }).is_test ? "bg-amber-50/70 text-stone-700" : "bg-white text-stone-800"}`}
                         title={nameMismatch ? `배부: ${dist.recipient_name}` : undefined}
                       >
-                        {sub.respondent_name || "익명"}
-                        {nameMismatch && <span className="ml-1 text-[10px] text-amber-500">*</span>}
+                        <div className="flex items-center gap-2">
+                          <span>
+                            {sub.respondent_name || "익명"}
+                            {nameMismatch && <span className="ml-1 text-[10px] text-amber-500">*</span>}
+                          </span>
+                          <TestFlagToggle
+                            submissionId={sub.id}
+                            surveyId={surveyId}
+                            isTest={!!(sub as { is_test?: boolean }).is_test}
+                          />
+                        </div>
                       </td>
                       <td
                         className={`sticky left-[260px] z-10 px-4 py-3 whitespace-nowrap border-r border-stone-200 shadow-[2px_0_4px_-2px_rgba(0,0,0,0.08)] ${deptMismatch ? "bg-amber-50 text-amber-800" : "bg-white text-stone-500"}`}
