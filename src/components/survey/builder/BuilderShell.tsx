@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import WizardPanel, { type ExportedQuestion } from "@/components/survey/wizard-panel";
@@ -17,9 +17,15 @@ interface BuilderShellProps {
 
 export default function BuilderShell({ surveyId }: BuilderShellProps) {
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const urlQ = searchParams.get("q");
   const [survey, setSurvey] = useState<BuilderSurvey | null>(null);
   const [questions, setQuestions] = useState<BuilderQuestion[]>([]);
-  const [selectedId, setSelectedId] = useState<number | null>(null);
+  const [selectedId, setSelectedIdState] = useState<number | null>(() => {
+    const n = urlQ ? Number(urlQ) : NaN;
+    return Number.isFinite(n) ? n : null;
+  });
   const [dirtyIds, setDirtyIds] = useState<Set<number>>(new Set());
   const [previewMode, setPreviewMode] = useState(false);
   const [wizardOpen, setWizardOpen] = useState(false);
@@ -42,14 +48,29 @@ export default function BuilderShell({ surveyId }: BuilderShellProps) {
     fetchSurvey();
   }, [fetchSurvey]);
 
-  // 처음 로드 시 첫 문항 자동 선택 (한 번만).
+  // URL 의 q 가 유효하면 그 문항을, 아니면 첫 문항을 자동 선택 (한 번만).
   useEffect(() => {
     if (pickedInitialSelectionRef.current) return;
-    if (questions.length > 0 && selectedId === null) {
-      setSelectedId(questions[0].id);
-      pickedInitialSelectionRef.current = true;
+    if (questions.length === 0) return;
+    const exists = selectedId !== null && questions.some((q) => q.id === selectedId);
+    if (!exists) {
+      setSelectedIdState(questions[0].id);
     }
+    pickedInitialSelectionRef.current = true;
   }, [questions, selectedId]);
+
+  // selectedId 변경 시 URL 의 ?q= 동기화
+  const setSelectedId = useCallback(
+    (id: number | null) => {
+      setSelectedIdState(id);
+      const sp = new URLSearchParams(searchParams.toString());
+      if (id === null) sp.delete("q");
+      else sp.set("q", String(id));
+      const query = sp.toString();
+      router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
+    },
+    [router, pathname, searchParams],
+  );
 
   const selectedQuestion = useMemo(
     () => questions.find((q) => q.id === selectedId) ?? null,
