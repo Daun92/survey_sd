@@ -6,17 +6,9 @@ import {
   FileBarChart,
   ChevronLeft,
   Inbox,
-  CalendarDays,
-  Users,
-  TrendingUp,
-  Target,
-  ArrowDownRight,
-  ArrowUpRight,
   Download,
 } from "lucide-react";
-import dynamic from "next/dynamic";
-import { AIReportComment } from "./ai-comment";
-import { AIOpenAnalysis } from "./ai-open-analysis";
+import { ReportTabs, type SurveyReportData } from "./ReportTabs";
 import type { SectionScore } from "@/components/charts/score-bar-chart";
 import type { QuestionDistribution } from "@/components/charts/likert-distribution";
 import type { DailyResponse } from "@/components/charts/response-trend";
@@ -24,50 +16,11 @@ import type { SectionGroup, QuestionDetail } from "@/components/charts/section-s
 import type { ScoreBucket } from "@/components/charts/score-distribution";
 import type { MatrixQuestion, MatrixRow } from "@/components/charts/respondent-matrix";
 
-const ScoreBarChart = dynamic(
-  () => import("@/components/charts/score-bar-chart").then((m) => m.ScoreBarChart),
-  { loading: () => <div className="h-64 animate-pulse rounded-xl bg-stone-100" /> }
-);
-const SectionScoreTable = dynamic(
-  () => import("@/components/charts/section-score-table").then((m) => m.SectionScoreTable),
-  { loading: () => <div className="h-64 animate-pulse rounded-xl bg-stone-100" /> }
-);
-const LikertDistribution = dynamic(
-  () => import("@/components/charts/likert-distribution").then((m) => m.LikertDistribution),
-  { loading: () => <div className="h-64 animate-pulse rounded-xl bg-stone-100" /> }
-);
-const ResponseTrend = dynamic(
-  () => import("@/components/charts/response-trend").then((m) => m.ResponseTrend),
-  { loading: () => <div className="h-64 animate-pulse rounded-xl bg-stone-100" /> }
-);
-const ScoreDistribution = dynamic(
-  () => import("@/components/charts/score-distribution").then((m) => m.ScoreDistribution),
-  { loading: () => <div className="h-64 animate-pulse rounded-xl bg-stone-100" /> }
-);
-const RespondentMatrix = dynamic(
-  () => import("@/components/charts/respondent-matrix").then((m) => m.RespondentMatrix),
-  { loading: () => <div className="h-64 animate-pulse rounded-xl bg-stone-100" /> }
-);
-
 export const revalidate = 60;
 
 const TARGET_SCORE = 90;
 
-function getGradeLabel100(score: number) {
-  if (score >= 90) return "매우우수";
-  if (score >= 80) return "우수";
-  if (score >= 70) return "양호";
-  return "개선필요";
-}
-
-function getGradeBadgeClass(score: number) {
-  if (score >= 90) return "bg-teal-100 text-teal-800";
-  if (score >= 80) return "bg-emerald-100 text-emerald-800";
-  if (score >= 70) return "bg-amber-100 text-amber-800";
-  return "bg-rose-100 text-rose-800";
-}
-
-async function getSurveyReport(surveyId: string) {
+async function getSurveyReport(surveyId: string): Promise<SurveyReportData | null> {
   const supabase = await createClient();
   const { data: survey } = await supabase
     .from("edu_surveys")
@@ -80,7 +33,7 @@ async function getSurveyReport(surveyId: string) {
   const [{ data: submissions }, { data: questions }] = await Promise.all([
     supabase
       .from("edu_submissions")
-      .select("id, total_score, answers, respondent_name, respondent_department, respondent_position, created_at")
+      .select("id, total_score, answers, respondent_name, respondent_department, respondent_position, channel, created_at")
       .eq("survey_id", surveyId)
       .eq("is_test", false)
       .order("created_at", { ascending: true }),
@@ -123,17 +76,14 @@ async function getSurveyReport(surveyId: string) {
 
   if (submissions && submissionCount > 0) {
     for (const sub of submissions) {
-      // 일별 응답 추이
       const day = sub.created_at.slice(0, 10);
       dayMap.set(day, (dayMap.get(day) ?? 0) + 1);
 
-      // total_score 기반 전체 평균
       if (sub.total_score != null) {
         totalScoreSum += sub.total_score;
         totalScoreCount += 1;
       }
 
-      // 문항별 점수 집계
       const answers = sub.answers as Record<string, unknown> | null;
       if (!answers) continue;
       for (const q of likertQuestions) {
@@ -157,7 +107,6 @@ async function getSurveyReport(surveyId: string) {
   }
 
   // ── 100점 기준 전체 평균 ──
-  // total_score가 있으면 사용, 없으면 문항 평균에서 환산
   let avgScore100: number;
   if (totalScoreCount > 0 && maxPossible > 0) {
     avgScore100 = (totalScoreSum / totalScoreCount / maxPossible) * 100;
@@ -167,13 +116,13 @@ async function getSurveyReport(surveyId: string) {
     avgScore100 = allCount > 0 ? (allSum / allCount) * 20 : 0;
   }
 
-  // ── 섹션별 100점 환산 점수 ──
+  // ── 섹션별 100점 환산 ──
   const sectionScores: SectionScore[] = [];
   for (const [name, { sum, count }] of sectionMap) {
     if (count > 0) {
       sectionScores.push({
         name,
-        avg: Math.round((sum / count) * 20 * 10) / 10, // 100점 환산
+        avg: Math.round((sum / count) * 20 * 10) / 10,
         count,
       });
     }
@@ -197,12 +146,12 @@ async function getSurveyReport(surveyId: string) {
   }
 
   const sectionGroups: SectionGroup[] = [];
-  for (const [section, questions] of sectionGroupMap) {
+  for (const [section, qs] of sectionGroupMap) {
     const sScore = sectionScores.find((s) => s.name === section);
     sectionGroups.push({
       section,
       avg100: sScore?.avg ?? 0,
-      questions,
+      questions: qs,
     });
   }
 
@@ -218,7 +167,7 @@ async function getSurveyReport(surveyId: string) {
     .sort()
     .map(([date, count]) => ({ date, count }));
 
-  // ── 최고/최저 만족 문항 (100점 기준) ──
+  // ── 최고/최저 만족 문항 ──
   const allQuestionDetails = sectionGroups.flatMap((g) => g.questions);
   const sortedByScore = [...allQuestionDetails].sort((a, b) => b.avg100 - a.avg100);
   const topQuestions = sortedByScore.slice(0, 3);
@@ -226,7 +175,7 @@ async function getSurveyReport(surveyId: string) {
 
   // ── 주관식 답변 수집 ──
   const textQuestions = (questions ?? []).filter((q) => q.question_type === "text");
-  const openResponses: { name: string; department: string; questionText: string; answer: string }[] = [];
+  const openResponses: SurveyReportData["openResponses"] = [];
   if (textQuestions.length > 0 && submissions) {
     for (const sub of submissions) {
       const answers = sub.answers as Record<string, unknown> | null;
@@ -235,8 +184,8 @@ async function getSurveyReport(surveyId: string) {
         const val = answers[tq.id];
         if (typeof val === "string" && val.trim()) {
           openResponses.push({
-            name: (sub as any).respondent_name || "익명",
-            department: (sub as any).respondent_department || "",
+            name: (sub as { respondent_name?: string }).respondent_name || "익명",
+            department: (sub as { respondent_department?: string }).respondent_department || "",
             questionText: tq.question_text,
             answer: val.trim(),
           });
@@ -268,7 +217,7 @@ async function getSurveyReport(surveyId: string) {
     }
   }
 
-  // ── 응답자 매트릭스 데이터 ──
+  // ── 응답자 매트릭스 ──
   const matrixQuestions: MatrixQuestion[] = likertQuestions.map((q) => ({
     id: q.id,
     code: q.question_code || `Q${q.sort_order + 1}`,
@@ -281,9 +230,9 @@ async function getSurveyReport(surveyId: string) {
       ? Math.round((score / (likertQuestions.length * 5)) * 100)
       : 0;
     return {
-      name: (sub as any).respondent_name || "익명",
-      department: (sub as any).respondent_department || "",
-      channel: (sub as any).channel || "online",
+      name: (sub as { respondent_name?: string }).respondent_name || "익명",
+      department: (sub as { respondent_department?: string }).respondent_department || "",
+      channel: (sub as { channel?: string }).channel || "online",
       answers: (sub.answers as Record<string, number | string>) ?? {},
       totalScore100: s100,
     };
@@ -293,18 +242,20 @@ async function getSurveyReport(surveyId: string) {
   const channelCounts = { online: 0, interview: 0 };
   if (submissions) {
     for (const sub of submissions) {
-      const ch = (sub as any).channel;
+      const ch = (sub as { channel?: string }).channel;
       if (ch === "interview") channelCounts.interview++;
       else channelCounts.online++;
     }
   }
 
   return {
-    ...survey,
+    id: survey.id,
+    title: survey.title,
+    status: survey.status,
+    created_at: survey.created_at,
     submissionCount,
     avgScore100: Math.round(avgScore100 * 10) / 10,
     gap: Math.round((avgScore100 - TARGET_SCORE) * 10) / 10,
-    submissions: submissions ?? [],
     sectionScores,
     sectionGroups,
     questionDistributions,
@@ -377,9 +328,6 @@ export default async function ReportsPage({
       );
     }
 
-    const status = statusLabels[report.status] ?? statusLabels.draft;
-    const isGapPositive = report.gap >= 0;
-
     return (
       <div>
         {/* 헤더 */}
@@ -408,183 +356,7 @@ export default async function ReportsPage({
           </div>
         </div>
 
-        {/* 설문 정보 + 요약 */}
-        <div className="rounded-xl border border-stone-200 bg-white shadow-sm mb-6">
-          <div className="p-5 border-b border-stone-100">
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-base font-semibold text-stone-900">
-                  {report.title}
-                </h2>
-                <p className="text-sm text-stone-500 mt-0.5">
-                  {formatDate(report.created_at)} · {report.likertQuestionCount}개 문항 (100점 만점)
-                </p>
-              </div>
-              <span
-                className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${status.className}`}
-              >
-                {status.label}
-              </span>
-            </div>
-          </div>
-
-          {/* 4칸 요약 카드 */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 divide-y sm:divide-y-0 sm:divide-x divide-stone-100">
-            <div className="p-5 text-center">
-              <div className="flex justify-center mb-2">
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-teal-50 text-teal-600">
-                  <Users size={16} />
-                </div>
-              </div>
-              <p className="text-[28px] font-bold text-stone-800">
-                {report.submissionCount}
-              </p>
-              <p className="text-xs text-stone-500 mt-1">총 응답 수</p>
-            </div>
-            <div className="p-5 text-center">
-              <div className="flex justify-center mb-2">
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-teal-50 text-teal-600">
-                  <TrendingUp size={16} />
-                </div>
-              </div>
-              <p className="text-[28px] font-bold text-stone-800">
-                {report.avgScore100}
-                <span className="text-sm font-normal text-stone-400">점</span>
-              </p>
-              <p className="text-xs text-stone-500 mt-1">만족도 (100점)</p>
-            </div>
-            <div className="p-5 text-center">
-              <div className="flex justify-center mb-2">
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-stone-100 text-stone-500">
-                  <Target size={16} />
-                </div>
-              </div>
-              <p className="text-[28px] font-bold text-stone-800">
-                {TARGET_SCORE}
-                <span className="text-sm font-normal text-stone-400">점</span>
-              </p>
-              <p className="text-xs text-stone-500 mt-1">목표 점수</p>
-            </div>
-            <div className="p-5 text-center">
-              <div className="flex justify-center mb-2">
-                <div className={`flex h-8 w-8 items-center justify-center rounded-lg ${isGapPositive ? "bg-teal-50 text-teal-600" : "bg-rose-50 text-rose-600"}`}>
-                  {isGapPositive ? <ArrowUpRight size={16} /> : <ArrowDownRight size={16} />}
-                </div>
-              </div>
-              <p className={`text-[28px] font-bold ${isGapPositive ? "text-teal-600" : "text-rose-600"}`}>
-                {isGapPositive ? "+" : ""}{report.gap}
-                <span className="text-sm font-normal text-stone-400">점</span>
-              </p>
-              <p className="text-xs text-stone-500 mt-1">목표 대비 GAP</p>
-            </div>
-          </div>
-        </div>
-
-        {/* 핵심 인사이트 */}
-        {report.submissionCount > 0 && (
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-            <div className="rounded-xl border border-teal-200 bg-teal-50/50 p-4">
-              <p className="text-[11px] font-medium text-teal-600 mb-2">최고 만족 항목</p>
-              {report.topQuestions.map((q, i) => (
-                <div key={i} className="flex items-center justify-between text-xs mb-1">
-                  <span className="text-stone-700 truncate mr-2">{q.text}</span>
-                  <span className="font-bold text-teal-700 shrink-0">{Math.round(q.avg100 * 10) / 10}</span>
-                </div>
-              ))}
-            </div>
-            <div className="rounded-xl border border-rose-200 bg-rose-50/50 p-4">
-              <p className="text-[11px] font-medium text-rose-600 mb-2">최저 만족 항목</p>
-              {report.bottomQuestions.map((q, i) => (
-                <div key={i} className="flex items-center justify-between text-xs mb-1">
-                  <span className="text-stone-700 truncate mr-2">{q.text}</span>
-                  <span className="font-bold text-rose-700 shrink-0">{Math.round(q.avg100 * 10) / 10}</span>
-                </div>
-              ))}
-            </div>
-            <div className="rounded-xl border border-stone-200 bg-stone-50/50 p-4">
-              <p className="text-[11px] font-medium text-stone-600 mb-2">응답 채널</p>
-              <div className="flex items-center gap-4 mt-3">
-                <div className="text-center flex-1">
-                  <p className="text-xl font-bold text-stone-800">{report.channelCounts.online}</p>
-                  <p className="text-[11px] text-stone-500">온라인 설문</p>
-                </div>
-                <div className="h-8 w-px bg-stone-200" />
-                <div className="text-center flex-1">
-                  <p className="text-xl font-bold text-stone-800">{report.channelCounts.interview}</p>
-                  <p className="text-[11px] text-stone-500">인터뷰</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* 차트 영역 */}
-        {report.submissionCount > 0 && (
-          <div className="space-y-4 mb-6">
-            {/* 섹션별 바 차트 + 점수 분포 */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              <ScoreBarChart data={report.sectionScores} />
-              <ScoreDistribution data={report.scoreBuckets} />
-            </div>
-
-            {/* Likert 분포 */}
-            <LikertDistribution data={report.questionDistributions.slice(0, 20)} />
-
-            {/* 섹션별 문항 상세 테이블 */}
-            <SectionScoreTable data={report.sectionGroups} />
-
-            {/* 응답 추이 */}
-            <ResponseTrend data={report.dailyResponses} />
-          </div>
-        )}
-
-        {/* AI 리포트 코멘트 */}
-        <AIReportComment
-          reportData={{
-            courseName: report.title,
-            sessionName: "",
-            overallAvg: report.avgScore100,
-            responseRate: 0,
-            totalResponses: report.submissionCount,
-            sectionScores: report.sectionScores.map((s) => ({ name: s.name, avg: s.avg })),
-            questionScores: report.questionDistributions.map((q) => ({
-              code: q.code,
-              text: q.text,
-              section: "",
-              avg: q.total > 0
-                ? ((q["1"] * 1 + q["2"] * 2 + q["3"] * 3 + q["4"] * 4 + q["5"] * 5) / q.total) * 20
-                : 0,
-            })),
-          }}
-        />
-
-        {/* 응답자별 상세 매트릭스 */}
-        {report.matrixRows.length > 0 && (
-          <div className="mt-6">
-            <RespondentMatrix questions={report.matrixQuestions} rows={report.matrixRows} />
-          </div>
-        )}
-
-        {/* 주관식 답변 모음 */}
-        {report.openResponses.length > 0 && (
-          <div className="rounded-xl border border-stone-200 bg-white shadow-sm mt-6">
-            <div className="p-5 border-b border-stone-100">
-              <h3 className="text-sm font-semibold text-stone-800">주관식 답변</h3>
-              <p className="text-[11px] text-stone-400 mt-0.5">{report.openResponses.length}건의 자유 의견</p>
-            </div>
-            <div className="divide-y divide-stone-100">
-              {report.openResponses.map((r, idx) => (
-                <div key={idx} className="px-5 py-4">
-                  <div className="flex items-center gap-2 mb-1.5">
-                    <span className="text-xs font-medium text-stone-800">{r.name}</span>
-                    {r.department && <span className="text-[11px] text-stone-400">{r.department}</span>}
-                  </div>
-                  <p className="text-sm text-stone-600 leading-relaxed whitespace-pre-wrap">{r.answer}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
+        <ReportTabs data={report} />
       </div>
     );
   }
