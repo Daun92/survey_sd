@@ -1,12 +1,14 @@
 "use client";
 
-import { useEffect, useState, useMemo, use } from "react";
+import { useEffect, useMemo, useRef, useState, use } from "react";
 import { SurveyStart } from "@/components/respond/survey-start";
 import { SurveyHeader } from "@/components/respond/survey-header";
 import { SurveyQuestion } from "@/components/respond/survey-question";
 import { SurveyBottomNav } from "@/components/respond/survey-bottom-nav";
 import { SurveyCompletion } from "@/components/respond/survey-completion";
-import { AlertCircle, ClipboardList } from "lucide-react";
+import { RespondentErrorState } from "@/components/respond/respondent-error-state";
+import { ClipboardList } from "lucide-react";
+import { useSurveyDraft } from "@/hooks/useSurveyDraft";
 
 interface Question {
   id: number;
@@ -52,8 +54,13 @@ export default function RespondPage({
   const { token } = use(params);
   const [step, setStep] = useState<ViewStep>({ kind: "loading" });
   const [data, setData] = useState<SurveyData | null>(null);
-  const [answers, setAnswers] = useState<Record<number, string>>({});
+  const [answers, setAnswers, clearDraft] = useSurveyDraft<Record<number, string>>(
+    `respond-draft-${token}`,
+    {},
+  );
   const [errors, setErrors] = useState<Set<number>>(new Set());
+  const startedAtRef = useRef<number | null>(null);
+  const [elapsedSeconds, setElapsedSeconds] = useState<number>(0);
 
   // 카테고리별 그룹핑
   const categoryGroups = useMemo<CategoryGroup[]>(() => {
@@ -111,6 +118,7 @@ export default function RespondPage({
 
   function goNext() {
     if (step.kind === "start") {
+      if (startedAtRef.current === null) startedAtRef.current = Date.now();
       setStep({ kind: "category", index: 0 });
       window.scrollTo({ top: 0, behavior: "smooth" });
       return;
@@ -149,6 +157,10 @@ export default function RespondPage({
         }),
       });
       if (res.ok) {
+        if (startedAtRef.current !== null) {
+          setElapsedSeconds(Math.round((Date.now() - startedAtRef.current) / 1000));
+        }
+        clearDraft();
         setStep({ kind: "done" });
       } else {
         const err = await res.json();
@@ -173,15 +185,15 @@ export default function RespondPage({
 
   // ─── Error ───
   if (step.kind === "error") {
-    return (
-      <div className="flex min-h-screen items-center justify-center p-4" style={{ backgroundColor: "var(--expert-bg)" }}>
-        <div className="max-w-md w-full py-12 px-8 text-center space-y-4 rounded-xl" style={{ backgroundColor: "var(--expert-surface-lowest)", boxShadow: "var(--expert-shadow)" }}>
-          <AlertCircle className="mx-auto h-12 w-12" style={{ color: "var(--expert-on-surface-variant)" }} />
-          <p className="text-lg font-medium font-headline" style={{ color: "var(--expert-on-surface)" }}>{step.message}</p>
-          <p className="text-sm" style={{ color: "var(--expert-on-surface-variant)" }}>문의사항이 있으시면 담당자에게 연락해 주세요.</p>
-        </div>
-      </div>
-    );
+    // 서버 응답 메시지로 variant 추정
+    const msg = step.message;
+    const variant: "submitted" | "expired" | "invalid" | "server_error" =
+      /이미 응답|already/i.test(msg) ? "submitted"
+      : /종료|마감|expired|closed/i.test(msg) ? "expired"
+      : /찾을 수 없|invalid|not found/i.test(msg) ? "invalid"
+      : /서버|네트워크|연결/i.test(msg) ? "server_error"
+      : "invalid";
+    return <RespondentErrorState variant={variant} description={msg} />;
   }
 
   // ─── Start ───
@@ -197,7 +209,14 @@ export default function RespondPage({
 
   // ─── Completion ───
   if (step.kind === "done") {
-    return <SurveyCompletion />;
+    const answered = Object.values(answers).filter((v) => v.trim()).length;
+    return (
+      <SurveyCompletion
+        surveyTitle={data?.survey.title}
+        answeredCount={answered}
+        elapsedSeconds={elapsedSeconds}
+      />
+    );
   }
 
   // ─── Category View (multiple questions) ───
