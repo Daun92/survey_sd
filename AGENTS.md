@@ -123,6 +123,26 @@ Deprecated 경로에 공용 자산·UX 개선을 얹지 않는다. 실수 방지
 - `npx eslint <path>` — 린트.
 - Prisma: `npx prisma generate` (`postinstall` 자동) · `npx prisma migrate dev` (스키마 변경 시).
 
+## Supabase 마이그레이션 컨벤션
+
+**신규 마이그레이션은 반드시 타임스탬프 형식으로 생성한다.**
+
+기존 파일은 `001_..` ~ `031_..` 연번을 쓰지만, Supabase CLI 의 `db push` 는 `schema_migrations` 에 **14자리 타임스탬프 버전**으로 기록한다. 신규 연번(`032_..`)을 만들면 CLI 가 그것을 "이미 적용됨"으로 오인해 **스킵**하는 버그가 발생했다 (2026-04-20, 031 적용 실패 → MCP 수동 복구).
+
+- 신규 파일 생성:
+  ```bash
+  npx supabase migration new <snake_case_name>
+  # → supabase/migrations/YYYYMMDDHHMMSS_<name>.sql 자동 생성
+  ```
+- 적용:
+  ```bash
+  npx supabase db push
+  # 원격 schema_migrations 와 비교해 없는 파일만 순차 apply
+  ```
+- 기존 `001_..~031_..` 는 건드리지 않는다 (이미 프로덕션 반영됨).
+- PR 시점에 "원격 Supabase 에 마이그레이션 수동 apply 필요" 여부를 PR 본문 Test plan 에 명기할 것.
+- 긴급 적용이 필요하면 Supabase SQL Editor 또는 Supabase MCP `apply_migration` 사용 가능. 단 MCP 사용 시 `schema_migrations` 에 기록이 남는 버전이 MCP 측 타임스탬프라, 추후 CLI `db push` 와 동기 유지되도록 주의.
+
 ## 주의
 
 - **응답자 라우트·차트 기존 동작 보존**: 리팩터는 항상 `(dashboard)` 나 `/admin` 내부로 한정.

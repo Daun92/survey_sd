@@ -114,7 +114,27 @@ const statusLabel: Record<string, { text: string; color: string }> = {
   failed: { text: '실패', color: 'bg-rose-100 text-rose-700' },
 }
 
-export default function DistributeTabs({ surveys, batches: initialBatches }: { surveys: SurveyItem[]; batches: BatchItem[] }) {
+interface RespondentPickerItem {
+  id: string
+  name: string
+  email: string | null
+  phone: string | null
+  department: string | null
+  position: string | null
+  customerId: number | null
+  companyName: string | null
+  lastSentAt: string | null
+}
+
+export default function DistributeTabs({
+  surveys,
+  batches: initialBatches,
+  respondents = [],
+}: {
+  surveys: SurveyItem[]
+  batches: BatchItem[]
+  respondents?: RespondentPickerItem[]
+}) {
   const [selectedSurveyId, setSelectedSurveyId] = useState(surveys[0]?.id ?? '')
   const [copiedId, setCopiedId] = useState<string | null>(null)
   const printRef = useRef<HTMLDivElement>(null)
@@ -133,6 +153,14 @@ export default function DistributeTabs({ surveys, batches: initialBatches }: { s
   const [manualRows, setManualRows] = useState<{ company: string; name: string; email: string; phone: string; memo: string }[]>([{ company: '', name: '', email: '', phone: '', memo: '' }])
   const [manualIsTest, setManualIsTest] = useState(false)
   const [manualProcessing, setManualProcessing] = useState(false)
+
+  // 주소록에서 선택 상태 (A-2.1/A-2.2)
+  const [showPicker, setShowPicker] = useState(false)
+  const [pickerSearch, setPickerSearch] = useState('')
+  const [pickerCustomer, setPickerCustomer] = useState<string>('')
+  const [pickerSelected, setPickerSelected] = useState<Set<string>>(new Set())
+  const [pickerProcessing, setPickerProcessing] = useState(false)
+  const [pickerIsTest, setPickerIsTest] = useState(false)
 
   // 추가 대상자 상태
   const [addingMore, setAddingMore] = useState(false)
@@ -297,6 +325,66 @@ export default function DistributeTabs({ surveys, batches: initialBatches }: { s
     } catch {
       setError('링크 생성 중 오류가 발생했습니다')
       setPersonalStep('preview')
+    }
+  }
+
+  // ─── 주소록에서 선택 → 개인 링크 생성 ───
+  const handlePickerGenerate = async () => {
+    if (!selectedSurveyId || pickerSelected.size === 0) return
+    setPickerProcessing(true)
+    setError(null)
+    try {
+      const picked = respondents.filter((r) => pickerSelected.has(r.id))
+      const rows = picked.map((r, i) => ({
+        company: r.companyName || '',
+        name: r.name,
+        email: r.email || '',
+        phone: r.phone || '',
+        phoneNormalized: (r.phone || '').replace(/[^0-9]/g, ''),
+        emailValid: !!r.email,
+        project: '',
+        course: '',
+        am: '',
+        team: '',
+        rowNumber: i + 1,
+      }))
+      const result = await createDistributionBatch({
+        surveyId: selectedSurveyId,
+        rows,
+        isTest: pickerIsTest,
+      })
+      if ('error' in result) {
+        setError(result.error as string)
+        setPickerProcessing(false)
+        return
+      }
+      setBatchId(result.batchId)
+      setResults(result.distributions)
+      setBatches((prev) => [{
+        id: result.batchId,
+        surveyId: selectedSurveyId,
+        surveyTitle: selectedSurvey?.title ?? '',
+        surveyStatus: selectedSurvey?.status ?? '',
+        educationType: selectedSurvey?.educationType ?? null,
+        sessionName: selectedSurvey?.sessionName ?? null,
+        sessionNumber: selectedSurvey?.sessionNumber ?? null,
+        courseName: selectedSurvey?.courseName ?? null,
+        projectName: selectedSurvey?.projectName ?? null,
+        isTest: pickerIsTest,
+        channel: 'personal_link',
+        label: null,
+        totalCount: result.distributions.length,
+        sentCount: 0, openedCount: 0, completedCount: 0,
+        createdAt: new Date().toISOString(),
+      }, ...prev])
+      setShowPicker(false)
+      setPickerSelected(new Set())
+      setPickerIsTest(false)
+      setPickerProcessing(false)
+      setPersonalStep('result')
+    } catch {
+      setError('링크 생성 중 오류가 발생했습니다')
+      setPickerProcessing(false)
     }
   }
 
@@ -1066,16 +1154,140 @@ export default function DistributeTabs({ surveys, batches: initialBatches }: { s
                 onChange={handleFileInput}
               />
             </div>
-            {/* 수동 추가 토글 */}
+            {/* 주소록에서 선택 + 수동 추가 토글 */}
             <div className="mt-4 border-t border-stone-100 pt-4">
-              {!showManualForm ? (
-                <button
-                  onClick={() => setShowManualForm(true)}
-                  className="inline-flex items-center gap-1.5 text-sm text-teal-600 hover:text-teal-800 font-medium transition-colors"
-                >
-                  <UserPlus size={14} />
-                  수동으로 개인 링크 추가
-                </button>
+              {!showManualForm && !showPicker ? (
+                <div className="flex items-center gap-4">
+                  <button
+                    onClick={() => setShowPicker(true)}
+                    disabled={respondents.length === 0}
+                    className="inline-flex items-center gap-1.5 text-sm text-teal-600 hover:text-teal-800 font-medium transition-colors disabled:text-stone-300 disabled:cursor-not-allowed"
+                  >
+                    <Users size={14} />
+                    주소록에서 선택
+                    {respondents.length > 0 ? <span className="text-[11px] text-stone-400">({respondents.length}명)</span> : <span className="text-[11px] text-stone-400">(주소록 비어있음)</span>}
+                  </button>
+                  <span className="text-stone-300">|</span>
+                  <button
+                    onClick={() => setShowManualForm(true)}
+                    className="inline-flex items-center gap-1.5 text-sm text-teal-600 hover:text-teal-800 font-medium transition-colors"
+                  >
+                    <UserPlus size={14} />
+                    수동으로 개인 링크 추가
+                  </button>
+                </div>
+              ) : showPicker ? (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm font-medium text-stone-700">주소록에서 선택</p>
+                    <button
+                      onClick={() => { setShowPicker(false); setPickerSelected(new Set()); setPickerSearch(''); setPickerCustomer('') }}
+                      className="text-xs text-stone-400 hover:text-stone-600"
+                    >
+                      닫기
+                    </button>
+                  </div>
+                  {/* 필터 */}
+                  <div className="flex gap-2 items-center">
+                    <input
+                      className="flex-1 rounded border border-stone-300 px-2.5 py-1.5 text-sm"
+                      placeholder="이름, 이메일, 부서 검색"
+                      value={pickerSearch}
+                      onChange={(e) => setPickerSearch(e.target.value)}
+                    />
+                    <select
+                      className="rounded border border-stone-300 px-2 py-1.5 text-sm bg-white"
+                      value={pickerCustomer}
+                      onChange={(e) => setPickerCustomer(e.target.value)}
+                    >
+                      <option value="">전체 고객사</option>
+                      {[...new Map(respondents.filter(r => r.customerId && r.companyName).map(r => [r.customerId!, r.companyName!])).entries()].map(([id, name]) => (
+                        <option key={id} value={String(id)}>{name}</option>
+                      ))}
+                    </select>
+                  </div>
+                  {/* 리스트 */}
+                  {(() => {
+                    const filtered = respondents.filter(r => {
+                      const q = pickerSearch.toLowerCase().trim()
+                      const matchQ = !q || r.name.toLowerCase().includes(q) || r.email?.toLowerCase().includes(q) || r.department?.toLowerCase().includes(q)
+                      const matchCustomer = !pickerCustomer || String(r.customerId) === pickerCustomer
+                      return matchQ && matchCustomer
+                    })
+                    const allFilteredChecked = filtered.length > 0 && filtered.every(r => pickerSelected.has(r.id))
+                    return (
+                      <>
+                        <div className="flex items-center justify-between text-xs text-stone-500 border-b border-stone-100 pb-2">
+                          <label className="inline-flex items-center gap-1.5 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={allFilteredChecked}
+                              onChange={(e) => {
+                                const next = new Set(pickerSelected)
+                                if (e.target.checked) filtered.forEach(r => next.add(r.id))
+                                else filtered.forEach(r => next.delete(r.id))
+                                setPickerSelected(next)
+                              }}
+                            />
+                            <span>현재 필터 {filtered.length}명 전체선택</span>
+                          </label>
+                          <span>선택 {pickerSelected.size}명</span>
+                        </div>
+                        <div className="max-h-[280px] overflow-y-auto border border-stone-100 rounded">
+                          {filtered.length === 0 ? (
+                            <div className="py-8 text-center text-xs text-stone-400">조건에 맞는 대상자가 없습니다</div>
+                          ) : (
+                            <ul className="divide-y divide-stone-100">
+                              {filtered.map(r => {
+                                const checked = pickerSelected.has(r.id)
+                                const alreadySent = !!r.lastSentAt
+                                return (
+                                  <li key={r.id} className="flex items-center gap-2 px-3 py-2 text-xs hover:bg-stone-50">
+                                    <input
+                                      type="checkbox"
+                                      checked={checked}
+                                      onChange={(e) => {
+                                        const next = new Set(pickerSelected)
+                                        if (e.target.checked) next.add(r.id)
+                                        else next.delete(r.id)
+                                        setPickerSelected(next)
+                                      }}
+                                    />
+                                    <span className="font-medium text-stone-800 w-20 truncate">{r.name}</span>
+                                    <span className="text-stone-500 w-56 truncate">{r.email || '—'}</span>
+                                    <span className="text-stone-500 w-32 truncate">{r.companyName || '—'}</span>
+                                    <span className="text-stone-400 w-32 truncate">{[r.department, r.position].filter(Boolean).join(' / ') || '—'}</span>
+                                    {alreadySent && (
+                                      <span className="ml-auto text-[10px] text-amber-600 bg-amber-50 border border-amber-200 rounded px-1.5 py-0.5" title={`최근 발송 ${r.lastSentAt}`}>
+                                        이미 발송
+                                      </span>
+                                    )}
+                                  </li>
+                                )
+                              })}
+                            </ul>
+                          )}
+                        </div>
+                      </>
+                    )
+                  })()}
+                  <div className="flex items-center gap-3">
+                    <label className="flex items-center gap-1.5 text-xs text-stone-600 cursor-pointer">
+                      <input type="checkbox" checked={pickerIsTest} onChange={(e) => setPickerIsTest(e.target.checked)} className="accent-amber-500 w-3.5 h-3.5" />
+                      테스트/참조용 <span className="text-[10px] text-stone-400">(리포트 미집계)</span>
+                    </label>
+                    <div className="flex-1" />
+                    <Button
+                      size="sm"
+                      onClick={handlePickerGenerate}
+                      disabled={pickerProcessing || pickerSelected.size === 0 || !selectedSurveyId}
+                      className="bg-teal-600 hover:bg-teal-700 text-white"
+                    >
+                      {pickerProcessing ? <Loader2 size={13} className="mr-1 animate-spin" /> : <Send size={13} className="mr-1" />}
+                      선택한 {pickerSelected.size}명 링크 생성
+                    </Button>
+                  </div>
+                </div>
               ) : (
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">

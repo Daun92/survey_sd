@@ -43,7 +43,7 @@ const distributeItems = [
 ];
 
 const adminDistributeItems = [
-  { href: "/admin/respondents", label: "응답자 관리", icon: UserCheck },
+  { href: "/admin/respondents", label: "대상자 주소록", icon: UserCheck },
 ];
 
 // ─── 분석 ───
