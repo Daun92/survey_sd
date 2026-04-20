@@ -31,10 +31,14 @@ interface SurveyItem {
   title: string
   token: string
   status: string
+  createdAt: string | null
   educationType: string | null
   surveyType: string | null
   sessionName: string | null
   sessionNumber: number | null
+  courseName: string | null
+  projectName: string | null
+  customerName: string | null
   classGroups: ClassGroup[]
 }
 
@@ -46,19 +50,25 @@ const educationTypeLabel: Record<string, string> = {
   s2_edu_post: '교육후',
 }
 
+// 동일 설문명이 많은 경우에도 고객사/프로젝트/차수로 구분 가능하게 — 존재하는 메타만 뒤에 덧붙임.
 function getSurveyDisplayName(s: SurveyItem) {
-  const tags: string[] = []
+  const metas: string[] = []
+  if (s.customerName) metas.push(s.customerName)
+  if (s.projectName && s.projectName !== s.customerName) metas.push(s.projectName)
+  if (s.sessionName) metas.push(s.sessionName)
+  else if (s.sessionNumber != null) metas.push(`${s.sessionNumber}차`)
   if (s.educationType && educationTypeLabel[s.educationType]) {
-    tags.push(educationTypeLabel[s.educationType])
-  } else if (s.educationType) {
-    tags.push(s.educationType)
+    metas.push(educationTypeLabel[s.educationType])
   }
-  if (s.sessionName) {
-    tags.push(s.sessionName)
-  } else if (s.sessionNumber != null) {
-    tags.push(`${s.sessionNumber}차`)
-  }
-  return tags.length > 0 ? `${s.title} [${tags.join(' · ')}]` : s.title
+  return metas.length > 0 ? `${s.title} — ${metas.join(' · ')}` : s.title
+}
+
+// 동일 title + 동일 메타인 설문이 남을 때의 최종 disambiguator (생성월)
+function getSurveyCreatedMonth(s: SurveyItem) {
+  if (!s.createdAt) return null
+  const d = new Date(s.createdAt)
+  if (Number.isNaN(d.getTime())) return null
+  return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}`
 }
 
 interface BatchItem {
@@ -274,8 +284,8 @@ export default function DistributeTabs({ surveys, batches: initialBatches }: { s
         educationType: selectedSurvey?.educationType ?? null,
         sessionName: selectedSurvey?.sessionName ?? null,
         sessionNumber: selectedSurvey?.sessionNumber ?? null,
-        courseName: null,
-        projectName: null,
+        courseName: selectedSurvey?.courseName ?? null,
+        projectName: selectedSurvey?.projectName ?? null,
         isTest: false,
         channel: 'personal_link',
         label: null,
@@ -325,8 +335,8 @@ export default function DistributeTabs({ surveys, batches: initialBatches }: { s
         educationType: selectedSurvey?.educationType ?? null,
         sessionName: selectedSurvey?.sessionName ?? null,
         sessionNumber: selectedSurvey?.sessionNumber ?? null,
-        courseName: null,
-        projectName: null,
+        courseName: selectedSurvey?.courseName ?? null,
+        projectName: selectedSurvey?.projectName ?? null,
         isTest: manualIsTest,
         channel: 'personal_link',
         label: null,
@@ -547,7 +557,7 @@ export default function DistributeTabs({ surveys, batches: initialBatches }: { s
                 <div className="flex items-center justify-between">
                   <div>
                     <CardTitle>데이터 미리보기</CardTitle>
-                    <CardDescription className="mt-1">{fileName} · {selectedSurvey?.title}</CardDescription>
+                    <CardDescription className="mt-1">{fileName} · {selectedSurvey ? getSurveyDisplayName(selectedSurvey) : ''}</CardDescription>
                   </div>
                   <Button variant="outline" size="sm" onClick={resetPersonal}>
                     <ArrowLeft size={14} className="mr-1" /> 돌아가기
@@ -637,7 +647,7 @@ export default function DistributeTabs({ surveys, batches: initialBatches }: { s
                       <CheckCircle2 size={18} className="text-emerald-600" /> 링크 생성 완료
                     </CardTitle>
                     <CardDescription className="mt-1">
-                      {results.length}건의 개인 링크가 생성되었습니다 · {selectedSurvey?.title}
+                      {results.length}건의 개인 링크가 생성되었습니다 · {selectedSurvey ? getSurveyDisplayName(selectedSurvey) : ''}
                     </CardDescription>
                   </div>
                   <div className="flex gap-2">
@@ -862,15 +872,27 @@ export default function DistributeTabs({ surveys, batches: initialBatches }: { s
                     — 설문을 선택하세요 —
                   </option>
                 )}
-                {scopedSurveys.map((s) => {
-                  const batchCount = batches.filter((b) => b.surveyId === s.id).length
-                  return (
-                    <option key={s.id} value={s.id}>
-                      {getSurveyDisplayName(s)}
-                      {batchCount > 0 ? ` · 배포 ${batchCount}건` : ''}
-                    </option>
-                  )
-                })}
+                {(() => {
+                  // 동일한 display name 이 둘 이상이면 생성월로 보조 구분 표기
+                  const nameCount = new Map<string, number>()
+                  for (const s of scopedSurveys) {
+                    const n = getSurveyDisplayName(s)
+                    nameCount.set(n, (nameCount.get(n) ?? 0) + 1)
+                  }
+                  return scopedSurveys.map((s) => {
+                    const baseName = getSurveyDisplayName(s)
+                    const batchCount = batches.filter((b) => b.surveyId === s.id).length
+                    const needsMonth = (nameCount.get(baseName) ?? 0) > 1
+                    const month = needsMonth ? getSurveyCreatedMonth(s) : null
+                    return (
+                      <option key={s.id} value={s.id}>
+                        {baseName}
+                        {month ? ` · ${month}` : ''}
+                        {batchCount > 0 ? ` · 배포 ${batchCount}건` : ''}
+                      </option>
+                    )
+                  })
+                })()}
               </select>
             )}
           </CardContent>
@@ -910,6 +932,20 @@ export default function DistributeTabs({ surveys, batches: initialBatches }: { s
                     <CardDescription className="mt-1">
                       QR코드를 교육장에 게시하거나 링크를 수강생에게 공유하세요
                     </CardDescription>
+                    {(() => {
+                      const metas: string[] = []
+                      if (selectedSurvey.customerName) metas.push(selectedSurvey.customerName)
+                      if (selectedSurvey.projectName && selectedSurvey.projectName !== selectedSurvey.customerName) metas.push(selectedSurvey.projectName)
+                      if (selectedSurvey.sessionName) metas.push(selectedSurvey.sessionName)
+                      else if (selectedSurvey.sessionNumber != null) metas.push(`${selectedSurvey.sessionNumber}차`)
+                      return metas.length > 0 ? (
+                        <p className="mt-2 text-[12px] text-stone-500">
+                          <span className="font-medium text-stone-700">{selectedSurvey.title}</span>
+                          <span className="mx-1.5 text-stone-300">·</span>
+                          {metas.join(' · ')}
+                        </p>
+                      ) : null
+                    })()}
                   </div>
                   <Badge
                     variant={
@@ -945,6 +981,20 @@ export default function DistributeTabs({ surveys, batches: initialBatches }: { s
                           {copiedId === 'main' ? ' 복사됨' : ' 복사'}
                         </Button>
                       </div>
+                      {/* 테스트 링크 — ?test=1 붙여 제출 시 is_test=true 로 저장, 집계 자동 제외 */}
+                      <div className="mt-2 flex items-center gap-2">
+                        <label className="text-[11px] text-amber-700 bg-amber-50 border border-amber-200 rounded px-1.5 py-0.5 font-medium">테스트</label>
+                        <div className="flex-1 bg-amber-50/40 border border-amber-100 rounded-lg px-3 py-1.5 text-xs text-stone-600 font-mono truncate">
+                          {surveyUrl}?test=1
+                        </div>
+                        <Button variant="outline" size="sm" onClick={() => copyToClipboard(`${surveyUrl}?test=1`, 'test-main')}>
+                          {copiedId === 'test-main' ? <Check size={14} className="text-emerald-600" /> : <Copy size={14} />}
+                          {copiedId === 'test-main' ? ' 복사됨' : ' 테스트 링크'}
+                        </Button>
+                      </div>
+                      <p className="mt-1 text-[11px] text-stone-400">
+                        테스트 링크로 제출된 응답은 <b>is_test=true</b> 로 저장되어 리포트·집계에서 자동 제외됩니다.
+                      </p>
                     </div>
 
                     {/* 분반별 링크 (있을 때만) */}

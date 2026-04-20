@@ -20,7 +20,10 @@ export const POST = withAuth({ type: "public" }, async (request: NextRequest, ct
       )
     }
 
-    const { answers, respondent_name, respondent_department, respondent_position, class_group_id, distribution_token } = parsed.data
+    const { answers, respondent_name, respondent_department, respondent_position, class_group_id, distribution_token, is_test: bodyIsTest } = parsed.data
+
+    // URL 쿼리 ?test=1 도 테스트 신호로 수용 (공통 링크 ?test=1 → 클라이언트가 body 로도 전달하지만 fallback)
+    const urlIsTest = request.nextUrl?.searchParams.get('test') === '1'
 
     // 설문 조회
     const { data: survey, error: surveyError } = await supabase
@@ -57,7 +60,8 @@ export const POST = withAuth({ type: "public" }, async (request: NextRequest, ct
     let distRespondentName = respondent_name
     let distributionId: string | null = null
     let respondentId: string | null = null
-    let isTestSubmission = false
+    // 테스트 제출 여부: 공통 링크 ?test=1, body.is_test, 또는 테스트 배치 — 어느 하나라도 true 면 test 로 분류
+    let isTestSubmission = Boolean(bodyIsTest) || urlIsTest
     if (distribution_token) {
       const { data: dist } = await supabase
         .from('distributions')

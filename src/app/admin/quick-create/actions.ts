@@ -269,29 +269,39 @@ export async function quickCreateSurvey(formData: FormData): Promise<QuickCreate
     if (input.templateId) {
       const { data: templateQuestions } = await supabase
         .from("cs_survey_questions")
-        .select("question_no, question_text, question_type, response_options, section_label, sort_order")
+        .select(
+          "id, question_no, question_text, question_type, response_options, section_label, sort_order, is_required, skip_logic, metadata"
+        )
         .eq("template_id", input.templateId)
         .order("sort_order", { ascending: true });
 
       if (templateQuestions && templateQuestions.length > 0) {
         const eduQuestions = templateQuestions.map((tq) => {
-          const options = parseResponseOptions(tq.response_options);
+          // options 는 metadata.source_options 우선, 없으면 response_options 파싱
+          const metadata = (tq.metadata as Record<string, unknown> | null) ?? null;
+          const metaOptionsRaw = metadata && (metadata as Record<string, unknown>).source_options;
+          const metaOptions = Array.isArray(metaOptionsRaw)
+            ? (metaOptionsRaw as unknown[]).map(String)
+            : null;
+          const options = metaOptions ?? parseResponseOptions(tq.response_options);
+
           return {
             survey_id: survey.id,
             question_code: tq.question_no,
             question_text: tq.question_text,
-            question_type: tq.question_type === "single_choice" ? "multiple_choice" : tq.question_type,
+            question_type: tq.question_type, // 복수/단일/리커트 그대로 보존
             section: tq.section_label || "일반",
             sort_order: tq.sort_order,
-            is_required: true,
+            is_required: tq.is_required ?? true,
             options: options ? JSON.stringify(options) : null,
+            metadata,
           };
         });
 
         const { data: insertedQuestions, error: questionsError } = await supabase
           .from("edu_questions")
           .insert(eduQuestions)
-          .select("id, question_code");
+          .select("id, question_code, sort_order");
 
         if (questionsError) {
           console.error("[quick-create] 문항 복사 실패:", questionsError);
@@ -299,20 +309,44 @@ export async function quickCreateSurvey(formData: FormData): Promise<QuickCreate
         }
         questionCount = insertedQuestions?.length ?? 0;
 
-        // ── Auto-set skip_logic for eco system questions ──
         if (insertedQuestions) {
+          // ── template question_id → 새 edu_questions.id 매핑 ──
+          const idMap = new Map<string, string>();
+          for (const tq of templateQuestions) {
+            const match = insertedQuestions.find((n) => n.sort_order === tq.sort_order);
+            if (match) idMap.set(tq.id, match.id);
+          }
+
+          // ── skip_logic 재매핑 (템플릿에 분기가 설정된 경우) ──
+          for (const tq of templateQuestions) {
+            const sl = tq.skip_logic as
+              | { show_when?: { question_id?: string; operator?: string; value?: unknown } }
+              | null;
+            if (!sl?.show_when?.question_id) continue;
+            const newId = idMap.get(tq.id);
+            const remappedTarget = idMap.get(sl.show_when.question_id);
+            if (!newId || !remappedTarget) continue;
+            await supabase
+              .from("edu_questions")
+              .update({
+                skip_logic: {
+                  show_when: { ...sl.show_when, question_id: remappedTarget },
+                },
+              })
+              .eq("id", newId);
+          }
+
+          // ── Backward-compat: 시스템 에코 템플릿용 기본 skip_logic (템플릿에 설정이 없을 때만) ──
           const ecoQ1 = insertedQuestions.find((q) => q.question_code === "에코Q1");
           if (ecoQ1) {
-            const ecoFollowUps = insertedQuestions.filter((q) =>
-              q.question_code === "에코Q1-1" || q.question_code === "에코기타"
+            const ecoFollowUps = insertedQuestions.filter(
+              (q) => q.question_code === "에코Q1-1" || q.question_code === "에코기타"
             );
-            if (ecoFollowUps.length > 0) {
+            for (const q of ecoFollowUps) {
+              const tq = templateQuestions.find((t) => t.question_no === q.question_code);
+              if (tq?.skip_logic) continue; // 이미 template 분기 적용됨
               const skipLogic = { show_when: { question_id: ecoQ1.id, operator: "equals", value: 6 } };
-              await Promise.all(
-                ecoFollowUps.map((q) =>
-                  supabase.from("edu_questions").update({ skip_logic: skipLogic }).eq("id", q.id)
-                )
-              );
+              await supabase.from("edu_questions").update({ skip_logic: skipLogic }).eq("id", q.id);
             }
           }
         }

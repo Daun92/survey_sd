@@ -11,27 +11,42 @@ async function getSurveyData(supabase: Awaited<ReturnType<typeof createClient>>)
     .select(`
       id, title, status, url_token, created_at, education_type, survey_type,
       sessions ( id, name, session_number,
-        class_groups ( id, name, survey_url_token )
+        class_groups ( id, name, survey_url_token ),
+        courses ( name,
+          projects ( name,
+            customers ( company_name )
+          )
+        )
       )
     `)
     .in("status", ["active", "draft", "closed"])
     .order("created_at", { ascending: false });
 
-  return (surveys ?? []).map((s: any) => ({
-    id: s.id,
-    title: s.title,
-    token: s.url_token,
-    status: s.status,
-    educationType: s.education_type ?? null,
-    surveyType: s.survey_type ?? null,
-    sessionName: s.sessions?.name ?? null,
-    sessionNumber: s.sessions?.session_number ?? null,
-    classGroups: (s.sessions?.class_groups ?? []).map((g: any) => ({
-      id: g.id,
-      name: g.name,
-      token: g.survey_url_token,
-    })),
-  }));
+  return (surveys ?? []).map((s: any) => {
+    const session = s.sessions;
+    const course = session?.courses;
+    const project = course?.projects;
+    const customer = project?.customers;
+    return {
+      id: s.id,
+      title: s.title,
+      token: s.url_token,
+      status: s.status,
+      createdAt: s.created_at ?? null,
+      educationType: s.education_type ?? null,
+      surveyType: s.survey_type ?? null,
+      sessionName: session?.name ?? null,
+      sessionNumber: session?.session_number ?? null,
+      courseName: course?.name ?? null,
+      projectName: project?.name ?? null,
+      customerName: customer?.company_name ?? null,
+      classGroups: (session?.class_groups ?? []).map((g: any) => ({
+        id: g.id,
+        name: g.name,
+        token: g.survey_url_token,
+      })),
+    };
+  });
 }
 
 async function getPersonalLinkBatches(supabase: Awaited<ReturnType<typeof createClient>>) {
