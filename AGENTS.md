@@ -6,23 +6,51 @@ This version has breaking changes — APIs, conventions, and file structure may 
 
 ---
 
+# ⚠️ 라우팅 제1원칙 (작업 대상 선택 기준)
+
+**실사용 경로**는 **Supabase edu_\* 기반** 이며, `/admin/*` 관리자 콘솔과 `/s/[token]` · `/d/[token]` 응답자 URL 만 사용한다. **Prisma 기반 `(dashboard)/*` · `/respond/[token]` · `/survey/[token]` · `/api/respond/*` 는 deprecated** 이다.
+
+신규 개선·리팩터·버그 수정은 **반드시 실사용 경로에서만** 수행한다. Prisma 기반 경로는 상단에 노란 경고 배너와 `@deprecated` JSDoc 이 붙어 있다. 작업 전에 **해당 경로가 deprecated 인지부터 확인**할 것.
+
+## 데이터 모델 매핑
+
+| 실사용 (Supabase edu_\*) | Deprecated (Prisma) |
+|---|---|
+| `edu_surveys` / `edu_questions` / `edu_submissions` | `Survey` / `SurveyQuestion` / `Response` / `ResponseAnswer` |
+| `distribution_batches` / `distributions` (Supabase UUID) | `Distribution` (Prisma int) |
+| `sessions` / `courses` / `projects` / `class_groups` | — |
+
+| 실사용 라우트 | 데이터 | 대응 deprecated |
+|---|---|---|
+| `/admin/surveys/[id]` 빌더 | `edu_*` | `(dashboard)/surveys/[id]` |
+| `/admin/distribute` | `distribution_batches` | `(dashboard)/distribute` |
+| `/admin/reports` | `edu_submissions` 집계 | `(dashboard)/reports` |
+| `/s/[token]` 응답자 (full flow) | `edu_surveys.url_token` | `/survey/[token]` |
+| `/d/[token]` 응답자 (개인 링크) | `distributions.unique_token` | `/respond/[token]` |
+| `/api/surveys/[token]/submit` (Supabase insert) | — | `/api/respond/[token]` |
+
+Deprecated 경로에 공용 자산·UX 개선을 얹지 않는다. 실수 방지 체크리스트: ① 대상 파일이 `(dashboard)/` · `/respond` · `/survey` · `/api/respond` · `/api/distributions` · `/api/reports` 에 있나? ② 있다면 멈추고 `/admin/*` 에서 동일 작업 가능한지 재검토.
+
+---
+
 # EXC-Survey 레포 내비게이션
 
-프로덕션 URL: https://exc-survey.vercel.app · Next.js 16.2.1 (App Router, Turbopack) · React 19.2.4 · Prisma + Supabase
+프로덕션 URL: https://exc-survey.vercel.app · Next.js 16.2.1 (App Router, Turbopack) · React 19.2.4 · Supabase 우선, Prisma 레거시
 
 ## 주요 라우트 지도
 
-### 관리자 / 작성자 (`(dashboard)` group — Prisma 기반)
-- **`/surveys`** — CS 설문 목록. 작성자가 새 설문 생성.
-- **`/surveys/[id]`** — 3-컬럼 빌더 (아웃라인 / 캔버스 / 인스펙터). `?q=<id>` 로 선택 문항 URL 동기화. 진입점 `src/app/(dashboard)/surveys/[id]/page.tsx` → `BuilderShell`.
-- **`/reports`** / **`/reports/[id]`** — CS 리포트 목록·상세 (단일 뷰, 레거시 성격).
-- **`/distribute`** · **`/distribute/[surveyId]`** — 배포·발송.
-- **`/customers`** · **`/training`** · **`/import`** · **`/interviews`** — 데이터 관리.
-
-### 관리자 (`/admin` — Supabase edu_* 기반)
-- **`/admin/reports`** — 교육 리포트 목록. `?survey=<id>` 로 5탭 상세 (요약 / 개별 응답 / 세그먼트 / VOC / 히트맵). `?tab=<key>` 로 탭 URL 동기화. 진입점 `src/app/admin/reports/page.tsx` → `ReportTabs`.
+### 관리자 / 작성자 (`/admin/*` — **실사용**, Supabase edu_\* 기반)
+- **`/admin/surveys`** / **`/admin/surveys/[id]`** — 교육 설문 편집.
+- **`/admin/distribute`** — 배포·발송. `distribution_batches` 단위 차수 관리.
+- **`/admin/reports`** — 교육 리포트. `?survey=<id>` 로 5탭 상세 (요약 / 개별 응답 / 세그먼트 / VOC / 히트맵), `?tab=<key>` URL 동기화. 진입점 `src/app/admin/reports/page.tsx` → `ReportTabs`.
 - **`/admin/responses/[surveyId]`** — 응답자별 전체 답 테이블.
-- **`/admin/surveys`** / **`/admin/surveys/[id]`** — 교육 설문 편집(별도 에디터).
+- **`/admin/hrd/*`** — HRD 실태조사 도메인.
+
+### 관리자 (`(dashboard)` group — **DEPRECATED**, Prisma)
+신규 작업 금지. 각 페이지 상단에 `DeprecatedPageBanner` 가 붙어 있다. 실사용 대체는 위 `/admin/*`.
+- `(dashboard)/surveys` · `(dashboard)/surveys/[id]` — 빌더 (Phase A-1 에서 3-컬럼 리팩터되었으나 실사용 안 됨, `/admin/surveys` 사용)
+- `(dashboard)/distribute` · `(dashboard)/distribute/[surveyId]`
+- `(dashboard)/reports` · `(dashboard)/reports/[surveyId]` · `(dashboard)/reports/annual`
 - **`/admin/hrd/*`** — HRD 실태조사 도메인.
 
 ### 응답자 (공개)
@@ -42,17 +70,23 @@ This version has breaking changes — APIs, conventions, and file structure may 
 
 ## 데이터 소스 구분
 
-- **Dashboard `/surveys` · `/reports`** — Prisma (`Survey` / `SurveyQuestion` / `Response` / `ResponseAnswer` / `Distribution` / `Customer`). `src/lib/db.ts`, `src/lib/repositories/`.
-- **Admin `/admin/*`** — Supabase client 직접 (`edu_surveys` / `edu_questions` / `edu_submissions` / `sessions` / `courses` / `projects`). `src/lib/supabase/server.ts`. 서버 컴포넌트에서 `await createClient()` 호출.
-- **두 시스템은 독립** — 교육 CS 도메인은 Supabase, 범용 CS 설문은 Prisma.
+- **실사용 — Supabase (`edu_*`, `distribution_batches`, `distributions`, `sessions`, `courses`, `projects`, `class_groups`, `hrd_*`)**. `src/lib/supabase/*` 의 `createClient()` 로 접근. server component 에서 `await createClient()`, server action (`src/app/admin/distribute/actions.ts` 등) 에서는 `createAdminClient()` 사용.
+- **Deprecated — Prisma (`Survey`/`SurveyQuestion`/`Response`/`ResponseAnswer`/`Distribution`/`Customer`)**. `src/lib/db.ts`, `src/lib/repositories/`. `(dashboard)/*` 및 일부 `/api/*` 만 참조. 신규 기능 추가 금지.
 
 ## API 라우트
 
-- `/api/surveys/*` — 빌더 (GET/PUT/POST/DELETE 문항).
-- `/api/reports/stats`, `/voc`, `/export`, `/annual`, `/generate-ppt` — Prisma 기반 리포트 집계.
-- `/api/ai/report-comment`, `/api/ai/analyze-responses`, `/api/ai/generate-questions` — Gemini 호출. `app_settings.gemini_api_key` 필요.
-- `/api/distributions/*` — 배포·발송·cs-bridge.
-- `/api/cron/*` — Vercel cron (이메일·SMS 일 1회).
+### 실사용 (유지·개선 대상)
+- Supabase 접근은 대부분 **server action** (`src/app/admin/**/actions.ts`) 로 처리 — 별도 REST 라우트 없음
+- `/api/ai/report-comment`, `/api/ai/analyze-responses`, `/api/ai/generate-questions` — Gemini 호출. `app_settings.gemini_api_key` 필요
+- `/api/cron/*` — Vercel cron (이메일·SMS 일 1회)
+- `/api/distributions/cs-bridge` — 외부 CS 플랫폼 연동 (Phase 1)
+- `/api/surveys/[token]/submit` — `/s/[token]` 응답 제출 (Supabase insert)
+
+### Deprecated (Prisma, 신규 사용 금지)
+- `/api/surveys/*` (빌더 전용 Prisma CRUD)
+- `/api/reports/*` (stats/voc/export/annual/generate-ppt — Prisma 집계)
+- `/api/distributions/*` (cs-bridge 제외 — Prisma Distribution CRUD)
+- `/api/respond/[token]` (Prisma 응답 제출)
 
 ## URL 상태 동기화 규약 (Phase A cleanup)
 

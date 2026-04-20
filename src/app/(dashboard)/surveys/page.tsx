@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { Plus, FileText, FolderOpen, Tag } from "lucide-react";
+import { DeprecatedPageBanner } from "@/components/layout/deprecated-banner";
 
 interface ServiceType { id: number; name: string }
 interface Template { id: number; templateName: string; serviceTypeId: number; serviceType: ServiceType }
@@ -131,6 +132,10 @@ export default function SurveysPage() {
 
   return (
     <div className="space-y-6">
+      <DeprecatedPageBanner
+        targetPath="/admin/surveys"
+        targetLabel="교육 설문 관리자"
+      />
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">설문 관리</h1>

@@ -19,6 +19,7 @@ import { toast } from "sonner";
 import {
   ArrowLeft, Plus, Send, Copy, RefreshCw, Mail, CheckCircle2, Clock, Eye, FolderOpen, List,
 } from "lucide-react";
+import { DeprecatedPageBanner } from "@/components/layout/deprecated-banner";
 
 interface Distribution {
   id: number;
@@ -179,6 +180,10 @@ export default function DistributeSurveyPage({ params }: { params: Promise<{ sur
 
   return (
     <div className="space-y-6">
+      <DeprecatedPageBanner
+        targetPath="/admin/distribute"
+        targetLabel="교육 배포 관리자"
+      />
       {/* 헤더 */}
       <div className="flex items-center gap-4">
         <Button variant="ghost" size="sm" onClick={() => router.push("/distribute")}>

@@ -14,6 +14,7 @@ import {
   CategoryBarChart, QuestionBarChart, DistributionChart,
 } from "@/components/charts/satisfaction-chart";
 import { ArrowLeft, Download } from "lucide-react";
+import { DeprecatedPageBanner } from "@/components/layout/deprecated-banner";
 
 interface QuestionStat {
   questionId: number;
@@ -63,6 +64,10 @@ export default function SurveyReportPage({ params }: { params: Promise<{ surveyI
 
   return (
     <div className="space-y-6">
+      <DeprecatedPageBanner
+        targetPath="/admin/reports"
+        targetLabel="교육 리포트 관리자"
+      />
       {/* 헤더 */}
       <div className="flex items-center gap-4">
         <Button variant="ghost" size="sm" onClick={() => router.push("/reports")}>
