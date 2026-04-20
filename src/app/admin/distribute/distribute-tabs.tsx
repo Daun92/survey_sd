@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useCallback } from 'react'
+import { useState, useRef, useCallback, useEffect } from 'react'
 import { QRCodeSVG } from 'qrcode.react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -91,9 +91,9 @@ interface DistributionResult {
 
 type PersonalStep = 'idle' | 'preview' | 'processing' | 'result'
 
-const BASE_URL = typeof window !== 'undefined'
-  ? window.location.origin
-  : (process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000')
+// SSR fallback — 서버/클라이언트 첫 렌더에서 동일한 값이어야 hydration 불일치 없음.
+// 마운트 후 useEffect 에서 window.location.origin 으로 업데이트.
+const SSR_BASE_URL = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
 
 const statusLabel: Record<string, { text: string; color: string }> = {
   pending: { text: '대기', color: 'bg-stone-100 text-stone-600' },
@@ -151,6 +151,16 @@ export default function DistributeTabs({ surveys, batches: initialBatches }: { s
   const [smsResendingId, setSmsResendingId] = useState<string | null>(null)
   const [smsResendResult, setSmsResendResult] = useState<{ id: string; success?: boolean; error?: string } | null>(null)
   const [batchSmsResending, setBatchSmsResending] = useState(false)
+
+  // hydration-safe BASE_URL: SSR 과 CSR 의 첫 렌더가 동일한 fallback 을 쓰고,
+  // 마운트 후 클라이언트에서 실제 origin 으로 교체.
+  const [BASE_URL, setBaseUrl] = useState(SSR_BASE_URL)
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.location.origin !== BASE_URL) {
+      setBaseUrl(window.location.origin)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const selectedSurvey = surveys.find((s) => s.id === selectedSurveyId)
   const surveyUrl = selectedSurvey ? `${BASE_URL}/s/${selectedSurvey.token}` : ''
