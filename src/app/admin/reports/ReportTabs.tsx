@@ -1,8 +1,9 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import Link from "next/link";
+import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import {
   Users,
   TrendingUp,
@@ -88,7 +89,35 @@ interface ReportTabsProps {
   data: SurveyReportData;
 }
 
+type TabKey = "summary" | "individual" | "segments" | "verbatims" | "heatmap";
+const VALID_TABS: TabKey[] = ["summary", "individual", "segments", "verbatims", "heatmap"];
+
+function isValidTab(v: string | null): v is TabKey {
+  return v !== null && (VALID_TABS as string[]).includes(v);
+}
+
 export function ReportTabs({ data }: ReportTabsProps) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const urlTab = searchParams.get("tab");
+  const [activeTab, setActiveTab] = useState<TabKey>(
+    isValidTab(urlTab) ? urlTab : "summary",
+  );
+
+  const handleTabChange = useCallback(
+    (v: string) => {
+      if (!isValidTab(v)) return;
+      setActiveTab(v);
+      const sp = new URLSearchParams(searchParams.toString());
+      if (v === "summary") sp.delete("tab");
+      else sp.set("tab", v);
+      const query = sp.toString();
+      router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
+    },
+    [router, pathname, searchParams],
+  );
+
   const status = statusLabels[data.status] ?? statusLabels.draft;
   const isGapPositive = data.gap >= 0;
 
@@ -139,7 +168,7 @@ export function ReportTabs({ data }: ReportTabsProps) {
       </div>
 
       {/* 탭 */}
-      <Tabs defaultValue="summary" className="space-y-4">
+      <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-4">
         <div className="border-b border-stone-200 bg-white rounded-t-xl px-2">
           <TabsList className="h-11 bg-transparent p-0 gap-1">
             <AdminTab value="summary">요약</AdminTab>
