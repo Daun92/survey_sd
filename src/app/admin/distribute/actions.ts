@@ -1581,3 +1581,26 @@ export async function cancelScheduledSmsBatch(
 
   return { cancelled: pendingItems.length }
 }
+
+// ============================================
+// 배치 라벨 갱신 — 사용자가 차수 자동 번호 대신 커스텀 이름을 부여할 때 사용
+// 빈 문자열 또는 null 을 넘기면 라벨 제거 (자동 "N차" 표시로 돌아감)
+// ============================================
+export async function updateBatchLabel(batchId: string, label: string | null) {
+  if (!batchId) return { error: "batchId 가 필요합니다" }
+
+  const trimmed = label === null ? null : label.trim()
+  const next = trimmed === "" ? null : trimmed
+
+  const supabase = createAdminClient()
+  const { error } = await supabase
+    .from("distribution_batches")
+    .update({ label: next })
+    .eq("id", batchId)
+
+  if (error) {
+    return { error: "라벨 저장 실패: " + error.message }
+  }
+
+  return { label: next }
+}

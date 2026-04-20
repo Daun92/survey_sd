@@ -14,7 +14,7 @@ async function getSurveyData(supabase: Awaited<ReturnType<typeof createClient>>)
         class_groups ( id, name, survey_url_token )
       )
     `)
-    .in("status", ["active", "draft"])
+    .in("status", ["active", "draft", "closed"])
     .order("created_at", { ascending: false });
 
   return (surveys ?? []).map((s: any) => ({
@@ -38,7 +38,7 @@ async function getPersonalLinkBatches(supabase: Awaited<ReturnType<typeof create
   const { data: batches } = await supabase
     .from("distribution_batches")
     .select(`
-      id, survey_id, channel, is_test, total_count, sent_count, opened_count, completed_count, created_at,
+      id, survey_id, channel, is_test, label, total_count, sent_count, opened_count, completed_count, created_at,
       edu_surveys (
         title, status, education_type,
         sessions ( name, session_number,
@@ -68,6 +68,7 @@ async function getPersonalLinkBatches(supabase: Awaited<ReturnType<typeof create
       projectName: project?.name ?? null,
       isTest: b.is_test ?? false,
       channel: b.channel,
+      label: b.label ?? null,
       totalCount: b.total_count,
       sentCount: b.sent_count,
       openedCount: b.opened_count,
