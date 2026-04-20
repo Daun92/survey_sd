@@ -14,7 +14,7 @@ async function getSurveyData(supabase: Awaited<ReturnType<typeof createClient>>)
         class_groups ( id, name, survey_url_token )
       )
     `)
-    .in("status", ["active", "draft"])
+    .in("status", ["active", "draft", "closed"])
     .order("created_at", { ascending: false });
 
   return (surveys ?? []).map((s: any) => ({
