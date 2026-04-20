@@ -93,16 +93,51 @@ async function getPersonalLinkBatches(supabase: Awaited<ReturnType<typeof create
   });
 }
 
+async function getRespondentPickerList(supabase: Awaited<ReturnType<typeof createClient>>) {
+  const { data } = await supabase
+    .from("respondents")
+    .select("id, name, email, phone, department, position, last_cs_survey_sent_at, customer_id, customers:customer_id(id, company_name)")
+    .eq("is_active", true)
+    .order("updated_at", { ascending: false })
+    .limit(500);
+  type RespondentRow = {
+    id: string;
+    name: string;
+    email: string | null;
+    phone: string | null;
+    department: string | null;
+    position: string | null;
+    customer_id: number | null;
+    last_cs_survey_sent_at: string | null;
+    customers: { id: number; company_name: string } | { id: number; company_name: string }[] | null;
+  };
+  return (data as RespondentRow[] | null ?? []).map((r) => {
+    const customer = Array.isArray(r.customers) ? r.customers[0] : r.customers;
+    return {
+      id: r.id,
+      name: r.name,
+      email: r.email ?? null,
+      phone: r.phone ?? null,
+      department: r.department ?? null,
+      position: r.position ?? null,
+      customerId: r.customer_id ?? null,
+      companyName: customer?.company_name ?? null,
+      lastSentAt: r.last_cs_survey_sent_at ?? null,
+    };
+  });
+}
+
 export default async function DistributePage() {
   const supabase = await createClient();
-  const [surveys, batches] = await Promise.all([
+  const [surveys, batches, respondents] = await Promise.all([
     getSurveyData(supabase),
     getPersonalLinkBatches(supabase),
+    getRespondentPickerList(supabase),
   ]);
 
   return (
     <div>
-      <DistributeTabs surveys={surveys} batches={batches} />
+      <DistributeTabs surveys={surveys} batches={batches} respondents={respondents} />
       {/* 워크플로우 다음 단계 */}
       <div className="mt-6 rounded-xl border border-stone-200 bg-white shadow-sm p-5 flex items-center justify-between">
         <div>
