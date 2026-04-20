@@ -1,8 +1,9 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/lib/supabase";
-import { CheckCircle, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
+import { CheckCircle, ChevronLeft, ChevronRight, Clock, FileText, Loader2 } from "lucide-react";
+import { useSurveyDraft } from "@/hooks/useSurveyDraft";
 
 interface Question {
   id: string;
@@ -19,6 +20,14 @@ interface Section {
   questions: Question[];
 }
 
+function formatElapsedSeconds(seconds: number): string {
+  if (seconds <= 0) return "";
+  if (seconds < 60) return `${seconds}초`;
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  return s > 0 ? `${m}분 ${s}초` : `${m}분`;
+}
+
 export function SurveyForm({
   surveyId,
   surveyTitle,
@@ -28,11 +37,22 @@ export function SurveyForm({
   surveyTitle?: string;
   questions: Question[];
 }) {
-  const [answers, setAnswers] = useState<Record<string, string>>({});
+  const [answers, setAnswers, clearDraft] = useSurveyDraft<Record<string, string>>(
+    `survey-draft-${surveyId}`,
+    {},
+  );
   const [currentStep, setCurrentStep] = useState(0);
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const startedAtRef = useRef<number | null>(null);
+  const [elapsedSeconds, setElapsedSeconds] = useState<number>(0);
+
+  useEffect(() => {
+    if (startedAtRef.current === null && questions.length > 0) {
+      startedAtRef.current = Date.now();
+    }
+  }, [questions.length]);
 
   // 섹션별 그룹핑
   const sections: Section[] = useMemo(() => {
@@ -89,6 +109,10 @@ export function SurveyForm({
         .insert({ survey_id: surveyId, answers });
 
       if (submitError) throw submitError;
+      if (startedAtRef.current !== null) {
+        setElapsedSeconds(Math.round((Date.now() - startedAtRef.current) / 1000));
+      }
+      clearDraft();
       setSubmitted(true);
     } catch {
       setError("제출 중 오류가 발생했습니다. 다시 시도해주세요.");
@@ -99,6 +123,8 @@ export function SurveyForm({
 
   // ─── 제출 완료 ───
   if (submitted) {
+    const answeredCount = Object.values(answers).filter((v) => v.trim()).length;
+    const elapsedLabel = formatElapsedSeconds(elapsedSeconds);
     return (
       <div className="rounded-xl border border-stone-200 bg-white shadow-sm p-12 text-center">
         <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full bg-teal-50">
@@ -113,6 +139,22 @@ export function SurveyForm({
         <p className="text-sm text-stone-500">
           소중한 응답에 감사드립니다. 이 창을 닫으셔도 됩니다.
         </p>
+        {(answeredCount > 0 || elapsedSeconds > 0) && (
+          <div className="mt-5 inline-flex gap-5 px-4 py-2 rounded-full bg-stone-50 border border-stone-200">
+            {answeredCount > 0 && (
+              <span className="inline-flex items-center gap-1.5 text-xs text-stone-500">
+                <FileText size={14} />
+                <b className="text-stone-700">{answeredCount}</b>개 응답
+              </span>
+            )}
+            {elapsedLabel && (
+              <span className="inline-flex items-center gap-1.5 text-xs text-stone-500">
+                <Clock size={14} />
+                <b className="text-stone-700">{elapsedLabel}</b> 소요
+              </span>
+            )}
+          </div>
+        )}
       </div>
     );
   }

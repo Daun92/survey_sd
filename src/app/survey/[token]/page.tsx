@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { notFound } from "next/navigation";
 import { SurveyForm } from "./SurveyForm";
+import { RespondentErrorState } from "@/components/respond/respondent-error-state";
 
 export const dynamic = "force-dynamic";
 
@@ -40,18 +41,11 @@ export default async function SurveyPage({
   }
 
   if (survey.status === "closed") {
-    return (
-      <div className="min-h-screen bg-stone-50 flex items-center justify-center p-4">
-        <div className="w-full max-w-2xl rounded-xl border border-stone-200 bg-white shadow-sm p-8 text-center">
-          <h1 className="text-xl font-bold text-stone-800 mb-2">
-            설문이 마감되었습니다
-          </h1>
-          <p className="text-sm text-stone-500">
-            이 설문은 더 이상 응답을 받지 않습니다.
-          </p>
-        </div>
-      </div>
-    );
+    return <RespondentErrorState variant="expired" />;
+  }
+
+  if (survey.status === "draft") {
+    return <RespondentErrorState variant="not_started" />;
   }
 
   return (
