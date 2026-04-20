@@ -17,6 +17,101 @@ interface DistributionResult {
   uniqueToken: string
 }
 
+type AdminSupabase = ReturnType<typeof createAdminClient>
+
+/**
+ * 주어진 회사명 목록을 customers 테이블과 대조해 company_name → customer_id 매핑을 만든다.
+ * 한 회사명에 매칭되는 customer 가 정확히 1건일 때만 id 를 반환한다.
+ * (동일 회사명이 여러 service_type 으로 존재하는 경우는 모호하므로 매핑하지 않고 null 로 둔다.)
+ */
+async function buildCustomerMap(
+  supabase: AdminSupabase,
+  companyNames: string[]
+): Promise<Map<string, number>> {
+  const map = new Map<string, number>()
+  if (companyNames.length === 0) return map
+
+  const { data: customers } = await supabase
+    .from("customers")
+    .select("id, company_name")
+    .in("company_name", companyNames)
+
+  if (!customers) return map
+
+  // 같은 company_name 이 둘 이상이면 모호 → 매핑 제외
+  const counts = new Map<string, number>()
+  for (const c of customers) counts.set(c.company_name, (counts.get(c.company_name) ?? 0) + 1)
+  for (const c of customers) {
+    if (counts.get(c.company_name) === 1) map.set(c.company_name, c.id)
+  }
+  return map
+}
+
+/**
+ * CSV/수동 입력 rows 를 respondents 테이블에 upsert 한다.
+ * - 이메일 기준 중복 체크 (있으면 update, 없으면 insert)
+ * - customer_id 는 company_name 단일 매칭 시에만 세팅, 아니면 null
+ * 반환값: rows 와 동일 순서의 respondent id 배열 (실패한 row 는 null 대신 빈 문자열 제외)
+ */
+async function upsertRespondents(
+  supabase: AdminSupabase,
+  rows: CreateBatchInput["rows"]
+): Promise<string[]> {
+  const uniqueCompanies = [...new Set(rows.map((r) => r.company).filter(Boolean))]
+  const customerMap = await buildCustomerMap(supabase, uniqueCompanies)
+
+  const respondentIds: string[] = []
+  for (const row of rows) {
+    const customerId = row.company ? customerMap.get(row.company) ?? null : null
+    let respondentId: string | null = null
+
+    if (row.email) {
+      const { data: existing } = await supabase
+        .from("respondents")
+        .select("id")
+        .eq("email", row.email)
+        .limit(1)
+        .maybeSingle()
+
+      if (existing) {
+        respondentId = existing.id
+        await supabase
+          .from("respondents")
+          .update({
+            name: row.name,
+            phone: row.phoneNormalized || null,
+            // customer_id 는 NULL 을 덮어쓰는 경우에만 세팅 (기존 customer_id 보존)
+            ...(customerId !== null ? { customer_id: customerId } : {}),
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", respondentId)
+      }
+    }
+
+    if (!respondentId) {
+      const { data: created, error: insertErr } = await supabase
+        .from("respondents")
+        .insert({
+          name: row.name,
+          email: row.email || null,
+          phone: row.phoneNormalized || null,
+          customer_id: customerId,
+        })
+        .select("id")
+        .single()
+      if (insertErr) {
+        console.error("[upsertRespondents] insert 실패:", insertErr.message, { name: row.name, email: row.email })
+      }
+      respondentId = created?.id ?? null
+    }
+
+    if (respondentId) respondentIds.push(respondentId)
+    else respondentIds.push("") // 순서 보존용 placeholder
+  }
+
+  return respondentIds
+}
+
 export async function createDistributionBatch(input: CreateBatchInput) {
   const parsed = createBatchSchema.safeParse(input)
   if (!parsed.success) {
@@ -37,89 +132,17 @@ export async function createDistributionBatch(input: CreateBatchInput) {
     return { error: "설문을 찾을 수 없습니다" }
   }
 
-  // 2. 고유 회사명 추출 → organizations upsert
-  const uniqueCompanies = [...new Set(rows.map((r) => r.company).filter(Boolean))]
-  const orgMap = new Map<string, string>() // company name → org id
+  // 2. 응답자 upsert (customer_id 는 company_name 단일 매칭 시 자동 세팅)
+  const respondentIds = await upsertRespondents(supabase, rows)
+  const validRespondentIds = respondentIds.filter((id) => id !== "")
 
-  for (const companyName of uniqueCompanies) {
-    // 기존 조직 검색
-    const { data: existing } = await supabase
-      .from("organizations")
-      .select("id")
-      .eq("name", companyName)
-      .limit(1)
-      .single()
-
-    if (existing) {
-      orgMap.set(companyName, existing.id)
-    } else {
-      const { data: created } = await supabase
-        .from("organizations")
-        .insert({ name: companyName })
-        .select("id")
-        .single()
-      if (created) orgMap.set(companyName, created.id)
-    }
-  }
-
-  // 3. 응답자 upsert (이메일 기준 중복 체크)
-  const respondentIds: string[] = []
-
-  for (const row of rows) {
-    const orgId = orgMap.get(row.company) ?? null
-
-    // 이메일 기준 기존 응답자 검색
-    let respondentId: string | null = null
-
-    if (row.email) {
-      const { data: existing } = await supabase
-        .from("respondents")
-        .select("id")
-        .eq("email", row.email)
-        .limit(1)
-        .single()
-
-      if (existing) {
-        respondentId = existing.id
-        // 조직 정보 업데이트
-        await supabase
-          .from("respondents")
-          .update({
-            name: row.name,
-            organization_id: orgId,
-            phone: row.phoneNormalized || null,
-            updated_at: new Date().toISOString(),
-          })
-          .eq("id", respondentId)
-      }
-    }
-
-    if (!respondentId) {
-      const { data: created } = await supabase
-        .from("respondents")
-        .insert({
-          name: row.name,
-          email: row.email || null,
-          phone: row.phoneNormalized || null,
-          organization_id: orgId,
-        })
-        .select("id")
-        .single()
-      respondentId = created?.id ?? null
-    }
-
-    if (respondentId) {
-      respondentIds.push(respondentId)
-    }
-  }
-
-  // 4. distribution_batch 생성
+  // 3. distribution_batch 생성
   const { data: batch, error: batchErr } = await supabase
     .from("distribution_batches")
     .insert({
       survey_id: surveyId,
       channel: "personal_link",
-      total_count: respondentIds.length,
+      total_count: validRespondentIds.length,
       is_test: isTest,
     })
     .select("id")
@@ -129,11 +152,11 @@ export async function createDistributionBatch(input: CreateBatchInput) {
     return { error: "배포 배치 생성에 실패했습니다" }
   }
 
-  // 5. distributions 일괄 생성
+  // 4. distributions 일괄 생성 (respondent_id 는 upsert 에서 확보한 id, 실패 행은 null)
   const distributionInserts = rows.map((row, idx) => ({
     batch_id: batch.id,
     survey_id: surveyId,
-    respondent_id: respondentIds[idx] ?? null,
+    respondent_id: respondentIds[idx] || null,
     recipient_email: row.email || null,
     recipient_name: row.name,
     recipient_company: row.company || null,
@@ -151,12 +174,14 @@ export async function createDistributionBatch(input: CreateBatchInput) {
     return { error: "개인 링크 생성에 실패했습니다: " + (distErr?.message ?? "") }
   }
 
-  // 6. respondents의 last_cs_survey_sent_at 업데이트
-  const now = new Date().toISOString()
-  await supabase
-    .from("respondents")
-    .update({ last_cs_survey_sent_at: now })
-    .in("id", respondentIds)
+  // 5. respondents 의 last_cs_survey_sent_at 갱신 (유효 id 만)
+  if (validRespondentIds.length > 0) {
+    const now = new Date().toISOString()
+    await supabase
+      .from("respondents")
+      .update({ last_cs_survey_sent_at: now })
+      .in("id", validRespondentIds)
+  }
 
   // 7. 결과 반환
   const results: DistributionResult[] = distributions.map((d) => ({
@@ -197,83 +222,15 @@ export async function addToDistributionBatch(input: {
     return { error: "설문 ID가 일치하지 않습니다" }
   }
 
-  // 2. 고유 회사명 추출 → organizations upsert
-  const uniqueCompanies = [...new Set(rows.map((r) => r.company).filter(Boolean))]
-  const orgMap = new Map<string, string>()
+  // 2. 응답자 upsert (customer_id 는 company_name 단일 매칭 시 자동 세팅)
+  const respondentIds = await upsertRespondents(supabase, rows)
+  const validRespondentIds = respondentIds.filter((id) => id !== "")
 
-  for (const companyName of uniqueCompanies) {
-    const { data: existing } = await supabase
-      .from("organizations")
-      .select("id")
-      .eq("name", companyName)
-      .limit(1)
-      .single()
-
-    if (existing) {
-      orgMap.set(companyName, existing.id)
-    } else {
-      const { data: created } = await supabase
-        .from("organizations")
-        .insert({ name: companyName })
-        .select("id")
-        .single()
-      if (created) orgMap.set(companyName, created.id)
-    }
-  }
-
-  // 3. 응답자 upsert
-  const respondentIds: string[] = []
-
-  for (const row of rows) {
-    const orgId = orgMap.get(row.company) ?? null
-    let respondentId: string | null = null
-
-    if (row.email) {
-      const { data: existing } = await supabase
-        .from("respondents")
-        .select("id")
-        .eq("email", row.email)
-        .limit(1)
-        .single()
-
-      if (existing) {
-        respondentId = existing.id
-        await supabase
-          .from("respondents")
-          .update({
-            name: row.name,
-            organization_id: orgId,
-            phone: row.phoneNormalized || null,
-            updated_at: new Date().toISOString(),
-          })
-          .eq("id", respondentId)
-      }
-    }
-
-    if (!respondentId) {
-      const { data: created } = await supabase
-        .from("respondents")
-        .insert({
-          name: row.name,
-          email: row.email || null,
-          phone: row.phoneNormalized || null,
-          organization_id: orgId,
-        })
-        .select("id")
-        .single()
-      respondentId = created?.id ?? null
-    }
-
-    if (respondentId) {
-      respondentIds.push(respondentId)
-    }
-  }
-
-  // 4. distributions 추가 생성
+  // 3. distributions 추가 생성
   const distributionInserts = rows.map((row, idx) => ({
     batch_id: batchId,
     survey_id: surveyId,
-    respondent_id: respondentIds[idx] ?? null,
+    respondent_id: respondentIds[idx] || null,
     recipient_email: row.email || null,
     recipient_name: row.name,
     recipient_company: row.company || null,
@@ -291,18 +248,20 @@ export async function addToDistributionBatch(input: {
     return { error: "추가 링크 생성 실패: " + (distErr?.message ?? "") }
   }
 
-  // 5. 배치 total_count 업데이트
+  // 4. 배치 total_count 업데이트
   await supabase
     .from("distribution_batches")
     .update({ total_count: batch.total_count + distributions.length })
     .eq("id", batchId)
 
-  // 6. respondents의 last_cs_survey_sent_at 업데이트
-  const now = new Date().toISOString()
-  await supabase
-    .from("respondents")
-    .update({ last_cs_survey_sent_at: now })
-    .in("id", respondentIds)
+  // 5. respondents 의 last_cs_survey_sent_at 갱신
+  if (validRespondentIds.length > 0) {
+    const now = new Date().toISOString()
+    await supabase
+      .from("respondents")
+      .update({ last_cs_survey_sent_at: now })
+      .in("id", validRespondentIds)
+  }
 
   const results: DistributionResult[] = distributions.map((d) => ({
     name: d.recipient_name ?? "",
