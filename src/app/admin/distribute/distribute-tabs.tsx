@@ -155,6 +155,8 @@ export default function DistributeTabs({ surveys, batches: initialBatches }: { s
   const selectedSurvey = surveys.find((s) => s.id === selectedSurveyId)
   const surveyUrl = selectedSurvey ? `${BASE_URL}/s/${selectedSurvey.token}` : ''
 
+  const isSelectedClosed = selectedSurvey?.status === 'closed'
+
   // 설문 선택과 이력 필터 통합:
   // - showAllHistory = true  → 전체 설문의 모든 배치 표시
   // - 그 외 → 현재 선택된 설문의 배치만 표시
@@ -864,8 +866,28 @@ export default function DistributeTabs({ surveys, batches: initialBatches }: { s
           </CardContent>
         </Card>
 
+        {/* ⚠️ 마감된 설문 경고 (이 설문은 ②·③ 비활성) */}
+        {isSelectedClosed && (
+          <Card className="border-rose-200 bg-rose-50/50">
+            <CardContent className="flex items-start gap-3 p-5">
+              <AlertTriangle size={20} className="text-rose-600 flex-shrink-0 mt-0.5" />
+              <div className="flex-1">
+                <p className="text-sm font-semibold text-rose-800">
+                  이 설문은 마감되었습니다
+                </p>
+                <p className="text-[13px] text-rose-700/80 mt-0.5">
+                  새 배포 링크를 생성하거나 이메일/SMS 를 발송할 수 없습니다. 아래 <b>배부 이력</b> 섹션에서 과거 차수별 기록만 조회할 수 있습니다.
+                </p>
+                <p className="text-[12px] text-rose-600/70 mt-1">
+                  재배포가 필요하면 먼저 설문 상태를 <b>진행중(active)</b> 으로 변경하세요.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* ② 공통 링크 / QR */}
-        {selectedSurvey && (
+        {selectedSurvey && !isSelectedClosed && (
           <div ref={printRef}>
             <Card>
               <CardHeader>
@@ -879,8 +901,20 @@ export default function DistributeTabs({ surveys, batches: initialBatches }: { s
                       QR코드를 교육장에 게시하거나 링크를 수강생에게 공유하세요
                     </CardDescription>
                   </div>
-                  <Badge variant={selectedSurvey.status === 'active' ? 'success' : 'outline'}>
-                    {selectedSurvey.status === 'active' ? '활성' : '초안'}
+                  <Badge
+                    variant={
+                      selectedSurvey.status === 'active'
+                        ? 'success'
+                        : selectedSurvey.status === 'closed'
+                          ? 'destructive'
+                          : 'outline'
+                    }
+                  >
+                    {selectedSurvey.status === 'active'
+                      ? '활성'
+                      : selectedSurvey.status === 'closed'
+                        ? '마감'
+                        : '초안'}
                   </Badge>
                 </div>
               </CardHeader>
@@ -935,7 +969,8 @@ export default function DistributeTabs({ surveys, batches: initialBatches }: { s
           </div>
         )}
 
-        {/* ③ 개인 링크 생성 (CSV 업로드) */}
+        {/* ③ 개인 링크 생성 (CSV 업로드) — 마감된 설문에서는 숨김 */}
+        {!isSelectedClosed && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -1062,6 +1097,7 @@ export default function DistributeTabs({ surveys, batches: initialBatches }: { s
             )}
           </CardContent>
         </Card>
+        )}
 
         {/* ④ 배부 이력 */}
         {batches.length > 0 && (
