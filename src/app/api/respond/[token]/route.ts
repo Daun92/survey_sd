@@ -1,3 +1,9 @@
+/**
+ * @deprecated Prisma 기반 응답자 API. `/respond/[token]` 페이지 전용. 실사용 경로는
+ * Supabase edu_* 기반이며 `/s/[token]` → `/api/surveys/[token]/submit` (Supabase insert)
+ * 또는 admin/distribute actions.ts 를 통해 처리됨. 신규 작업 금지.
+ */
+
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { withAuth } from "@/lib/api-utils";

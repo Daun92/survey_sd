@@ -1,3 +1,9 @@
+/**
+ * @deprecated 공용 토큰으로 직접 공유하는 교육 설문 응답자 페이지. 실사용 대상은 admin/distribute
+ * 에서 생성되는 `/s/[token]` (full-featured flow). 이 경로는 레거시 단일 응답자 뷰이며 신규
+ * 기능은 `/s` 에 추가할 것. 참고: AGENTS.md 라우팅 지도.
+ */
+
 import { createClient } from "@/lib/supabase/server";
 import { notFound } from "next/navigation";
 import { SurveyForm } from "./SurveyForm";

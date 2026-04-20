@@ -6,6 +6,7 @@ import { buttonVariants } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Send, FileText } from "lucide-react";
+import { DeprecatedPageBanner } from "@/components/layout/deprecated-banner";
 
 interface Survey {
   id: number;
@@ -32,6 +33,10 @@ export default function DistributePage() {
 
   return (
     <div className="space-y-6">
+      <DeprecatedPageBanner
+        targetPath="/admin/distribute"
+        targetLabel="교육 배포 관리자"
+      />
       <div>
         <h1 className="text-2xl font-bold">배포 관리</h1>
         <p className="text-muted-foreground">설문을 선택하여 배포 현황을 관리하세요</p>
