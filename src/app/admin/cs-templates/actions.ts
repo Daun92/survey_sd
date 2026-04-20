@@ -20,13 +20,13 @@ export async function duplicateTemplate(templateId: string) {
   // 원본 템플릿 조회
   const { data: original } = await supabase
     .from("cs_survey_templates")
-    .select("name, division, division_label, description")
+    .select("name, division, division_label, description, settings")
     .eq("id", templateId)
     .single();
 
   if (!original) throw new Error("원본 템플릿을 찾을 수 없습니다.");
 
-  // 복제 템플릿 생성
+  // 복제 템플릿 생성 (사용자 복제본은 항상 is_system=false)
   const { data: newTemplate, error: createError } = await supabase
     .from("cs_survey_templates")
     .insert({
@@ -34,6 +34,7 @@ export async function duplicateTemplate(templateId: string) {
       division: original.division,
       division_label: original.division_label,
       description: original.description,
+      settings: original.settings,
       is_active: true,
       is_system: false,
     })
@@ -42,17 +43,54 @@ export async function duplicateTemplate(templateId: string) {
 
   if (createError || !newTemplate) throw new Error("템플릿 복제 실패: " + createError?.message);
 
-  // 문항 복제
+  // 문항 복제: skip_logic, metadata, is_required 까지 전부 select
   const { data: questions } = await supabase
     .from("cs_survey_questions")
-    .select("page_type, question_no, result_column, question_text, question_type, response_options, section_label, mapping_status, sort_order, notes")
+    .select(
+      "id, page_type, question_no, result_column, question_text, question_type, response_options, section_label, mapping_status, sort_order, notes, is_required, skip_logic, metadata"
+    )
     .eq("template_id", templateId)
     .order("sort_order", { ascending: true });
 
   if (questions && questions.length > 0) {
-    const copied = questions.map((q) => ({ ...q, template_id: newTemplate.id }));
-    const { error: insertError } = await supabase.from("cs_survey_questions").insert(copied);
+    // 1차 insert: skip_logic 제외 → 새 id 확보
+    const toInsert = questions.map((q) => {
+      const { id, skip_logic, ...rest } = q;
+      void id;
+      void skip_logic;
+      return { ...rest, template_id: newTemplate.id };
+    });
+
+    const { data: inserted, error: insertError } = await supabase
+      .from("cs_survey_questions")
+      .insert(toInsert)
+      .select("id, sort_order");
+
     if (insertError) throw new Error("문항 복제 실패: " + insertError.message);
+
+    // 구 id → 신 id 매핑 (sort_order 기준)
+    const idMap = new Map<string, string>();
+    for (const orig of questions) {
+      const match = inserted?.find((n) => n.sort_order === orig.sort_order);
+      if (match) idMap.set(orig.id, match.id);
+    }
+
+    // skip_logic의 question_id를 새 id로 치환하며 update
+    for (const orig of questions) {
+      const sl = orig.skip_logic as { show_when?: { question_id?: string } } | null;
+      if (!sl?.show_when?.question_id) continue;
+      const newId = idMap.get(orig.id);
+      const remappedTarget = idMap.get(sl.show_when.question_id);
+      if (!newId || !remappedTarget) continue;
+      await supabase
+        .from("cs_survey_questions")
+        .update({
+          skip_logic: {
+            show_when: { ...sl.show_when, question_id: remappedTarget },
+          },
+        })
+        .eq("id", newId);
+    }
   }
 
   revalidatePath("/admin/cs-templates");
@@ -87,26 +125,81 @@ export async function createTemplateFromSurvey(surveyId: string, name: string) {
 
   if (createError || !template) throw new Error("템플릿 생성 실패: " + createError?.message);
 
-  // 설문 문항 → 템플릿 문항으로 복사
+  // 설문 문항 → 템플릿 문항으로 복사 (분기/필수/옵션/메타데이터 보존)
   const { data: questions } = await supabase
     .from("edu_questions")
-    .select("question_code, question_text, question_type, section, sort_order, options")
+    .select(
+      "id, question_code, question_text, question_type, section, sort_order, options, is_required, skip_logic, metadata"
+    )
     .eq("survey_id", surveyId)
     .order("sort_order", { ascending: true });
 
   if (questions && questions.length > 0) {
-    const templateQuestions = questions.map((q, idx) => ({
-      template_id: template.id,
-      page_type: "1P",
-      question_no: q.question_code || `Q${idx + 1}`,
-      question_text: q.question_text,
-      question_type: q.question_type === "multiple_choice" ? "single_choice" : q.question_type,
-      response_options: q.options ? (typeof q.options === "string" ? q.options : JSON.parse(q.options)?.join("/")) : null,
-      section_label: q.section,
-      sort_order: q.sort_order,
-    }));
-    const { error: insertError } = await supabase.from("cs_survey_questions").insert(templateQuestions);
+    // 1차 insert: skip_logic 제외 → 새 id 확보
+    const toInsert = questions.map((q, idx) => {
+      // options 정규화 (JSON 배열 또는 문자열로 저장된 경우 둘 다 허용)
+      let optionArray: string[] | null = null;
+      if (q.options) {
+        try {
+          const parsed = typeof q.options === "string" ? JSON.parse(q.options) : q.options;
+          if (Array.isArray(parsed)) optionArray = parsed.map(String);
+        } catch {
+          /* noop */
+        }
+      }
+
+      // metadata에 원본 options 를 보존해 두면 quickCreateSurvey 에서 정확히 복원 가능
+      const baseMetadata = (q.metadata as Record<string, unknown> | null) ?? null;
+      const mergedMetadata = optionArray
+        ? { ...(baseMetadata ?? {}), source_options: optionArray }
+        : baseMetadata;
+
+      const code = q.question_code || `Q${idx + 1}`;
+      return {
+        template_id: template.id,
+        page_type: "1P",
+        question_no: code,
+        result_column: code,
+        question_text: q.question_text,
+        question_type: q.question_type, // 복수/단일/리커트 타입 그대로 보존
+        response_options: optionArray ? optionArray.join("/") : null,
+        section_label: q.section,
+        sort_order: q.sort_order,
+        is_required: q.is_required ?? true,
+        metadata: mergedMetadata,
+      };
+    });
+
+    const { data: inserted, error: insertError } = await supabase
+      .from("cs_survey_questions")
+      .insert(toInsert)
+      .select("id, sort_order");
+
     if (insertError) throw new Error("문항 복제 실패: " + insertError.message);
+
+    // 구 id → 신 id 매핑 (sort_order 기준)
+    const idMap = new Map<string, string>();
+    for (const orig of questions) {
+      const match = inserted?.find((n) => n.sort_order === orig.sort_order);
+      if (match) idMap.set(orig.id, match.id);
+    }
+
+    // skip_logic의 question_id 를 새 template question id 로 치환
+    for (const orig of questions) {
+      const sl = orig.skip_logic as { show_when?: { question_id?: string } } | null;
+      if (!sl?.show_when?.question_id) continue;
+      const newId = idMap.get(orig.id);
+      const remappedTarget = idMap.get(sl.show_when.question_id);
+      if (!newId || !remappedTarget) continue;
+      await supabase
+        .from("cs_survey_questions")
+        .update({
+          skip_logic: {
+            show_when: { ...sl.show_when, question_id: remappedTarget },
+          },
+        })
+        .eq("id", newId);
+    }
   }
 
   revalidatePath("/admin/cs-templates");
