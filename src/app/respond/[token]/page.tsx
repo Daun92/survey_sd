@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, use } from "react";
+import { useEffect, useMemo, useState, use } from "react";
 import { SurveyStart } from "@/components/respond/survey-start";
 import { SurveyHeader } from "@/components/respond/survey-header";
 import { SurveyQuestion } from "@/components/respond/survey-question";
@@ -59,8 +59,6 @@ export default function RespondPage({
     {},
   );
   const [errors, setErrors] = useState<Set<number>>(new Set());
-  const startedAtRef = useRef<number | null>(null);
-  const [elapsedSeconds, setElapsedSeconds] = useState<number>(0);
 
   // 카테고리별 그룹핑
   const categoryGroups = useMemo<CategoryGroup[]>(() => {
@@ -118,7 +116,6 @@ export default function RespondPage({
 
   function goNext() {
     if (step.kind === "start") {
-      if (startedAtRef.current === null) startedAtRef.current = Date.now();
       setStep({ kind: "category", index: 0 });
       window.scrollTo({ top: 0, behavior: "smooth" });
       return;
@@ -157,9 +154,6 @@ export default function RespondPage({
         }),
       });
       if (res.ok) {
-        if (startedAtRef.current !== null) {
-          setElapsedSeconds(Math.round((Date.now() - startedAtRef.current) / 1000));
-        }
         clearDraft();
         setStep({ kind: "done" });
       } else {
@@ -209,14 +203,7 @@ export default function RespondPage({
 
   // ─── Completion ───
   if (step.kind === "done") {
-    const answered = Object.values(answers).filter((v) => v.trim()).length;
-    return (
-      <SurveyCompletion
-        surveyTitle={data?.survey.title}
-        answeredCount={answered}
-        elapsedSeconds={elapsedSeconds}
-      />
-    );
+    return <SurveyCompletion surveyTitle={data?.survey.title} />;
   }
 
   // ─── Category View (multiple questions) ───
