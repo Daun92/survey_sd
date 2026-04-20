@@ -1,9 +1,35 @@
 "use client";
 
-import { CheckCircle2, Shield, TrendingUp } from "lucide-react";
+import { CheckCircle2, Clock, FileText, Shield, TrendingUp } from "lucide-react";
 import { SurveyHeader } from "./survey-header";
 
-export function SurveyCompletion() {
+interface SurveyCompletionProps {
+  /** 표시할 설문 제목 (상단 헤더 오버레이) */
+  surveyTitle?: string;
+  /** 응답 소요 시간(초). 요약 카드에 "N분 N초" 형식으로 표시 */
+  elapsedSeconds?: number;
+  /** 응답한 문항 수. 요약 카드에 표시 */
+  answeredCount?: number;
+  /** 기본 감사 문구 대신 노출할 커스텀 텍스트 */
+  customThankYou?: string;
+}
+
+function formatElapsed(seconds: number): string {
+  if (seconds < 60) return `${seconds}초`;
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  return s > 0 ? `${m}분 ${s}초` : `${m}분`;
+}
+
+export function SurveyCompletion({
+  surveyTitle,
+  elapsedSeconds,
+  answeredCount,
+  customThankYou,
+}: SurveyCompletionProps = {}) {
+  const hasSummary =
+    typeof elapsedSeconds === "number" || typeof answeredCount === "number";
+
   return (
     <div
       className="min-h-screen flex flex-col"
@@ -36,6 +62,14 @@ export function SurveyCompletion() {
 
           {/* Content */}
           <div className="space-y-4">
+            {surveyTitle && (
+              <p
+                className="text-sm font-medium uppercase tracking-widest"
+                style={{ color: "var(--expert-primary-accent)" }}
+              >
+                {surveyTitle}
+              </p>
+            )}
             <h2
               className="font-headline text-4xl md:text-5xl font-bold tracking-tight leading-tight"
               style={{ color: "var(--expert-on-surface)" }}
@@ -46,10 +80,41 @@ export function SurveyCompletion() {
               className="text-lg max-w-[480px] mx-auto leading-relaxed"
               style={{ color: "var(--expert-on-surface-variant)" }}
             >
-              소중한 의견 감사드립니다. 여러분의 답변은 향후 서비스 개선에 큰
-              도움이 됩니다.
+              {customThankYou ??
+                "소중한 의견 감사드립니다. 여러분의 답변은 향후 서비스 개선에 큰 도움이 됩니다."}
             </p>
           </div>
+
+          {/* 응답 요약 (elapsedSeconds / answeredCount 제공 시만) */}
+          {hasSummary && (
+            <div
+              className="inline-flex gap-6 px-6 py-3 rounded-full mx-auto"
+              style={{
+                backgroundColor: "var(--expert-surface-lowest)",
+                boxShadow: "var(--expert-shadow)",
+                border: "1px solid rgba(188, 202, 189, 0.1)",
+              }}
+            >
+              {typeof answeredCount === "number" && (
+                <span
+                  className="inline-flex items-center gap-1.5 text-sm"
+                  style={{ color: "var(--expert-on-surface-variant)" }}
+                >
+                  <FileText className="h-4 w-4" />
+                  <b style={{ color: "var(--expert-on-surface)" }}>{answeredCount}</b>개 응답
+                </span>
+              )}
+              {typeof elapsedSeconds === "number" && elapsedSeconds > 0 && (
+                <span
+                  className="inline-flex items-center gap-1.5 text-sm"
+                  style={{ color: "var(--expert-on-surface-variant)" }}
+                >
+                  <Clock className="h-4 w-4" />
+                  <b style={{ color: "var(--expert-on-surface)" }}>{formatElapsed(elapsedSeconds)}</b> 소요
+                </span>
+              )}
+            </div>
+          )}
 
           {/* Bento Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-12 text-left">

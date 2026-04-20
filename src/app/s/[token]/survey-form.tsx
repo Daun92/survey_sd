@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { CheckCircle2, Loader2, ChevronRight, ChevronLeft, Clock, FileText, Shield } from 'lucide-react'
 import { parseSimpleMarkdown } from '@/lib/simple-markdown'
+import { MobileFrame } from '@/components/respond/mobile-frame'
 
 interface SkipLogicCondition {
   show_when: {
@@ -127,16 +128,6 @@ function shouldShowQuestion(q: SurveyQuestion, answers: Record<string, number | 
     case 'less_than': return Number(answer) < Number(value)
     default: return true
   }
-}
-
-function MobileFrame({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="min-h-screen bg-stone-200 md:flex md:items-center md:justify-center md:py-8">
-      <div className="w-full md:w-[420px] md:min-h-[720px] md:max-h-[90vh] md:rounded-3xl md:shadow-2xl md:border md:border-stone-300 md:overflow-hidden bg-stone-50 flex flex-col min-h-screen md:min-h-0 md:relative">
-        {children}
-      </div>
-    </div>
-  )
 }
 
 interface PrefillRespondent {
