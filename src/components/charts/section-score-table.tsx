@@ -1,5 +1,6 @@
 "use client";
 
+import { Fragment } from "react";
 import { getGradeBgColor, getGradeLabel } from "./score-bar-chart";
 
 export interface QuestionDetail {
@@ -47,9 +48,9 @@ export function SectionScoreTable({ data }: { data: SectionGroup[] }) {
           </thead>
           <tbody>
             {data.map((group) => (
-              <>
+              <Fragment key={group.section}>
                 {/* 섹션 헤더 */}
-                <tr key={`section-${group.section}`} className="bg-stone-50 border-b border-stone-100">
+                <tr className="bg-stone-50 border-b border-stone-100">
                   <td colSpan={3} className="px-4 py-2.5">
                     <span className="text-[13px] font-semibold text-stone-800">
                       {group.section}
@@ -86,7 +87,7 @@ export function SectionScoreTable({ data }: { data: SectionGroup[] }) {
                     </td>
                   </tr>
                 ))}
-              </>
+              </Fragment>
             ))}
           </tbody>
         </table>

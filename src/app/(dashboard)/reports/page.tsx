@@ -10,6 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ServiceTypeCompareChart, CategoryRadarChart } from "@/components/charts/satisfaction-chart";
 import { BarChart3, FileText, Download } from "lucide-react";
+import { DeprecatedPageBanner } from "@/components/layout/deprecated-banner";
 
 interface SurveyStat {
   surveyId: number;
@@ -51,6 +52,10 @@ export default function ReportsPage() {
 
   return (
     <div className="space-y-6">
+      <DeprecatedPageBanner
+        targetPath="/admin/reports"
+        targetLabel="교육 리포트 관리자"
+      />
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">리포트</h1>

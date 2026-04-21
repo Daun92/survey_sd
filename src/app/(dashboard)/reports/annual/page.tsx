@@ -8,6 +8,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ServiceTypeCompareChart } from "@/components/charts/satisfaction-chart";
 import { TrendingUp, TrendingDown, Minus, Download } from "lucide-react";
+import { DeprecatedPageBanner } from "@/components/layout/deprecated-banner";
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from "recharts";
@@ -54,6 +55,10 @@ export default function AnnualReportPage() {
 
   return (
     <div className="space-y-6">
+      <DeprecatedPageBanner
+        targetPath="/admin/reports"
+        targetLabel="교육 리포트 관리자"
+      />
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">연간 결산</h1>

@@ -1,5 +1,11 @@
 "use client";
 
+/**
+ * @deprecated Prisma 기반 응답자 라우트. 실사용 경로는 Supabase edu_* 기반 `/s/[token]` 또는
+ * `/d/[token]`. 이 라우트로 응답을 받는 배포(`(dashboard)/distribute` 에서 생성)도 함께
+ * deprecated 되었음. 신규 개선 작업은 `/s`·`/d` 에 집중할 것. 참고: AGENTS.md 라우팅 지도.
+ */
+
 import { useEffect, useState, useMemo, use } from "react";
 import { SurveyStart } from "@/components/respond/survey-start";
 import { SurveyHeader } from "@/components/respond/survey-header";

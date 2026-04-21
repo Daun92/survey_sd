@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useCallback } from 'react'
+import { useState, useRef, useCallback, useEffect } from 'react'
 import { QRCodeSVG } from 'qrcode.react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -14,7 +14,7 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 import { parseDistributionCsv, parseDistributionXlsx, decodeCSVBuffer, type ParsedRow } from '@/lib/csv/parse-distribution-csv'
-import { createDistributionBatch, addToDistributionBatch, getDistributions, deleteDistributionBatch, resendDistributionEmail, resendBatchEmails, resendDistributionSms, resendBatchSms } from './actions'
+import { createDistributionBatch, addToDistributionBatch, getDistributions, deleteDistributionBatch, resendDistributionEmail, resendBatchEmails, resendDistributionSms, resendBatchSms, updateBatchLabel } from './actions'
 import EmailSendPanel from './email-send-panel'
 import EmailProviderSettings from './email-provider-settings'
 import SmsSendPanel from './sms-send-panel'
@@ -31,10 +31,14 @@ interface SurveyItem {
   title: string
   token: string
   status: string
+  createdAt: string | null
   educationType: string | null
   surveyType: string | null
   sessionName: string | null
   sessionNumber: number | null
+  courseName: string | null
+  projectName: string | null
+  customerName: string | null
   classGroups: ClassGroup[]
 }
 
@@ -46,19 +50,25 @@ const educationTypeLabel: Record<string, string> = {
   s2_edu_post: '교육후',
 }
 
+// 동일 설문명이 많은 경우에도 고객사/프로젝트/차수로 구분 가능하게 — 존재하는 메타만 뒤에 덧붙임.
 function getSurveyDisplayName(s: SurveyItem) {
-  const tags: string[] = []
+  const metas: string[] = []
+  if (s.customerName) metas.push(s.customerName)
+  if (s.projectName && s.projectName !== s.customerName) metas.push(s.projectName)
+  if (s.sessionName) metas.push(s.sessionName)
+  else if (s.sessionNumber != null) metas.push(`${s.sessionNumber}차`)
   if (s.educationType && educationTypeLabel[s.educationType]) {
-    tags.push(educationTypeLabel[s.educationType])
-  } else if (s.educationType) {
-    tags.push(s.educationType)
+    metas.push(educationTypeLabel[s.educationType])
   }
-  if (s.sessionName) {
-    tags.push(s.sessionName)
-  } else if (s.sessionNumber != null) {
-    tags.push(`${s.sessionNumber}차`)
-  }
-  return tags.length > 0 ? `${s.title} [${tags.join(' · ')}]` : s.title
+  return metas.length > 0 ? `${s.title} — ${metas.join(' · ')}` : s.title
+}
+
+// 동일 title + 동일 메타인 설문이 남을 때의 최종 disambiguator (생성월)
+function getSurveyCreatedMonth(s: SurveyItem) {
+  if (!s.createdAt) return null
+  const d = new Date(s.createdAt)
+  if (Number.isNaN(d.getTime())) return null
+  return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}`
 }
 
 interface BatchItem {
@@ -73,6 +83,7 @@ interface BatchItem {
   projectName: string | null
   isTest: boolean
   channel: string
+  label: string | null
   totalCount: number
   sentCount: number
   openedCount: number
@@ -90,9 +101,9 @@ interface DistributionResult {
 
 type PersonalStep = 'idle' | 'preview' | 'processing' | 'result'
 
-const BASE_URL = typeof window !== 'undefined'
-  ? window.location.origin
-  : (process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000')
+// SSR fallback — 서버/클라이언트 첫 렌더에서 동일한 값이어야 hydration 불일치 없음.
+// 마운트 후 useEffect 에서 window.location.origin 으로 업데이트.
+const SSR_BASE_URL = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
 
 const statusLabel: Record<string, { text: string; color: string }> = {
   pending: { text: '대기', color: 'bg-stone-100 text-stone-600' },
@@ -103,7 +114,27 @@ const statusLabel: Record<string, { text: string; color: string }> = {
   failed: { text: '실패', color: 'bg-rose-100 text-rose-700' },
 }
 
-export default function DistributeTabs({ surveys, batches: initialBatches }: { surveys: SurveyItem[]; batches: BatchItem[] }) {
+interface RespondentPickerItem {
+  id: string
+  name: string
+  email: string | null
+  phone: string | null
+  department: string | null
+  position: string | null
+  customerId: number | null
+  companyName: string | null
+  lastSentAt: string | null
+}
+
+export default function DistributeTabs({
+  surveys,
+  batches: initialBatches,
+  respondents = [],
+}: {
+  surveys: SurveyItem[]
+  batches: BatchItem[]
+  respondents?: RespondentPickerItem[]
+}) {
   const [selectedSurveyId, setSelectedSurveyId] = useState(surveys[0]?.id ?? '')
   const [copiedId, setCopiedId] = useState<string | null>(null)
   const printRef = useRef<HTMLDivElement>(null)
@@ -123,6 +154,14 @@ export default function DistributeTabs({ surveys, batches: initialBatches }: { s
   const [manualIsTest, setManualIsTest] = useState(false)
   const [manualProcessing, setManualProcessing] = useState(false)
 
+  // 주소록에서 선택 상태 (A-2.1/A-2.2)
+  const [showPicker, setShowPicker] = useState(false)
+  const [pickerSearch, setPickerSearch] = useState('')
+  const [pickerCustomer, setPickerCustomer] = useState<string>('')
+  const [pickerSelected, setPickerSelected] = useState<Set<string>>(new Set())
+  const [pickerProcessing, setPickerProcessing] = useState(false)
+  const [pickerIsTest, setPickerIsTest] = useState(false)
+
   // 추가 대상자 상태
   const [addingMore, setAddingMore] = useState(false)
   const [addMoreParsedRows, setAddMoreParsedRows] = useState<ParsedRow[]>([])
@@ -130,9 +169,16 @@ export default function DistributeTabs({ surveys, batches: initialBatches }: { s
   const [addMoreProcessing, setAddMoreProcessing] = useState(false)
   const [addMoreError, setAddMoreError] = useState<string | null>(null)
 
-  // 배치 이력 상태
-  const [historyFilter, setHistoryFilter] = useState<string>('all')
+  // 배치 이력 상태 — historyFilter 제거: selectedSurveyId 가 단일 소스
+  // "전체 설문 이력 보기" 토글로 설문 선택과 무관한 전체 뷰 제공
+  const [showAllHistory, setShowAllHistory] = useState(false)
+  // 진행중/전체 탭 — 기본 "진행중" (edu_surveys.status === 'active')
+  const [surveyScope, setSurveyScope] = useState<'active' | 'all'>('active')
   const [batches, setBatches] = useState<BatchItem[]>(initialBatches)
+  // 라벨 인라인 편집 상태
+  const [editingLabelBatchId, setEditingLabelBatchId] = useState<string | null>(null)
+  const [labelDraft, setLabelDraft] = useState('')
+  const [savingLabelId, setSavingLabelId] = useState<string | null>(null)
   const [expandedBatchId, setExpandedBatchId] = useState<string | null>(null)
   const [batchDistributions, setBatchDistributions] = useState<any[]>([])
   const [loadingBatchId, setLoadingBatchId] = useState<string | null>(null)
@@ -144,12 +190,55 @@ export default function DistributeTabs({ surveys, batches: initialBatches }: { s
   const [smsResendResult, setSmsResendResult] = useState<{ id: string; success?: boolean; error?: string } | null>(null)
   const [batchSmsResending, setBatchSmsResending] = useState(false)
 
+  // hydration-safe BASE_URL: SSR 과 CSR 의 첫 렌더가 동일한 fallback 을 쓰고,
+  // 마운트 후 클라이언트에서 실제 origin 으로 교체.
+  const [BASE_URL, setBaseUrl] = useState(SSR_BASE_URL)
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.location.origin !== BASE_URL) {
+      setBaseUrl(window.location.origin)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   const selectedSurvey = surveys.find((s) => s.id === selectedSurveyId)
   const surveyUrl = selectedSurvey ? `${BASE_URL}/s/${selectedSurvey.token}` : ''
 
-  const filteredBatches = historyFilter === 'all'
+  const isSelectedClosed = selectedSurvey?.status === 'closed'
+
+  // 설문 선택과 이력 필터 통합:
+  // - showAllHistory = true  → 전체 설문의 모든 배치 표시
+  // - 그 외 → 현재 선택된 설문의 배치만 표시
+  const scopedBatches = showAllHistory
     ? batches
-    : batches.filter((b) => b.surveyId === historyFilter)
+    : batches.filter((b) => b.surveyId === selectedSurveyId)
+
+  // 차수 번호 자동 부여: 같은 설문 안에서 created_at ASC 순서대로 1,2,3,...
+  // label 이 있으면 우선 표시.
+  // (scopedBatches 를 그대로 내려가는 게 아니라 roundNumber 메타 보강한 새 배열 반환)
+  const roundMap = (() => {
+    const bySurvey = new Map<string, BatchItem[]>()
+    for (const b of batches) {
+      if (!bySurvey.has(b.surveyId)) bySurvey.set(b.surveyId, [])
+      bySurvey.get(b.surveyId)!.push(b)
+    }
+    const idx = new Map<string, number>()
+    for (const [, arr] of bySurvey) {
+      const sorted = [...arr].sort((a, z) => a.createdAt.localeCompare(z.createdAt))
+      sorted.forEach((b, i) => idx.set(b.id, i + 1))
+    }
+    return idx
+  })()
+
+  const filteredBatches = scopedBatches.map((b) => ({
+    ...b,
+    roundNumber: roundMap.get(b.id) ?? 1,
+    displayLabel: b.label && b.label.trim() !== '' ? b.label : `${roundMap.get(b.id) ?? 1}차`,
+  }))
+
+  // 진행중/전체 탭 기준 설문 목록 필터
+  const scopedSurveys = surveyScope === 'active'
+    ? surveys.filter((s) => s.status === 'active')
+    : surveys
 
   const validRows = parsedRows.filter((r) => r.emailValid)
   const invalidRows = parsedRows.filter((r) => !r.emailValid)
@@ -223,10 +312,11 @@ export default function DistributeTabs({ surveys, batches: initialBatches }: { s
         educationType: selectedSurvey?.educationType ?? null,
         sessionName: selectedSurvey?.sessionName ?? null,
         sessionNumber: selectedSurvey?.sessionNumber ?? null,
-        courseName: null,
-        projectName: null,
+        courseName: selectedSurvey?.courseName ?? null,
+        projectName: selectedSurvey?.projectName ?? null,
         isTest: false,
         channel: 'personal_link',
+        label: null,
         totalCount: result.distributions.length,
         sentCount: 0, openedCount: 0, completedCount: 0,
         createdAt: new Date().toISOString(),
@@ -235,6 +325,66 @@ export default function DistributeTabs({ surveys, batches: initialBatches }: { s
     } catch {
       setError('링크 생성 중 오류가 발생했습니다')
       setPersonalStep('preview')
+    }
+  }
+
+  // ─── 주소록에서 선택 → 개인 링크 생성 ───
+  const handlePickerGenerate = async () => {
+    if (!selectedSurveyId || pickerSelected.size === 0) return
+    setPickerProcessing(true)
+    setError(null)
+    try {
+      const picked = respondents.filter((r) => pickerSelected.has(r.id))
+      const rows = picked.map((r, i) => ({
+        company: r.companyName || '',
+        name: r.name,
+        email: r.email || '',
+        phone: r.phone || '',
+        phoneNormalized: (r.phone || '').replace(/[^0-9]/g, ''),
+        emailValid: !!r.email,
+        project: '',
+        course: '',
+        am: '',
+        team: '',
+        rowNumber: i + 1,
+      }))
+      const result = await createDistributionBatch({
+        surveyId: selectedSurveyId,
+        rows,
+        isTest: pickerIsTest,
+      })
+      if ('error' in result) {
+        setError(result.error as string)
+        setPickerProcessing(false)
+        return
+      }
+      setBatchId(result.batchId)
+      setResults(result.distributions)
+      setBatches((prev) => [{
+        id: result.batchId,
+        surveyId: selectedSurveyId,
+        surveyTitle: selectedSurvey?.title ?? '',
+        surveyStatus: selectedSurvey?.status ?? '',
+        educationType: selectedSurvey?.educationType ?? null,
+        sessionName: selectedSurvey?.sessionName ?? null,
+        sessionNumber: selectedSurvey?.sessionNumber ?? null,
+        courseName: selectedSurvey?.courseName ?? null,
+        projectName: selectedSurvey?.projectName ?? null,
+        isTest: pickerIsTest,
+        channel: 'personal_link',
+        label: null,
+        totalCount: result.distributions.length,
+        sentCount: 0, openedCount: 0, completedCount: 0,
+        createdAt: new Date().toISOString(),
+      }, ...prev])
+      setShowPicker(false)
+      setPickerSelected(new Set())
+      setPickerIsTest(false)
+      setPickerProcessing(false)
+      setPersonalStep('result')
+    } catch {
+      setError('링크 생성 중 오류가 발생했습니다')
+      setPickerProcessing(false)
     }
   }
 
@@ -273,10 +423,11 @@ export default function DistributeTabs({ surveys, batches: initialBatches }: { s
         educationType: selectedSurvey?.educationType ?? null,
         sessionName: selectedSurvey?.sessionName ?? null,
         sessionNumber: selectedSurvey?.sessionNumber ?? null,
-        courseName: null,
-        projectName: null,
+        courseName: selectedSurvey?.courseName ?? null,
+        projectName: selectedSurvey?.projectName ?? null,
         isTest: manualIsTest,
         channel: 'personal_link',
+        label: null,
         totalCount: result.distributions.length,
         sentCount: 0, openedCount: 0, completedCount: 0,
         createdAt: new Date().toISOString(),
@@ -391,6 +542,33 @@ export default function DistributeTabs({ surveys, batches: initialBatches }: { s
     URL.revokeObjectURL(url)
   }
 
+  // ─── 라벨 편집 핸들러 ───
+  const startEditLabel = (batchId: string, current: string) => {
+    setEditingLabelBatchId(batchId)
+    setLabelDraft(current)
+  }
+
+  const cancelEditLabel = () => {
+    setEditingLabelBatchId(null)
+    setLabelDraft('')
+  }
+
+  const saveLabel = async (batchId: string) => {
+    setSavingLabelId(batchId)
+    try {
+      const next = labelDraft.trim() === '' ? null : labelDraft.trim()
+      const result = await updateBatchLabel(batchId, next)
+      if ('error' in result) {
+        alert(result.error)
+        return
+      }
+      setBatches((prev) => prev.map((b) => (b.id === batchId ? { ...b, label: result.label } : b)))
+      cancelEditLabel()
+    } finally {
+      setSavingLabelId(null)
+    }
+  }
+
   // ─── 배치 이력 핸들러 ───
   const toggleBatchDetail = async (id: string) => {
     if (expandedBatchId === id) {
@@ -467,7 +645,7 @@ export default function DistributeTabs({ surveys, batches: initialBatches }: { s
                 <div className="flex items-center justify-between">
                   <div>
                     <CardTitle>데이터 미리보기</CardTitle>
-                    <CardDescription className="mt-1">{fileName} · {selectedSurvey?.title}</CardDescription>
+                    <CardDescription className="mt-1">{fileName} · {selectedSurvey ? getSurveyDisplayName(selectedSurvey) : ''}</CardDescription>
                   </div>
                   <Button variant="outline" size="sm" onClick={resetPersonal}>
                     <ArrowLeft size={14} className="mr-1" /> 돌아가기
@@ -557,7 +735,7 @@ export default function DistributeTabs({ surveys, batches: initialBatches }: { s
                       <CheckCircle2 size={18} className="text-emerald-600" /> 링크 생성 완료
                     </CardTitle>
                     <CardDescription className="mt-1">
-                      {results.length}건의 개인 링크가 생성되었습니다 · {selectedSurvey?.title}
+                      {results.length}건의 개인 링크가 생성되었습니다 · {selectedSurvey ? getSurveyDisplayName(selectedSurvey) : ''}
                     </CardDescription>
                   </div>
                   <div className="flex gap-2">
@@ -733,24 +911,103 @@ export default function DistributeTabs({ surveys, batches: initialBatches }: { s
       </div>
 
       <div className="space-y-6">
-        {/* ① 설문 선택 (공통) */}
+        {/* ① 설문 선택 (공통) — 진행중/전체 범위 탭 + 드롭다운 */}
         <Card>
-          <CardContent className="p-5">
-            <label className="text-sm font-medium text-stone-700 mb-2 block">설문 선택</label>
-            <select
-              className="w-full rounded-md border border-stone-200 bg-white px-3 py-2 text-sm text-stone-800"
-              value={selectedSurveyId}
-              onChange={(e) => setSelectedSurveyId(e.target.value)}
-            >
-              {surveys.map((s) => (
-                <option key={s.id} value={s.id}>{getSurveyDisplayName(s)}</option>
-              ))}
-            </select>
+          <CardContent className="p-5 space-y-3">
+            <div className="flex items-center justify-between gap-3 flex-wrap">
+              <label className="text-sm font-medium text-stone-700">설문 선택</label>
+              <div className="inline-flex rounded-md border border-stone-200 bg-white p-0.5 text-xs">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSurveyScope('active')
+                    // 현재 선택된 설문이 active 가 아니면 첫 active 설문으로 교체
+                    const isCurrentActive = surveys.find((s) => s.id === selectedSurveyId)?.status === 'active'
+                    if (!isCurrentActive) {
+                      const firstActive = surveys.find((s) => s.status === 'active')
+                      if (firstActive) setSelectedSurveyId(firstActive.id)
+                    }
+                  }}
+                  className={`h-7 rounded-md px-2.5 font-medium transition-colors ${
+                    surveyScope === 'active' ? 'bg-teal-600 text-white' : 'text-stone-500 hover:text-stone-700'
+                  }`}
+                >
+                  진행중 ({surveys.filter((s) => s.status === 'active').length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSurveyScope('all')}
+                  className={`h-7 rounded-md px-2.5 font-medium transition-colors ${
+                    surveyScope === 'all' ? 'bg-teal-600 text-white' : 'text-stone-500 hover:text-stone-700'
+                  }`}
+                >
+                  전체 ({surveys.length})
+                </button>
+              </div>
+            </div>
+            {scopedSurveys.length === 0 ? (
+              <p className="text-sm text-stone-400 py-4 text-center">
+                {surveyScope === 'active' ? '진행중인 설문이 없습니다.' : '설문이 없습니다.'}
+              </p>
+            ) : (
+              <select
+                className="w-full rounded-md border border-stone-200 bg-white px-3 py-2 text-sm text-stone-800"
+                value={scopedSurveys.some((s) => s.id === selectedSurveyId) ? selectedSurveyId : ''}
+                onChange={(e) => setSelectedSurveyId(e.target.value)}
+              >
+                {!scopedSurveys.some((s) => s.id === selectedSurveyId) && (
+                  <option value="" disabled>
+                    — 설문을 선택하세요 —
+                  </option>
+                )}
+                {(() => {
+                  // 동일한 display name 이 둘 이상이면 생성월로 보조 구분 표기
+                  const nameCount = new Map<string, number>()
+                  for (const s of scopedSurveys) {
+                    const n = getSurveyDisplayName(s)
+                    nameCount.set(n, (nameCount.get(n) ?? 0) + 1)
+                  }
+                  return scopedSurveys.map((s) => {
+                    const baseName = getSurveyDisplayName(s)
+                    const batchCount = batches.filter((b) => b.surveyId === s.id).length
+                    const needsMonth = (nameCount.get(baseName) ?? 0) > 1
+                    const month = needsMonth ? getSurveyCreatedMonth(s) : null
+                    return (
+                      <option key={s.id} value={s.id}>
+                        {baseName}
+                        {month ? ` · ${month}` : ''}
+                        {batchCount > 0 ? ` · 배포 ${batchCount}건` : ''}
+                      </option>
+                    )
+                  })
+                })()}
+              </select>
+            )}
           </CardContent>
         </Card>
 
+        {/* ⚠️ 마감된 설문 경고 (이 설문은 ②·③ 비활성) */}
+        {isSelectedClosed && (
+          <Card className="border-rose-200 bg-rose-50/50">
+            <CardContent className="flex items-start gap-3 p-5">
+              <AlertTriangle size={20} className="text-rose-600 flex-shrink-0 mt-0.5" />
+              <div className="flex-1">
+                <p className="text-sm font-semibold text-rose-800">
+                  이 설문은 마감되었습니다
+                </p>
+                <p className="text-[13px] text-rose-700/80 mt-0.5">
+                  새 배포 링크를 생성하거나 이메일/SMS 를 발송할 수 없습니다. 아래 <b>배부 이력</b> 섹션에서 과거 차수별 기록만 조회할 수 있습니다.
+                </p>
+                <p className="text-[12px] text-rose-600/70 mt-1">
+                  재배포가 필요하면 먼저 설문 상태를 <b>진행중(active)</b> 으로 변경하세요.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* ② 공통 링크 / QR */}
-        {selectedSurvey && (
+        {selectedSurvey && !isSelectedClosed && (
           <div ref={printRef}>
             <Card>
               <CardHeader>
@@ -763,9 +1020,35 @@ export default function DistributeTabs({ surveys, batches: initialBatches }: { s
                     <CardDescription className="mt-1">
                       QR코드를 교육장에 게시하거나 링크를 수강생에게 공유하세요
                     </CardDescription>
+                    {(() => {
+                      const metas: string[] = []
+                      if (selectedSurvey.customerName) metas.push(selectedSurvey.customerName)
+                      if (selectedSurvey.projectName && selectedSurvey.projectName !== selectedSurvey.customerName) metas.push(selectedSurvey.projectName)
+                      if (selectedSurvey.sessionName) metas.push(selectedSurvey.sessionName)
+                      else if (selectedSurvey.sessionNumber != null) metas.push(`${selectedSurvey.sessionNumber}차`)
+                      return metas.length > 0 ? (
+                        <p className="mt-2 text-[12px] text-stone-500">
+                          <span className="font-medium text-stone-700">{selectedSurvey.title}</span>
+                          <span className="mx-1.5 text-stone-300">·</span>
+                          {metas.join(' · ')}
+                        </p>
+                      ) : null
+                    })()}
                   </div>
-                  <Badge variant={selectedSurvey.status === 'active' ? 'success' : 'outline'}>
-                    {selectedSurvey.status === 'active' ? '활성' : '초안'}
+                  <Badge
+                    variant={
+                      selectedSurvey.status === 'active'
+                        ? 'success'
+                        : selectedSurvey.status === 'closed'
+                          ? 'destructive'
+                          : 'outline'
+                    }
+                  >
+                    {selectedSurvey.status === 'active'
+                      ? '활성'
+                      : selectedSurvey.status === 'closed'
+                        ? '마감'
+                        : '초안'}
                   </Badge>
                 </div>
               </CardHeader>
@@ -786,6 +1069,20 @@ export default function DistributeTabs({ surveys, batches: initialBatches }: { s
                           {copiedId === 'main' ? ' 복사됨' : ' 복사'}
                         </Button>
                       </div>
+                      {/* 테스트 링크 — ?test=1 붙여 제출 시 is_test=true 로 저장, 집계 자동 제외 */}
+                      <div className="mt-2 flex items-center gap-2">
+                        <label className="text-[11px] text-amber-700 bg-amber-50 border border-amber-200 rounded px-1.5 py-0.5 font-medium">테스트</label>
+                        <div className="flex-1 bg-amber-50/40 border border-amber-100 rounded-lg px-3 py-1.5 text-xs text-stone-600 font-mono truncate">
+                          {surveyUrl}?test=1
+                        </div>
+                        <Button variant="outline" size="sm" onClick={() => copyToClipboard(`${surveyUrl}?test=1`, 'test-main')}>
+                          {copiedId === 'test-main' ? <Check size={14} className="text-emerald-600" /> : <Copy size={14} />}
+                          {copiedId === 'test-main' ? ' 복사됨' : ' 테스트 링크'}
+                        </Button>
+                      </div>
+                      <p className="mt-1 text-[11px] text-stone-400">
+                        테스트 링크로 제출된 응답은 <b>is_test=true</b> 로 저장되어 리포트·집계에서 자동 제외됩니다.
+                      </p>
                     </div>
 
                     {/* 분반별 링크 (있을 때만) */}
@@ -820,7 +1117,8 @@ export default function DistributeTabs({ surveys, batches: initialBatches }: { s
           </div>
         )}
 
-        {/* ③ 개인 링크 생성 (CSV 업로드) */}
+        {/* ③ 개인 링크 생성 (CSV 업로드) — 마감된 설문에서는 숨김 */}
+        {!isSelectedClosed && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -856,16 +1154,140 @@ export default function DistributeTabs({ surveys, batches: initialBatches }: { s
                 onChange={handleFileInput}
               />
             </div>
-            {/* 수동 추가 토글 */}
+            {/* 주소록에서 선택 + 수동 추가 토글 */}
             <div className="mt-4 border-t border-stone-100 pt-4">
-              {!showManualForm ? (
-                <button
-                  onClick={() => setShowManualForm(true)}
-                  className="inline-flex items-center gap-1.5 text-sm text-teal-600 hover:text-teal-800 font-medium transition-colors"
-                >
-                  <UserPlus size={14} />
-                  수동으로 개인 링크 추가
-                </button>
+              {!showManualForm && !showPicker ? (
+                <div className="flex items-center gap-4">
+                  <button
+                    onClick={() => setShowPicker(true)}
+                    disabled={respondents.length === 0}
+                    className="inline-flex items-center gap-1.5 text-sm text-teal-600 hover:text-teal-800 font-medium transition-colors disabled:text-stone-300 disabled:cursor-not-allowed"
+                  >
+                    <Users size={14} />
+                    주소록에서 선택
+                    {respondents.length > 0 ? <span className="text-[11px] text-stone-400">({respondents.length}명)</span> : <span className="text-[11px] text-stone-400">(주소록 비어있음)</span>}
+                  </button>
+                  <span className="text-stone-300">|</span>
+                  <button
+                    onClick={() => setShowManualForm(true)}
+                    className="inline-flex items-center gap-1.5 text-sm text-teal-600 hover:text-teal-800 font-medium transition-colors"
+                  >
+                    <UserPlus size={14} />
+                    수동으로 개인 링크 추가
+                  </button>
+                </div>
+              ) : showPicker ? (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm font-medium text-stone-700">주소록에서 선택</p>
+                    <button
+                      onClick={() => { setShowPicker(false); setPickerSelected(new Set()); setPickerSearch(''); setPickerCustomer('') }}
+                      className="text-xs text-stone-400 hover:text-stone-600"
+                    >
+                      닫기
+                    </button>
+                  </div>
+                  {/* 필터 */}
+                  <div className="flex gap-2 items-center">
+                    <input
+                      className="flex-1 rounded border border-stone-300 px-2.5 py-1.5 text-sm"
+                      placeholder="이름, 이메일, 부서 검색"
+                      value={pickerSearch}
+                      onChange={(e) => setPickerSearch(e.target.value)}
+                    />
+                    <select
+                      className="rounded border border-stone-300 px-2 py-1.5 text-sm bg-white"
+                      value={pickerCustomer}
+                      onChange={(e) => setPickerCustomer(e.target.value)}
+                    >
+                      <option value="">전체 고객사</option>
+                      {[...new Map(respondents.filter(r => r.customerId && r.companyName).map(r => [r.customerId!, r.companyName!])).entries()].map(([id, name]) => (
+                        <option key={id} value={String(id)}>{name}</option>
+                      ))}
+                    </select>
+                  </div>
+                  {/* 리스트 */}
+                  {(() => {
+                    const filtered = respondents.filter(r => {
+                      const q = pickerSearch.toLowerCase().trim()
+                      const matchQ = !q || r.name.toLowerCase().includes(q) || r.email?.toLowerCase().includes(q) || r.department?.toLowerCase().includes(q)
+                      const matchCustomer = !pickerCustomer || String(r.customerId) === pickerCustomer
+                      return matchQ && matchCustomer
+                    })
+                    const allFilteredChecked = filtered.length > 0 && filtered.every(r => pickerSelected.has(r.id))
+                    return (
+                      <>
+                        <div className="flex items-center justify-between text-xs text-stone-500 border-b border-stone-100 pb-2">
+                          <label className="inline-flex items-center gap-1.5 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={allFilteredChecked}
+                              onChange={(e) => {
+                                const next = new Set(pickerSelected)
+                                if (e.target.checked) filtered.forEach(r => next.add(r.id))
+                                else filtered.forEach(r => next.delete(r.id))
+                                setPickerSelected(next)
+                              }}
+                            />
+                            <span>현재 필터 {filtered.length}명 전체선택</span>
+                          </label>
+                          <span>선택 {pickerSelected.size}명</span>
+                        </div>
+                        <div className="max-h-[280px] overflow-y-auto border border-stone-100 rounded">
+                          {filtered.length === 0 ? (
+                            <div className="py-8 text-center text-xs text-stone-400">조건에 맞는 대상자가 없습니다</div>
+                          ) : (
+                            <ul className="divide-y divide-stone-100">
+                              {filtered.map(r => {
+                                const checked = pickerSelected.has(r.id)
+                                const alreadySent = !!r.lastSentAt
+                                return (
+                                  <li key={r.id} className="flex items-center gap-2 px-3 py-2 text-xs hover:bg-stone-50">
+                                    <input
+                                      type="checkbox"
+                                      checked={checked}
+                                      onChange={(e) => {
+                                        const next = new Set(pickerSelected)
+                                        if (e.target.checked) next.add(r.id)
+                                        else next.delete(r.id)
+                                        setPickerSelected(next)
+                                      }}
+                                    />
+                                    <span className="font-medium text-stone-800 w-20 truncate">{r.name}</span>
+                                    <span className="text-stone-500 w-56 truncate">{r.email || '—'}</span>
+                                    <span className="text-stone-500 w-32 truncate">{r.companyName || '—'}</span>
+                                    <span className="text-stone-400 w-32 truncate">{[r.department, r.position].filter(Boolean).join(' / ') || '—'}</span>
+                                    {alreadySent && (
+                                      <span className="ml-auto text-[10px] text-amber-600 bg-amber-50 border border-amber-200 rounded px-1.5 py-0.5" title={`최근 발송 ${r.lastSentAt}`}>
+                                        이미 발송
+                                      </span>
+                                    )}
+                                  </li>
+                                )
+                              })}
+                            </ul>
+                          )}
+                        </div>
+                      </>
+                    )
+                  })()}
+                  <div className="flex items-center gap-3">
+                    <label className="flex items-center gap-1.5 text-xs text-stone-600 cursor-pointer">
+                      <input type="checkbox" checked={pickerIsTest} onChange={(e) => setPickerIsTest(e.target.checked)} className="accent-amber-500 w-3.5 h-3.5" />
+                      테스트/참조용 <span className="text-[10px] text-stone-400">(리포트 미집계)</span>
+                    </label>
+                    <div className="flex-1" />
+                    <Button
+                      size="sm"
+                      onClick={handlePickerGenerate}
+                      disabled={pickerProcessing || pickerSelected.size === 0 || !selectedSurveyId}
+                      className="bg-teal-600 hover:bg-teal-700 text-white"
+                    >
+                      {pickerProcessing ? <Loader2 size={13} className="mr-1 animate-spin" /> : <Send size={13} className="mr-1" />}
+                      선택한 {pickerSelected.size}명 링크 생성
+                    </Button>
+                  </div>
+                </div>
               ) : (
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
@@ -947,36 +1369,43 @@ export default function DistributeTabs({ surveys, batches: initialBatches }: { s
             )}
           </CardContent>
         </Card>
+        )}
 
         {/* ④ 배부 이력 */}
         {batches.length > 0 && (
           <Card>
             <CardHeader>
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between flex-wrap gap-3">
                 <div>
                   <CardTitle className="flex items-center gap-2">
                     <Users size={18} className="text-stone-600" />
                     배부 이력
+                    {!showAllHistory && selectedSurvey && (
+                      <span className="text-sm font-normal text-stone-500">· {getSurveyDisplayName(selectedSurvey)}</span>
+                    )}
                   </CardTitle>
-                  <CardDescription>이전에 생성한 개인 링크 배치를 확인하고 관리합니다</CardDescription>
+                  <CardDescription>
+                    {showAllHistory
+                      ? `전체 설문의 배포 이력 (${batches.length}건)`
+                      : `선택한 설문의 차수별 배포 이력 (${scopedBatches.length}건). 상단 설문 선택을 변경하면 자동으로 교체됩니다.`}
+                  </CardDescription>
                 </div>
-                <select
-                  className="rounded-md border border-stone-200 bg-white px-3 py-1.5 text-sm text-stone-700"
-                  value={historyFilter}
-                  onChange={(e) => setHistoryFilter(e.target.value)}
-                >
-                  <option value="all">전체 설문 ({batches.length})</option>
-                  {surveys.map((s) => {
-                    const count = batches.filter((b) => b.surveyId === s.id).length
-                    if (count === 0) return null
-                    return <option key={s.id} value={s.id}>{getSurveyDisplayName(s)} ({count})</option>
-                  })}
-                </select>
+                <label className="inline-flex items-center gap-2 rounded-md border border-stone-200 bg-white px-2.5 py-1.5 text-xs text-stone-600 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={showAllHistory}
+                    onChange={(e) => setShowAllHistory(e.target.checked)}
+                    className="h-3.5 w-3.5 accent-teal-600"
+                  />
+                  전체 설문 이력 보기 ({batches.length})
+                </label>
               </div>
             </CardHeader>
             <CardContent className="p-0">
               {filteredBatches.length === 0 ? (
-                <div className="px-5 py-8 text-center text-sm text-stone-400">선택한 설문의 배부 이력이 없습니다</div>
+                <div className="px-5 py-8 text-center text-sm text-stone-400">
+                  {showAllHistory ? '배부 이력이 없습니다' : '선택한 설문의 배부 이력이 없습니다'}
+                </div>
               ) : (
               <div className="divide-y divide-stone-100">
                 {filteredBatches.map((batch) => {
@@ -995,6 +1424,55 @@ export default function DistributeTabs({ surveys, batches: initialBatches }: { s
                         />
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-1.5 flex-wrap">
+                            {editingLabelBatchId === batch.id ? (
+                              <div
+                                className="inline-flex items-center gap-1"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <input
+                                  autoFocus
+                                  value={labelDraft}
+                                  onChange={(e) => setLabelDraft(e.target.value)}
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Enter') saveLabel(batch.id)
+                                    if (e.key === 'Escape') cancelEditLabel()
+                                  }}
+                                  placeholder={`${batch.roundNumber}차`}
+                                  className="h-6 w-32 rounded-md border border-teal-300 bg-white px-2 text-[11px] text-stone-800 focus:outline-none focus:ring-2 focus:ring-teal-200"
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => saveLabel(batch.id)}
+                                  disabled={savingLabelId === batch.id}
+                                  className="rounded-md bg-teal-600 px-2 py-0.5 text-[11px] font-medium text-white hover:bg-teal-700 disabled:opacity-60"
+                                >
+                                  저장
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={cancelEditLabel}
+                                  className="rounded-md border border-stone-200 px-2 py-0.5 text-[11px] text-stone-500 hover:bg-stone-50"
+                                >
+                                  취소
+                                </button>
+                              </div>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  startEditLabel(batch.id, batch.label ?? '')
+                                }}
+                                title="차수 라벨 편집"
+                                className={`inline-flex items-center rounded-md px-1.5 py-0.5 text-[11px] font-bold shrink-0 transition-colors ${
+                                  batch.label
+                                    ? 'bg-teal-100 text-teal-800 hover:bg-teal-200'
+                                    : 'bg-stone-100 text-stone-700 hover:bg-stone-200'
+                                }`}
+                              >
+                                {batch.displayLabel}
+                              </button>
+                            )}
                             <span className="text-sm font-medium text-stone-800 truncate">{batch.surveyTitle}</span>
                             {batch.isTest && (
                               <span className="inline-flex items-center rounded-md bg-amber-100 px-1.5 py-0.5 text-[10px] font-medium text-amber-700 shrink-0">

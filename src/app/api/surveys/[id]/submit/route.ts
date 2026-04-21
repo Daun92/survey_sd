@@ -20,7 +20,10 @@ export const POST = withAuth({ type: "public" }, async (request: NextRequest, ct
       )
     }
 
-    const { answers, respondent_name, respondent_department, respondent_position, class_group_id, distribution_token } = parsed.data
+    const { answers, respondent_name, respondent_department, respondent_position, class_group_id, distribution_token, is_test: bodyIsTest } = parsed.data
+
+    // URL 쿼리 ?test=1 도 테스트 신호로 수용 (공통 링크 ?test=1 → 클라이언트가 body 로도 전달하지만 fallback)
+    const urlIsTest = request.nextUrl?.searchParams.get('test') === '1'
 
     // 설문 조회
     const { data: survey, error: surveyError } = await supabase
@@ -56,11 +59,13 @@ export const POST = withAuth({ type: "public" }, async (request: NextRequest, ct
     // 개별 링크(distribution) 정보 조회
     let distRespondentName = respondent_name
     let distributionId: string | null = null
-    let isTestSubmission = false
+    let respondentId: string | null = null
+    // 테스트 제출 여부: 공통 링크 ?test=1, body.is_test, 또는 테스트 배치 — 어느 하나라도 true 면 test 로 분류
+    let isTestSubmission = Boolean(bodyIsTest) || urlIsTest
     if (distribution_token) {
       const { data: dist } = await supabase
         .from('distributions')
-        .select('id, recipient_name, recipient_email, status, batch_id')
+        .select('id, recipient_name, recipient_email, status, batch_id, respondent_id')
         .eq('unique_token', distribution_token)
         .eq('survey_id', survey.id)
         .single()
@@ -70,6 +75,7 @@ export const POST = withAuth({ type: "public" }, async (request: NextRequest, ct
           return NextResponse.json({ error: '이미 응답을 완료한 링크입니다' }, { status: 400 })
         }
         distributionId = dist.id
+        respondentId = dist.respondent_id ?? null
         distRespondentName = dist.recipient_name || respondent_name
         // 테스트 배치 여부 확인
         if (dist.batch_id) {
@@ -98,6 +104,9 @@ export const POST = withAuth({ type: "public" }, async (request: NextRequest, ct
         session_id: survey.session_id,
         class_group_id: resolvedGroupId,
         distribution_id: distributionId,
+        // 개인 링크 경로면 distribution 의 respondent_id 를 그대로 복사해 주소록과 연결.
+        // 공통 링크(/s) 는 respondent 불명이라 null 유지.
+        respondent_id: respondentId,
         respondent_name: distRespondentName || null,
         respondent_department: respondent_department || null,
         respondent_position: respondent_position || null,

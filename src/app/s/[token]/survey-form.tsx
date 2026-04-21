@@ -129,10 +129,15 @@ function shouldShowQuestion(q: SurveyQuestion, answers: Record<string, number | 
   }
 }
 
-function MobileFrame({ children }: { children: React.ReactNode }) {
+function MobileFrame({ children, testBanner }: { children: React.ReactNode; testBanner?: boolean }) {
   return (
     <div className="min-h-screen bg-stone-200 md:flex md:items-center md:justify-center md:py-8">
       <div className="w-full md:w-[420px] md:min-h-[720px] md:max-h-[90vh] md:rounded-3xl md:shadow-2xl md:border md:border-stone-300 md:overflow-hidden bg-stone-50 flex flex-col min-h-screen md:min-h-0 md:relative">
+        {testBanner && (
+          <div className="bg-amber-100 border-b border-amber-300 px-4 py-2 text-center text-[12px] font-semibold text-amber-800">
+            ⚠ 테스트 모드 — 이 응답은 집계·리포트에서 자동 제외됩니다
+          </div>
+        )}
         {children}
       </div>
     </div>
@@ -145,14 +150,15 @@ interface PrefillRespondent {
   position?: string
 }
 
-export default function SurveyForm({ survey, groupToken, distributionToken, prefillRespondent }: {
+export default function SurveyForm({ survey, groupToken, distributionToken, prefillRespondent, isTestMode = false }: {
   survey: SurveyData
   groupToken: string | null
   distributionToken?: string
   prefillRespondent?: PrefillRespondent
+  isTestMode?: boolean
 }) {
-  // ─── sessionStorage 키 (설문별 고유) ───
-  const storageKey = `survey_draft_${survey.id}`
+  // ─── sessionStorage 키 (설문별 고유, 테스트 모드 시 분리) ───
+  const storageKey = isTestMode ? `survey_draft_test_${survey.id}` : `survey_draft_${survey.id}`
 
   const loadDraft = useCallback(() => {
     try {
@@ -169,17 +175,17 @@ export default function SurveyForm({ survey, groupToken, distributionToken, pref
 
   const [step, setStep] = useState<Step>(() => {
     if (typeof window === 'undefined') return 'landing'
-    const draft = (() => { try { const r = sessionStorage.getItem(`survey_draft_${survey.id}`); return r ? JSON.parse(r) : null } catch { return null } })()
+    const draft = (() => { try { const r = sessionStorage.getItem(storageKey); return r ? JSON.parse(r) : null } catch { return null } })()
     return draft?.step ?? 'landing'
   })
   const [answers, setAnswers] = useState<Record<string, number | string | number[]>>(() => {
     if (typeof window === 'undefined') return {}
-    const draft = (() => { try { const r = sessionStorage.getItem(`survey_draft_${survey.id}`); return r ? JSON.parse(r) : null } catch { return null } })()
+    const draft = (() => { try { const r = sessionStorage.getItem(storageKey); return r ? JSON.parse(r) : null } catch { return null } })()
     return draft?.answers ?? {}
   })
   const [respondentInfo, setRespondentInfo] = useState<Record<string, string>>(() => {
     if (typeof window !== 'undefined') {
-      const draft = (() => { try { const r = sessionStorage.getItem(`survey_draft_${survey.id}`); return r ? JSON.parse(r) : null } catch { return null } })()
+      const draft = (() => { try { const r = sessionStorage.getItem(storageKey); return r ? JSON.parse(r) : null } catch { return null } })()
       if (draft?.respondentInfo && Object.keys(draft.respondentInfo).length > 0) return draft.respondentInfo
     }
     const initial: Record<string, string> = {}
@@ -196,7 +202,7 @@ export default function SurveyForm({ survey, groupToken, distributionToken, pref
   const [elapsedTime, setElapsedTime] = useState('')
   const [currentSectionIdx, setCurrentSectionIdx] = useState(() => {
     if (typeof window === 'undefined') return 0
-    const draft = (() => { try { const r = sessionStorage.getItem(`survey_draft_${survey.id}`); return r ? JSON.parse(r) : null } catch { return null } })()
+    const draft = (() => { try { const r = sessionStorage.getItem(storageKey); return r ? JSON.parse(r) : null } catch { return null } })()
     return draft?.sectionIdx ?? 0
   })
   const [toast, setToast] = useState<string | null>(null)
@@ -333,6 +339,7 @@ export default function SurveyForm({ survey, groupToken, distributionToken, pref
           respondent_info: respondentInfo,
           class_group_id: groupToken || null,
           distribution_token: distributionToken || null,
+          is_test: isTestMode || undefined,
         }),
       })
 
@@ -366,7 +373,7 @@ export default function SurveyForm({ survey, groupToken, distributionToken, pref
     const canStart = (!needsConsent || consentChecked) && requiredFieldsFilled
 
     return (
-      <MobileFrame>
+      <MobileFrame testBanner={isTestMode}>
       <div className="flex-1 flex flex-col bg-stone-50 overflow-y-auto">
         {/* Top Bar */}
         <div className="flex items-center justify-between px-6 py-3.5 bg-white border-b border-stone-100">
@@ -506,7 +513,7 @@ export default function SurveyForm({ survey, groupToken, distributionToken, pref
   // ─── Ending Page ───
   if (step === 'ending') {
     return (
-      <MobileFrame>
+      <MobileFrame testBanner={isTestMode}>
       <div className="flex-1 flex flex-col items-center justify-center px-6 bg-stone-50 relative">
         <div className="flex flex-col items-center gap-6 -mt-16">
           <div className="flex items-center justify-center w-[72px] h-[72px] bg-teal-50 rounded-full border-2 border-teal-100">
@@ -611,7 +618,7 @@ export default function SurveyForm({ survey, groupToken, distributionToken, pref
 
   // ─── Questions Page ───
   return (
-    <MobileFrame>
+    <MobileFrame testBanner={isTestMode}>
     <div ref={scrollContainerRef} className="flex-1 flex flex-col bg-stone-50 overflow-y-auto">
       {/* Header with progress */}
       <div className="bg-white sticky top-0 z-10">
