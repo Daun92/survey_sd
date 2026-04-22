@@ -13,6 +13,7 @@ import {
   Trash2,
   AlertCircle,
   Upload,
+  History,
 } from "lucide-react";
 import {
   createRespondent,
@@ -20,6 +21,10 @@ import {
   deleteRespondent,
   toggleRespondentActive,
   bulkImportRespondents,
+  previewSendHistoryImport,
+  importSendHistory,
+  type SendHistoryRow,
+  type SendHistoryDryRunResult,
 } from "./actions";
 
 interface Customer {
@@ -96,6 +101,43 @@ function parseCsv(text: string): {
   return out;
 }
 
+/**
+ * 발송이력 CSV 파서 — 과정명/고객사/이름/직급/전화번호/설문시기.
+ * 헤더명은 한글 또는 영문 alias 모두 허용.
+ */
+function parseSendHistoryCsv(text: string): SendHistoryRow[] {
+  const lines = text.replace(/\r\n?/g, "\n").split("\n").filter((l) => l.trim() !== "");
+  if (lines.length < 2) return [];
+  const header = splitCsvLine(lines[0]).map((h) => h.trim().toLowerCase());
+  const idx = {
+    course: header.findIndex((h) => h === "course_name" || h === "과정명" || h === "과정"),
+    company: header.findIndex((h) => h === "company" || h === "회사" || h === "고객사" || h === "회사명"),
+    name: header.findIndex((h) => h === "name" || h === "이름"),
+    position: header.findIndex((h) => h === "position" || h === "직위" || h === "직급"),
+    phone: header.findIndex((h) => h === "phone" || h === "전화" || h === "전화번호"),
+    month: header.findIndex((h) => h === "sent_month" || h === "설문시기" || h === "발송월" || h === "시기"),
+  };
+  if (idx.name < 0) throw new Error("CSV 에 '이름' 헤더가 없습니다.");
+  if (idx.month < 0) throw new Error("CSV 에 '설문시기' 헤더가 없습니다.");
+
+  const out: SendHistoryRow[] = [];
+  for (const line of lines.slice(1)) {
+    const cells = splitCsvLine(line);
+    const name = cells[idx.name]?.trim();
+    const sent_month = cells[idx.month]?.trim();
+    if (!name || !sent_month) continue;
+    out.push({
+      name,
+      sent_month,
+      phone: idx.phone >= 0 ? cells[idx.phone]?.trim() || undefined : undefined,
+      company: idx.company >= 0 ? cells[idx.company]?.trim() || undefined : undefined,
+      position: idx.position >= 0 ? cells[idx.position]?.trim() || undefined : undefined,
+      course_name: idx.course >= 0 ? cells[idx.course]?.trim() || undefined : undefined,
+    });
+  }
+  return out;
+}
+
 function splitCsvLine(line: string): string[] {
   // 간단 CSV: 쌍따옴표 인용 지원
   const out: string[] = [];
@@ -151,6 +193,15 @@ export default function RespondentClient({
   const [bulkLoading, setBulkLoading] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const historyFileInputRef = useRef<HTMLInputElement>(null);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [historyPreview, setHistoryPreview] = useState<
+    | {
+        rows: SendHistoryRow[];
+        result: SendHistoryDryRunResult;
+      }
+    | null
+  >(null);
 
   const NINETY_DAYS_MS = 90 * 24 * 60 * 60 * 1000;
 
@@ -269,6 +320,43 @@ export default function RespondentClient({
     return diff > 180 * 24 * 60 * 60 * 1000;
   }
 
+  async function handleHistoryFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setHistoryLoading(true);
+    try {
+      const text = await file.text();
+      const rows = parseSendHistoryCsv(text);
+      if (rows.length === 0) {
+        showToast("업로드할 이력 레코드가 없습니다.");
+        return;
+      }
+      const result = await previewSendHistoryImport(rows);
+      setHistoryPreview({ rows, result });
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : "발송이력 CSV 파싱 실패");
+    } finally {
+      setHistoryLoading(false);
+      if (historyFileInputRef.current) historyFileInputRef.current.value = "";
+    }
+  }
+
+  async function confirmHistoryImport() {
+    if (!historyPreview) return;
+    setHistoryLoading(true);
+    try {
+      const result = await importSendHistory(historyPreview.rows);
+      showToast(
+        `이력 ${result.historyInserted}건 추가 (중복스킵 ${result.historyDuplicatesSkipped}) · 신규 인물 ${result.respondentsInserted} · 업데이트 ${result.respondentsUpdated}`,
+      );
+      setHistoryPreview(null);
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : "발송이력 업로드 실패");
+    } finally {
+      setHistoryLoading(false);
+    }
+  }
+
   async function handleBulkImport(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -301,6 +389,70 @@ export default function RespondentClient({
         </div>
       )}
 
+      {/* 발송이력 Dry-run Preview Modal */}
+      {historyPreview && (
+        <div className="fixed inset-0 z-[9998] flex items-center justify-center bg-black/40 p-4">
+          <div className="w-full max-w-lg rounded-xl bg-white p-6 shadow-xl">
+            <h2 className="text-lg font-bold text-stone-800">발송이력 업로드 확인</h2>
+            <p className="mt-1 text-sm text-stone-500">
+              실제 적용 전에 다음 요약을 확인해주세요.
+            </p>
+            <dl className="mt-4 grid grid-cols-2 gap-3 text-sm">
+              <div className="rounded-md bg-stone-50 p-3">
+                <dt className="text-xs text-stone-500">전체 행</dt>
+                <dd className="mt-0.5 font-semibold text-stone-800">{historyPreview.result.totalRows}</dd>
+              </div>
+              <div className="rounded-md bg-stone-50 p-3">
+                <dt className="text-xs text-stone-500">이력 insert 예정</dt>
+                <dd className="mt-0.5 font-semibold text-teal-700">{historyPreview.result.historyToInsert}</dd>
+              </div>
+              <div className="rounded-md bg-stone-50 p-3">
+                <dt className="text-xs text-stone-500">인물 (unique)</dt>
+                <dd className="mt-0.5 font-semibold text-stone-800">{historyPreview.result.distinctPeople}</dd>
+              </div>
+              <div className="rounded-md bg-stone-50 p-3">
+                <dt className="text-xs text-stone-500">신규 / 기존</dt>
+                <dd className="mt-0.5 font-semibold text-stone-800">
+                  <span className="text-emerald-600">{historyPreview.result.newPeople}</span>
+                  {" / "}
+                  <span className="text-stone-600">{historyPreview.result.existingPeople}</span>
+                </dd>
+              </div>
+              {(historyPreview.result.skippedEmptyName > 0 ||
+                historyPreview.result.skippedInvalidMonth > 0) && (
+                <div className="col-span-2 rounded-md bg-amber-50 p-3 text-xs text-amber-800">
+                  스킵: 이름누락 {historyPreview.result.skippedEmptyName}건 · 시기파싱실패 {historyPreview.result.skippedInvalidMonth}건
+                </div>
+              )}
+              {historyPreview.result.unmatchedCompanies.length > 0 && (
+                <div className="col-span-2 rounded-md bg-amber-50 p-3 text-xs text-amber-800">
+                  <div className="font-medium">매칭 실패 고객사 {historyPreview.result.unmatchedCompanies.length}건</div>
+                  <div className="mt-1 max-h-24 overflow-y-auto text-[11px] text-amber-700">
+                    {historyPreview.result.unmatchedCompanies.slice(0, 20).join(", ")}
+                    {historyPreview.result.unmatchedCompanies.length > 20 && " …"}
+                  </div>
+                  <div className="mt-1 text-[11px] text-amber-600">
+                    이 회사들은 customer_id = null 로 저장됩니다 (raw_company_name 은 유지).
+                  </div>
+                </div>
+              )}
+            </dl>
+            <div className="mt-5 flex justify-end gap-2">
+              <Button
+                variant="outline"
+                onClick={() => setHistoryPreview(null)}
+                disabled={historyLoading}
+              >
+                취소
+              </Button>
+              <Button onClick={confirmHistoryImport} disabled={historyLoading}>
+                {historyLoading ? "적용 중..." : "확정 적용"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
@@ -310,6 +462,22 @@ export default function RespondentClient({
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            onClick={() => historyFileInputRef.current?.click()}
+            disabled={historyLoading}
+            title="과정명/고객사/이름/직급/전화번호/설문시기 컬럼을 가진 CSV"
+          >
+            <History size={16} className="mr-1.5" />
+            {historyLoading ? "분석 중..." : "발송이력 업로드"}
+          </Button>
+          <input
+            ref={historyFileInputRef}
+            type="file"
+            accept=".csv"
+            className="hidden"
+            onChange={handleHistoryFileChange}
+          />
           <Button variant="outline" onClick={() => fileInputRef.current?.click()} disabled={bulkLoading}>
             <Upload size={16} className="mr-1.5" />
             {bulkLoading ? "업로드 중..." : "CSV 업로드"}
