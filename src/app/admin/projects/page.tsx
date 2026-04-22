@@ -9,6 +9,7 @@ import {
   Hash,
   Plus,
 } from "lucide-react";
+import { supabaseError } from "@/lib/supabase/errors";
 
 export const revalidate = 60;
 
@@ -30,10 +31,7 @@ async function getProjects(supabase: Awaited<ReturnType<typeof createClient>>) {
     .order("created_at", { ascending: false })
     .limit(500);
 
-  if (error) {
-    console.error("Error fetching projects:", error);
-    return [];
-  }
+  if (error) throw supabaseError(error, "프로젝트 목록을 불러오지 못했습니다");
 
   return data ?? [];
 }

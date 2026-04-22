@@ -13,6 +13,7 @@ import {
   Eye,
 } from "lucide-react";
 import SurveyEditor from "./SurveyEditor";
+import { supabaseError } from "@/lib/supabase/errors";
 
 export const dynamic = "force-dynamic";
 
@@ -51,10 +52,11 @@ async function getSurveyDetail(supabase: Awaited<ReturnType<typeof createClient>
       .eq("is_test", false),
   ]);
 
-  if (surveyError || !survey) {
-    console.error("[surveys/[id]] Supabase error:", surveyError);
-    return null;
+  if (surveyError) {
+    if (surveyError.code === "PGRST116") return null; // → notFound() in caller
+    throw supabaseError(surveyError, "설문 정보를 불러오지 못했습니다");
   }
+  if (!survey) return null;
 
   const session = survey.sessions as any;
   const course = session?.courses;

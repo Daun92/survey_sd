@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 import { ArrowLeft, ListChecks, Calendar } from "lucide-react";
 import { TemplateDetailActions } from "./detail-actions";
 import { TemplateEditor } from "./template-editor";
+import { supabaseError } from "@/lib/supabase/errors";
 
 export const dynamic = "force-dynamic";
 
@@ -34,10 +35,11 @@ async function getTemplateDetail(id: string) {
       .order("sort_order", { ascending: true }),
   ]);
 
-  if (error || !template) {
-    console.error("[cs-templates/[id]] Supabase error:", error);
-    return null;
+  if (error) {
+    if (error.code === "PGRST116") return null; // → notFound() in caller
+    throw supabaseError(error, "CS 템플릿 정보를 불러오지 못했습니다");
   }
+  if (!template) return null;
 
   return { template, questions: questions ?? [] };
 }

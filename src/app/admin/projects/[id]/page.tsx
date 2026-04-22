@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { ProjectActions } from "./ProjectActions";
 import { SessionManager } from "./SessionManager";
+import { supabaseError } from "@/lib/supabase/errors";
 
 export const dynamic = "force-dynamic";
 
@@ -48,10 +49,11 @@ async function getProjectDetail(supabase: Awaited<ReturnType<typeof createClient
       .order("created_at", { ascending: false }),
   ]);
 
-  if (projectError || !project) {
-    console.error("[projects/[id]] Supabase error:", projectError);
-    return null;
+  if (projectError) {
+    if (projectError.code === "PGRST116") return null; // → notFound() in caller
+    throw supabaseError(projectError, "프로젝트 정보를 불러오지 못했습니다");
   }
+  if (!project) return null;
 
   return {
     project,
