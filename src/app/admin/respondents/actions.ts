@@ -56,17 +56,17 @@ export interface BulkRow {
   position?: string;
 }
 
-export interface SendHistoryRow {
+export interface ResponseHistoryRow {
   name: string;
   phone?: string;
   company?: string;
   position?: string;
   course_name?: string;
   /** YYYY-MM-01 형식 권장, 다른 형식이면 파서에서 정규화 */
-  sent_month: string;
+  responded_month: string;
 }
 
-export interface SendHistoryDryRunResult {
+export interface ResponseHistoryDryRunResult {
   totalRows: number;
   skippedEmptyName: number;
   skippedInvalidMonth: number;
@@ -77,7 +77,7 @@ export interface SendHistoryDryRunResult {
   unmatchedCompanies: string[];
 }
 
-export interface SendHistoryImportResult extends SendHistoryDryRunResult {
+export interface ResponseHistoryImportResult extends ResponseHistoryDryRunResult {
   respondentsInserted: number;
   respondentsUpdated: number;
   historyInserted: number;
@@ -174,11 +174,12 @@ export async function bulkImportRespondents(rows: BulkRow[]): Promise<BulkImport
 }
 
 // ============================================================================
-// 발송이력 CSV 병합 (respondent_cs_history)
+// 응답이력 CSV 병합 (respondent_cs_history)
 // ----------------------------------------------------------------------------
-// 외부 엑셀/CSV 발송이력을 respondents 마스터와 respondent_cs_history 에
-// 병합한다. dedup 키는 (이름 + 정규화 전화번호). email 은 CSV 에 없어도 OK.
-// last_cs_survey_sent_at 은 각 인물의 max(sent_month) 로 동기화.
+// 외부 엑셀/CSV 로 수집된 과거 설문 응답이력을 respondents 마스터와
+// respondent_cs_history 에 병합한다. dedup 키는 (이름 + 정규화 전화번호).
+// email 은 CSV 에 없어도 OK. last_cs_survey_sent_at 은 각 인물의
+// max(responded_month) 로 동기화 (응답 ≥ 발송 이므로 6개월 룰 프록시로 사용).
 // ============================================================================
 
 /** 고객사 이름 정규화: `(주)`, `㈜`, `주식회사`, `(재)` 제거 + 공백/점 다듬기 */
@@ -199,7 +200,7 @@ function normalizePhone(raw: string | undefined | null): string | null {
  * CSV 의 '설문시기' 값 (예: '2025-11-01', '2025-11', '2025/11') → 'YYYY-MM-01' DATE.
  * 파싱 불가 → null.
  */
-function normalizeSentMonth(raw: string): string | null {
+function normalizeRespondedMonth(raw: string): string | null {
   const s = raw.trim();
   if (!s) return null;
   // ISO 'YYYY-MM-DD' or 'YYYY-MM'
@@ -283,38 +284,38 @@ async function buildCustomerMap(
 }
 
 /** 테스트 행 판별: 이름/고객사/과정명에 '테스트' 들어간 경우 제외 */
-function isTestRow(r: SendHistoryRow): boolean {
+function isTestRow(r: ResponseHistoryRow): boolean {
   const tokens = [r.name, r.company, r.course_name].map((s) => s ?? "");
   return tokens.some((t) => t.includes("테스트"));
 }
 
 /**
  * dry-run: 실제 insert 는 하지 않고 업로드 시 어떤 작업이 일어날지 집계만 반환.
- * UI 에서 확인 모달 → importSendHistory 로 확정 실행하도록 분리.
+ * UI 에서 확인 모달 → importResponseHistory 로 확정 실행하도록 분리.
  */
-export async function previewSendHistoryImport(
-  rows: SendHistoryRow[],
-): Promise<SendHistoryDryRunResult> {
+export async function previewResponseHistoryImport(
+  rows: ResponseHistoryRow[],
+): Promise<ResponseHistoryDryRunResult> {
   const supabase = await createClient();
   return computePreview(supabase, rows);
 }
 
 async function computePreview(
   supabase: Awaited<ReturnType<typeof createClient>>,
-  rows: SendHistoryRow[],
-): Promise<SendHistoryDryRunResult> {
+  rows: ResponseHistoryRow[],
+): Promise<ResponseHistoryDryRunResult> {
   const cleaned = rows.filter((r) => !isTestRow(r));
 
   let skippedEmptyName = 0;
   let skippedInvalidMonth = 0;
-  const validRows: Array<SendHistoryRow & { phoneKey: string | null; monthIso: string }> = [];
+  const validRows: Array<ResponseHistoryRow & { phoneKey: string | null; monthIso: string }> = [];
 
   for (const r of cleaned) {
     if (!r.name?.trim()) {
       skippedEmptyName += 1;
       continue;
     }
-    const monthIso = normalizeSentMonth(r.sent_month);
+    const monthIso = normalizeRespondedMonth(r.responded_month);
     if (!monthIso) {
       skippedInvalidMonth += 1;
       continue;
@@ -365,19 +366,19 @@ async function computePreview(
  * 실제 실행: respondent upsert → history insert(ON CONFLICT DO NOTHING) →
  * last_cs_survey_sent_at 동기화.
  */
-export async function importSendHistory(
-  rows: SendHistoryRow[],
-): Promise<SendHistoryImportResult> {
+export async function importResponseHistory(
+  rows: ResponseHistoryRow[],
+): Promise<ResponseHistoryImportResult> {
   const supabase = await createClient();
   const preview = await computePreview(supabase, rows);
 
   const cleaned = rows.filter((r) => !isTestRow(r));
   const validRows: Array<
-    SendHistoryRow & { phoneKey: string | null; monthIso: string }
+    ResponseHistoryRow & { phoneKey: string | null; monthIso: string }
   > = [];
   for (const r of cleaned) {
     if (!r.name?.trim()) continue;
-    const monthIso = normalizeSentMonth(r.sent_month);
+    const monthIso = normalizeRespondedMonth(r.responded_month);
     if (!monthIso) continue;
     validRows.push({ ...r, phoneKey: normalizePhone(r.phone), monthIso });
   }
@@ -415,7 +416,7 @@ export async function importSendHistory(
   let respondentsInserted = 0;
   let respondentsUpdated = 0;
 
-  // 인물별 max(sent_month) 먼저 계산 (update 에 사용)
+  // 인물별 max(responded_month) 먼저 계산 (update 에 사용)
   const maxMonthByKey = new Map<string, string>();
   for (const r of validRows) {
     const k = `${r.name.trim()}|${r.phoneKey ?? ""}`;
@@ -493,7 +494,7 @@ export async function importSendHistory(
     respondent_id: string;
     customer_id: number | null;
     course_name: string | null;
-    sent_month: string;
+    responded_month: string;
     source: string;
     raw_company_name: string | null;
     raw_position: string | null;
@@ -508,30 +509,30 @@ export async function importSendHistory(
       respondent_id: person.id,
       customer_id: customerId,
       course_name: r.course_name?.trim() || null,
-      sent_month: r.monthIso,
+      responded_month: r.monthIso,
       source: "csv_import",
       raw_company_name: r.company?.trim() || null,
       raw_position: r.position?.trim() || null,
     });
   }
 
-  // 기존 (respondent_id, course_name, sent_month) 조합 먼저 조회 → 중복 제거
+  // 기존 (respondent_id, course_name, responded_month) 조합 먼저 조회 → 중복 제거
   let historyDuplicatesSkipped = 0;
   let historyInserted = 0;
   if (historyRows.length > 0) {
     const respondentIds = [...new Set(historyRows.map((h) => h.respondent_id))];
     const { data: existingHist } = await supabase
       .from("respondent_cs_history")
-      .select("respondent_id, course_name, sent_month")
+      .select("respondent_id, course_name, responded_month")
       .in("respondent_id", respondentIds);
 
     const existSet = new Set<string>();
     for (const h of existingHist ?? []) {
-      existSet.add(`${h.respondent_id}|${h.course_name ?? ""}|${h.sent_month}`);
+      existSet.add(`${h.respondent_id}|${h.course_name ?? ""}|${h.responded_month}`);
     }
 
     const toInsert = historyRows.filter((h) => {
-      const k = `${h.respondent_id}|${h.course_name ?? ""}|${h.sent_month}`;
+      const k = `${h.respondent_id}|${h.course_name ?? ""}|${h.responded_month}`;
       if (existSet.has(k)) {
         historyDuplicatesSkipped += 1;
         return false;

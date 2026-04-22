@@ -21,10 +21,10 @@ import {
   deleteRespondent,
   toggleRespondentActive,
   bulkImportRespondents,
-  previewSendHistoryImport,
-  importSendHistory,
-  type SendHistoryRow,
-  type SendHistoryDryRunResult,
+  previewResponseHistoryImport,
+  importResponseHistory,
+  type ResponseHistoryRow,
+  type ResponseHistoryDryRunResult,
 } from "./actions";
 
 interface Customer {
@@ -48,9 +48,12 @@ interface Respondent {
   sent_count: number;
   response_count: number;
   last_response_at: string | null;
+  history_count: number;
+  history_latest_month: string | null;
+  history_latest_course: string | null;
 }
 
-type FilterPreset = "all" | "not_sent" | "no_recent_response" | "active_only";
+type FilterPreset = "all" | "not_sent" | "no_recent_response" | "active_only" | "has_history";
 
 function formatMonth(iso: string | null): string {
   if (!iso) return "—";
@@ -102,10 +105,10 @@ function parseCsv(text: string): {
 }
 
 /**
- * 발송이력 CSV 파서 — 과정명/고객사/이름/직급/전화번호/설문시기.
+ * 응답이력 CSV 파서 — 과정명/고객사/이름/직급/전화번호/설문시기.
  * 헤더명은 한글 또는 영문 alias 모두 허용.
  */
-function parseSendHistoryCsv(text: string): SendHistoryRow[] {
+function parseResponseHistoryCsv(text: string): ResponseHistoryRow[] {
   const lines = text.replace(/\r\n?/g, "\n").split("\n").filter((l) => l.trim() !== "");
   if (lines.length < 2) return [];
   const header = splitCsvLine(lines[0]).map((h) => h.trim().toLowerCase());
@@ -115,20 +118,29 @@ function parseSendHistoryCsv(text: string): SendHistoryRow[] {
     name: header.findIndex((h) => h === "name" || h === "이름"),
     position: header.findIndex((h) => h === "position" || h === "직위" || h === "직급"),
     phone: header.findIndex((h) => h === "phone" || h === "전화" || h === "전화번호"),
-    month: header.findIndex((h) => h === "sent_month" || h === "설문시기" || h === "발송월" || h === "시기"),
+    month: header.findIndex(
+      (h) =>
+        h === "responded_month" ||
+        h === "sent_month" ||
+        h === "설문시기" ||
+        h === "응답월" ||
+        h === "응답시기" ||
+        h === "발송월" ||
+        h === "시기",
+    ),
   };
   if (idx.name < 0) throw new Error("CSV 에 '이름' 헤더가 없습니다.");
-  if (idx.month < 0) throw new Error("CSV 에 '설문시기' 헤더가 없습니다.");
+  if (idx.month < 0) throw new Error("CSV 에 '설문시기' 또는 '응답월' 헤더가 없습니다.");
 
-  const out: SendHistoryRow[] = [];
+  const out: ResponseHistoryRow[] = [];
   for (const line of lines.slice(1)) {
     const cells = splitCsvLine(line);
     const name = cells[idx.name]?.trim();
-    const sent_month = cells[idx.month]?.trim();
-    if (!name || !sent_month) continue;
+    const responded_month = cells[idx.month]?.trim();
+    if (!name || !responded_month) continue;
     out.push({
       name,
-      sent_month,
+      responded_month,
       phone: idx.phone >= 0 ? cells[idx.phone]?.trim() || undefined : undefined,
       company: idx.company >= 0 ? cells[idx.company]?.trim() || undefined : undefined,
       position: idx.position >= 0 ? cells[idx.position]?.trim() || undefined : undefined,
@@ -197,8 +209,8 @@ export default function RespondentClient({
   const [historyLoading, setHistoryLoading] = useState(false);
   const [historyPreview, setHistoryPreview] = useState<
     | {
-        rows: SendHistoryRow[];
-        result: SendHistoryDryRunResult;
+        rows: ResponseHistoryRow[];
+        result: ResponseHistoryDryRunResult;
       }
     | null
   >(null);
@@ -225,6 +237,8 @@ export default function RespondentClient({
       matchPreset = hasSent && !recent;
     } else if (preset === "active_only") {
       matchPreset = r.is_active;
+    } else if (preset === "has_history") {
+      matchPreset = r.history_count > 0;
     }
 
     return matchSearch && matchCustomer && matchPreset;
@@ -239,6 +253,7 @@ export default function RespondentClient({
       return hasSent && Date.now() - lastResp >= NINETY_DAYS_MS;
     }).length,
     active_only: respondents.filter((r) => r.is_active).length,
+    has_history: respondents.filter((r) => r.history_count > 0).length,
   };
 
   function showToast(msg: string) {
@@ -326,15 +341,15 @@ export default function RespondentClient({
     setHistoryLoading(true);
     try {
       const text = await file.text();
-      const rows = parseSendHistoryCsv(text);
+      const rows = parseResponseHistoryCsv(text);
       if (rows.length === 0) {
         showToast("업로드할 이력 레코드가 없습니다.");
         return;
       }
-      const result = await previewSendHistoryImport(rows);
+      const result = await previewResponseHistoryImport(rows);
       setHistoryPreview({ rows, result });
     } catch (err) {
-      showToast(err instanceof Error ? err.message : "발송이력 CSV 파싱 실패");
+      showToast(err instanceof Error ? err.message : "응답이력 CSV 파싱 실패");
     } finally {
       setHistoryLoading(false);
       if (historyFileInputRef.current) historyFileInputRef.current.value = "";
@@ -345,13 +360,13 @@ export default function RespondentClient({
     if (!historyPreview) return;
     setHistoryLoading(true);
     try {
-      const result = await importSendHistory(historyPreview.rows);
+      const result = await importResponseHistory(historyPreview.rows);
       showToast(
         `이력 ${result.historyInserted}건 추가 (중복스킵 ${result.historyDuplicatesSkipped}) · 신규 인물 ${result.respondentsInserted} · 업데이트 ${result.respondentsUpdated}`,
       );
       setHistoryPreview(null);
     } catch (err) {
-      showToast(err instanceof Error ? err.message : "발송이력 업로드 실패");
+      showToast(err instanceof Error ? err.message : "응답이력 업로드 실패");
     } finally {
       setHistoryLoading(false);
     }
@@ -389,11 +404,11 @@ export default function RespondentClient({
         </div>
       )}
 
-      {/* 발송이력 Dry-run Preview Modal */}
+      {/* 응답이력 Dry-run Preview Modal */}
       {historyPreview && (
         <div className="fixed inset-0 z-[9998] flex items-center justify-center bg-black/40 p-4">
           <div className="w-full max-w-lg rounded-xl bg-white p-6 shadow-xl">
-            <h2 className="text-lg font-bold text-stone-800">발송이력 업로드 확인</h2>
+            <h2 className="text-lg font-bold text-stone-800">응답이력 업로드 확인</h2>
             <p className="mt-1 text-sm text-stone-500">
               실제 적용 전에 다음 요약을 확인해주세요.
             </p>
@@ -469,7 +484,7 @@ export default function RespondentClient({
             title="과정명/고객사/이름/직급/전화번호/설문시기 컬럼을 가진 CSV"
           >
             <History size={16} className="mr-1.5" />
-            {historyLoading ? "분석 중..." : "발송이력 업로드"}
+            {historyLoading ? "분석 중..." : "응답이력 업로드"}
           </Button>
           <input
             ref={historyFileInputRef}
@@ -619,6 +634,7 @@ export default function RespondentClient({
             { key: "active_only" as const, label: "활성만", count: presetCounts.active_only },
             { key: "not_sent" as const, label: "미발송", count: presetCounts.not_sent },
             { key: "no_recent_response" as const, label: "90일 무응답", count: presetCounts.no_recent_response },
+            { key: "has_history" as const, label: "응답이력 있음", count: presetCounts.has_history },
           ].map(({ key, label, count }) => (
             <button
               key={key}
@@ -684,6 +700,19 @@ export default function RespondentClient({
                           <div className="text-[11px] text-stone-400 mt-0.5">
                             최근 응답 {formatMonth(r.last_response_at)}
                           </div>
+                          {r.history_count > 0 && (
+                            <div className="mt-1 text-[11px] text-teal-700">
+                              과거이력 {r.history_count}회
+                              {r.history_latest_month && ` · ${formatMonth(r.history_latest_month)}`}
+                              {r.history_latest_course && (
+                                <span className="ml-1 text-stone-500" title={r.history_latest_course}>
+                                  {r.history_latest_course.length > 14
+                                    ? r.history_latest_course.slice(0, 14) + "…"
+                                    : r.history_latest_course}
+                                </span>
+                              )}
+                            </div>
+                          )}
                         </td>
                         <td className="px-4 py-3">
                           {r.last_cs_survey_sent_at ? (
