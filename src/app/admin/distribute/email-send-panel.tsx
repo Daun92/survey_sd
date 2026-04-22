@@ -132,10 +132,10 @@ export default function EmailSendPanel({ batchId, surveyId, results }: Props) {
         <CardContent className="py-6">
           <button
             onClick={() => setShowPanel(true)}
-            className="flex items-center gap-2 text-sm text-teal-600 hover:text-teal-800 font-medium mx-auto"
+            className="flex items-center gap-2 text-sm text-stone-500 hover:text-stone-700 font-medium mx-auto"
           >
             <Mail size={16} />
-            메일 발송 설정
+            메일 발송 설정 <span className="text-xs text-stone-400">(보조 채널)</span>
           </button>
         </CardContent>
       </Card>
