@@ -209,8 +209,8 @@ export default async function ResponseDetailPage({
                         className={`sticky left-[180px] z-10 px-4 py-3 font-medium whitespace-nowrap border-r border-stone-100 ${nameMismatch ? "bg-amber-50 text-amber-800" : (sub as { is_test?: boolean }).is_test ? "bg-amber-50/70 text-stone-700" : "bg-white text-stone-800"}`}
                         title={nameMismatch ? `배부: ${dist.recipient_name}` : undefined}
                       >
-                        <div className="flex items-center gap-2">
-                          <span>
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className="flex-1 min-w-0 truncate">
                             {sub.respondent_name || "익명"}
                             {nameMismatch && <span className="ml-1 text-[10px] text-amber-500">*</span>}
                           </span>
