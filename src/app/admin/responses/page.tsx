@@ -27,27 +27,30 @@ async function getSurveysWithResponses(supabase: Awaited<ReturnType<typeof creat
           courses(name,
             projects(name)
           )
-        ),
-        edu_submissions(count)
+        )
       `)
       .order("created_at", { ascending: false })
       .limit(500),
+    // 분자: 테스트 제외한 실제 응답만 집계 (count + total_score 동시 수집)
     supabase
       .from("edu_submissions")
       .select("survey_id, total_score")
       .eq("is_test", false),
+    // 분모: status='pending' 은 링크만 생성된 미발송 상태라 제외
     supabase
       .from("distributions")
-      .select("survey_id"),
+      .select("survey_id")
+      .neq("status", "pending"),
   ]);
 
   if (!surveys) return [];
 
-  const statsMap: Record<string, { totalScore: number; scoreCount: number }> = {};
+  const statsMap: Record<string, { submissionCount: number; totalScore: number; scoreCount: number }> = {};
   (submissions ?? []).forEach((sub) => {
     if (!statsMap[sub.survey_id]) {
-      statsMap[sub.survey_id] = { totalScore: 0, scoreCount: 0 };
+      statsMap[sub.survey_id] = { submissionCount: 0, totalScore: 0, scoreCount: 0 };
     }
+    statsMap[sub.survey_id].submissionCount += 1;
     if (sub.total_score != null) {
       statsMap[sub.survey_id].totalScore += sub.total_score;
       statsMap[sub.survey_id].scoreCount += 1;
@@ -65,9 +68,8 @@ async function getSurveysWithResponses(supabase: Awaited<ReturnType<typeof creat
       const session = s.sessions as any;
       const course = session?.courses as any;
       const project = course?.projects as any;
-      const submissionCount =
-        (s.edu_submissions as unknown as { count: number }[])?.[0]?.count ?? 0;
       const stats = statsMap[s.id];
+      const submissionCount = stats?.submissionCount ?? 0;
       return {
         id: s.id,
         title: s.title,
