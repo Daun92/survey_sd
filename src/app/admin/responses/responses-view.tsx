@@ -10,6 +10,7 @@ interface SurveyWithResponses {
   status: string;
   session_name: string | null;
   session_capacity: number | null;
+  distribution_count: number;
   course_name: string | null;
   project_name: string | null;
   submission_count: number;
@@ -20,6 +21,33 @@ const statusLabels: Record<string, { label: string; className: string }> = {
   active: { label: "진행중", className: "bg-emerald-100 text-emerald-800" },
   closed: { label: "마감", className: "bg-rose-100 text-rose-800" },
 };
+
+/**
+ * 응답률 분모는 실제 발송된 distributions 수가 가장 정확.
+ * distributions 가 0이면 세션 정원(capacity) fallback.
+ * 둘 다 없으면 null → UI "-".
+ */
+function computeResponseStats(s: SurveyWithResponses): {
+  rate: number | null;
+  denom: number | null;
+  denomSource: "distributions" | "capacity";
+} {
+  if (s.distribution_count > 0) {
+    return {
+      rate: Math.round((s.submission_count / s.distribution_count) * 100),
+      denom: s.distribution_count,
+      denomSource: "distributions",
+    };
+  }
+  if (s.session_capacity && s.session_capacity > 0) {
+    return {
+      rate: Math.round((s.submission_count / s.session_capacity) * 100),
+      denom: s.session_capacity,
+      denomSource: "capacity",
+    };
+  }
+  return { rate: null, denom: null, denomSource: "capacity" };
+}
 
 function SurveyTags({ survey }: { survey: SurveyWithResponses }) {
   const tags: { label: string; className: string }[] = [];
@@ -72,10 +100,7 @@ export default function ResponsesView({ surveys }: { surveys: SurveyWithResponse
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
           {surveys.map((survey) => {
             const status = statusLabels[survey.status] ?? statusLabels.closed;
-            const responseRate =
-              survey.session_capacity && survey.session_capacity > 0
-                ? Math.round((survey.submission_count / survey.session_capacity) * 100)
-                : null;
+            const { rate: responseRate, denom, denomSource } = computeResponseStats(survey);
 
             return (
               <div key={survey.id} className="rounded-xl border border-stone-200 bg-white shadow-sm hover:shadow-md transition-shadow">
@@ -120,9 +145,10 @@ export default function ResponsesView({ surveys }: { surveys: SurveyWithResponse
                         style={{ width: `${responseRate !== null ? Math.min(responseRate, 100) : 0}%` }}
                       />
                     </div>
-                    {survey.session_capacity && (
+                    {denom !== null && (
                       <p className="text-[11px] text-stone-400 mt-1">
-                        {survey.submission_count} / {survey.session_capacity}명
+                        {survey.submission_count} / {denom}
+                        {denomSource === "distributions" ? "건 발송" : "명 정원"}
                       </p>
                     )}
                   </div>
@@ -165,10 +191,7 @@ export default function ResponsesView({ surveys }: { surveys: SurveyWithResponse
             <tbody>
               {surveys.map((survey) => {
                 const status = statusLabels[survey.status] ?? statusLabels.closed;
-                const responseRate =
-                  survey.session_capacity && survey.session_capacity > 0
-                    ? Math.round((survey.submission_count / survey.session_capacity) * 100)
-                    : null;
+                const { rate: responseRate, denom, denomSource } = computeResponseStats(survey);
 
                 return (
                   <tr key={survey.id} className="border-b border-stone-100 last:border-0 hover:bg-stone-50/50 transition-colors">
@@ -187,7 +210,14 @@ export default function ResponsesView({ surveys }: { surveys: SurveyWithResponse
                     <td className="px-4 py-3 text-right font-semibold text-teal-600">
                       {survey.avg_score !== null ? survey.avg_score.toFixed(1) : "-"}
                     </td>
-                    <td className="px-4 py-3 text-right text-stone-600">
+                    <td
+                      className="px-4 py-3 text-right text-stone-600"
+                      title={
+                        denom !== null
+                          ? `${survey.submission_count} / ${denom}${denomSource === "distributions" ? "건 발송" : "명 정원"}`
+                          : undefined
+                      }
+                    >
                       {responseRate !== null ? `${responseRate}%` : "-"}
                     </td>
                     <td className="px-4 py-3">
