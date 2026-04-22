@@ -91,9 +91,10 @@ export interface BulkImportResult {
 }
 
 /**
- * CSV 일괄 업로드: email 기반 upsert.
+ * CSV 일괄 업로드: 휴대전화(digits) 기반 upsert.
+ * - 전화번호 없는 row 는 이메일로 fallback dedup. 둘 다 없으면 insert (dedup 불가).
+ * - 이름만 있는 row 는 skipped.
  * - company 이름이 customers.company_name 에 정확히 1건 매칭되면 customer_id 자동 세팅.
- * - email 이 없는 row 는 중복 감지 불가 → 매번 신규 insert (skipped 로 카운트하지 않음).
  */
 export async function bulkImportRespondents(rows: BulkRow[]): Promise<BulkImportResult> {
   const supabase = await createClient();
@@ -128,7 +129,33 @@ export async function bulkImportRespondents(rows: BulkRow[]): Promise<BulkImport
     const customerId = row.company ? customerMap.get(row.company) ?? null : null;
     const phone = row.phone?.replace(/[^0-9]/g, "") || null;
 
-    if (row.email) {
+    // 1) 전화번호 기반 dedup (주 키)
+    if (phone) {
+      const { data: existing } = await supabase
+        .from("respondents")
+        .select("id, email")
+        .eq("phone", phone)
+        .limit(1)
+        .maybeSingle();
+
+      if (existing) {
+        const { error } = await supabase
+          .from("respondents")
+          .update({
+            name: row.name,
+            email: row.email || existing.email || null,
+            department: row.department ?? null,
+            position: row.position ?? null,
+            ...(customerId !== null ? { customer_id: customerId } : {}),
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", existing.id);
+        if (error) skipped += 1;
+        else updated += 1;
+        continue;
+      }
+    } else if (row.email) {
+      // 2) 전화 없으면 이메일 fallback
       const { data: existing } = await supabase
         .from("respondents")
         .select("id")
@@ -141,18 +168,14 @@ export async function bulkImportRespondents(rows: BulkRow[]): Promise<BulkImport
           .from("respondents")
           .update({
             name: row.name,
-            phone,
             department: row.department ?? null,
             position: row.position ?? null,
             ...(customerId !== null ? { customer_id: customerId } : {}),
             updated_at: new Date().toISOString(),
           })
           .eq("id", existing.id);
-        if (error) {
-          skipped += 1;
-        } else {
-          updated += 1;
-        }
+        if (error) skipped += 1;
+        else updated += 1;
         continue;
       }
     }

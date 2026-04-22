@@ -62,6 +62,16 @@ function formatMonth(iso: string | null): string {
   return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, "0")}`;
 }
 
+/** 숫자만 저장된 전화번호를 010-1234-5678 형태로 렌더 (입력은 그대로 보존) */
+function formatPhoneDisplay(raw: string | null): string {
+  if (!raw) return "—";
+  const d = raw.replace(/[^0-9]/g, "");
+  if (d.length === 11) return `${d.slice(0, 3)}-${d.slice(3, 7)}-${d.slice(7)}`;
+  if (d.length === 10) return `${d.slice(0, 3)}-${d.slice(3, 6)}-${d.slice(6)}`;
+  if (d.length === 8) return `${d.slice(0, 4)}-${d.slice(4)}`;
+  return raw;
+}
+
 /**
  * 간단 CSV 파서 — 헤더 1행 + 데이터 행. 헤더명은 한글/영문 모두 허용.
  * 매핑: name/이름, email/이메일, phone/전화, company/회사/고객사, department/부서, position/직위
@@ -218,11 +228,15 @@ export default function RespondentClient({
   const NINETY_DAYS_MS = 90 * 24 * 60 * 60 * 1000;
 
   const filtered = respondents.filter((r) => {
+    const q = search.trim();
+    const qDigits = q.replace(/[^0-9]/g, "");
+    const phoneDigits = r.phone?.replace(/[^0-9]/g, "") ?? "";
     const matchSearch =
-      !search ||
-      r.name.toLowerCase().includes(search.toLowerCase()) ||
-      r.email?.toLowerCase().includes(search.toLowerCase()) ||
-      r.department?.toLowerCase().includes(search.toLowerCase());
+      !q ||
+      r.name.toLowerCase().includes(q.toLowerCase()) ||
+      r.email?.toLowerCase().includes(q.toLowerCase()) ||
+      r.department?.toLowerCase().includes(q.toLowerCase()) ||
+      (qDigits.length >= 3 && phoneDigits.includes(qDigits));
     const matchCustomer =
       !filterCustomer || String(r.customer_id) === filterCustomer;
 
@@ -284,6 +298,15 @@ export default function RespondentClient({
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!form.name.trim()) return;
+    const phoneDigits = form.phone.replace(/[^0-9]/g, "");
+    if (!phoneDigits) {
+      showToast("휴대전화는 메시지 발송용 필수 값입니다.");
+      return;
+    }
+    if (phoneDigits.length < 10 || phoneDigits.length > 11) {
+      showToast("휴대전화 형식을 확인해주세요 (숫자 10~11자리).");
+      return;
+    }
     setLoading(true);
     try {
       const payload = {
@@ -473,7 +496,7 @@ export default function RespondentClient({
         <div>
           <h1 className="text-xl font-bold text-stone-800">대상자 주소록</h1>
           <p className="text-sm text-stone-500 mt-1">
-            CS 설문 발송 대상자를 한 곳에서 관리합니다. 배부 시 CSV 업로드로도 자동 축적됩니다.
+            메시지(SMS) 발송 중심으로 CS 설문 대상자 연락처를 관리합니다. 휴대전화가 기본 식별키이며, 이메일은 보조 채널입니다.
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -534,20 +557,26 @@ export default function RespondentClient({
                   />
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-stone-700 mb-1 block">이메일</label>
+                  <label className="text-sm font-medium text-stone-700 mb-1 block">
+                    휴대전화 <span className="text-rose-500">*</span>
+                  </label>
+                  <Input
+                    value={form.phone}
+                    onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                    placeholder="010-1234-5678"
+                    required
+                    inputMode="tel"
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-stone-700 mb-1 block">
+                    이메일 <span className="text-xs font-normal text-stone-400">(보조)</span>
+                  </label>
                   <Input
                     type="email"
                     value={form.email}
                     onChange={(e) => setForm({ ...form, email: e.target.value })}
                     placeholder="email@company.com"
-                  />
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-stone-700 mb-1 block">전화번호</label>
-                  <Input
-                    value={form.phone}
-                    onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                    placeholder="010-1234-5678"
                   />
                 </div>
                 <div>
@@ -609,7 +638,7 @@ export default function RespondentClient({
             <Input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="이름, 이메일, 부서 검색"
+              placeholder="이름, 전화, 이메일, 부서 검색"
               className="pl-9"
             />
           </div>
@@ -668,8 +697,8 @@ export default function RespondentClient({
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-stone-200 bg-stone-50">
-                    <th className="px-4 py-3 text-left font-medium text-stone-600">이름</th>
-                    <th className="px-4 py-3 text-left font-medium text-stone-600">이메일</th>
+                    <th className="px-4 py-3 text-left font-medium text-stone-600">이름 / 이메일</th>
+                    <th className="px-4 py-3 text-left font-medium text-stone-600">휴대전화</th>
                     <th className="px-4 py-3 text-left font-medium text-stone-600">고객사</th>
                     <th className="px-4 py-3 text-left font-medium text-stone-600">부서/직위</th>
                     <th className="px-4 py-3 text-left font-medium text-stone-600">응답 이력</th>
@@ -683,8 +712,15 @@ export default function RespondentClient({
                     const sendable = isSendable(r.last_cs_survey_sent_at);
                     return (
                       <tr key={r.id} className="border-b border-stone-100 hover:bg-stone-50/50">
-                        <td className="px-4 py-3 font-medium text-stone-800">{r.name}</td>
-                        <td className="px-4 py-3 text-stone-600">{r.email || "—"}</td>
+                        <td className="px-4 py-3">
+                          <div className="font-medium text-stone-800">{r.name}</div>
+                          {r.email && (
+                            <div className="text-[11px] text-stone-400 mt-0.5">{r.email}</div>
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-stone-700 font-mono text-xs">
+                          {formatPhoneDisplay(r.phone)}
+                        </td>
                         <td className="px-4 py-3 text-stone-600">
                           {r.customers?.company_name || "—"}
                         </td>
