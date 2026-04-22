@@ -10,7 +10,10 @@ interface SurveyWithResponses {
   status: string;
   session_name: string | null;
   session_capacity: number | null;
+  /** 배포 대상 전체 수 (pending 포함) — "응답률" 의 분모 */
   distribution_count: number;
+  /** 열람(= opened/started/completed) 한 대상자 수 — 응답률과 분리된 참고 지표 */
+  engaged_count: number;
   course_name: string | null;
   project_name: string | null;
   submission_count: number;
@@ -23,9 +26,9 @@ const statusLabels: Record<string, { label: string; className: string }> = {
 };
 
 /**
- * 응답률 분모는 실제 발송된 distributions 수가 가장 정확.
- * distributions 가 0이면 세션 정원(capacity) fallback.
- * 둘 다 없으면 null → UI "-".
+ * 응답률 = 응답 / 배포(전체 distributions).
+ * 배포가 없으면 세션 정원 fallback. 둘 다 없으면 null.
+ * "열람 대비 응답률" 은 별도 지표로 카드 보조 영역에 표시.
  */
 function computeResponseStats(s: SurveyWithResponses): {
   rate: number | null;
@@ -134,7 +137,7 @@ export default function ResponsesView({ surveys }: { surveys: SurveyWithResponse
 
                   <div className="mb-4">
                     <div className="flex items-center justify-between mb-1.5">
-                      <span className="text-xs text-stone-500">응답률</span>
+                      <span className="text-xs text-stone-500">응답률 (응답 / 배포)</span>
                       <span className="text-xs font-medium text-stone-700">
                         {responseRate !== null ? `${responseRate}%` : "-"}
                       </span>
@@ -145,11 +148,26 @@ export default function ResponsesView({ surveys }: { surveys: SurveyWithResponse
                         style={{ width: `${responseRate !== null ? Math.min(responseRate, 100) : 0}%` }}
                       />
                     </div>
-                    {denom !== null && (
-                      <p className="text-[11px] text-stone-400 mt-1">
-                        {survey.submission_count} / {denom}
-                        {denomSource === "distributions" ? "건 발송" : "명 정원"}
-                      </p>
+                    {denomSource === "distributions" ? (
+                      <div className="mt-1.5 flex items-center gap-2 text-[11px] text-stone-500">
+                        <span>
+                          배포 <span className="font-medium text-stone-700">{survey.distribution_count}</span>
+                        </span>
+                        <span className="text-stone-300">·</span>
+                        <span>
+                          열람 <span className="font-medium text-stone-700">{survey.engaged_count}</span>
+                        </span>
+                        <span className="text-stone-300">·</span>
+                        <span>
+                          응답 <span className="font-medium text-stone-700">{survey.submission_count}</span>
+                        </span>
+                      </div>
+                    ) : (
+                      denom !== null && (
+                        <p className="text-[11px] text-stone-400 mt-1">
+                          {survey.submission_count} / {denom}명 정원
+                        </p>
+                      )
                     )}
                   </div>
 
@@ -213,9 +231,11 @@ export default function ResponsesView({ surveys }: { surveys: SurveyWithResponse
                     <td
                       className="px-4 py-3 text-right text-stone-600"
                       title={
-                        denom !== null
-                          ? `${survey.submission_count} / ${denom}${denomSource === "distributions" ? "건 발송" : "명 정원"}`
-                          : undefined
+                        denomSource === "distributions"
+                          ? `배포 ${survey.distribution_count} · 열람 ${survey.engaged_count} · 응답 ${survey.submission_count}`
+                          : denom !== null
+                            ? `${survey.submission_count} / ${denom}명 정원`
+                            : undefined
                       }
                     >
                       {responseRate !== null ? `${responseRate}%` : "-"}

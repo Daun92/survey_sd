@@ -10,12 +10,17 @@ interface SurveyWithResponses {
   status: string;
   session_name: string | null;
   session_capacity: number | null;
+  /** 전체 distributions 건수 — 배포 대상 수의 상한 (pending 포함) */
   distribution_count: number;
+  /** 열람 이상 (opened/started/completed) — 링크 클릭한 대상자 수 */
+  engaged_count: number;
   course_name: string | null;
   project_name: string | null;
   submission_count: number;
   avg_score: number | null;
 }
+
+const ENGAGED_STATUSES = ["opened", "started", "completed"] as const;
 
 async function getSurveysWithResponses(supabase: Awaited<ReturnType<typeof createClient>>): Promise<SurveyWithResponses[]> {
   const [{ data: surveys }, { data: submissions }, { data: dists }] = await Promise.all([
@@ -36,11 +41,10 @@ async function getSurveysWithResponses(supabase: Awaited<ReturnType<typeof creat
       .from("edu_submissions")
       .select("survey_id, total_score")
       .eq("is_test", false),
-    // 분모: status='pending' 은 링크만 생성된 미발송 상태라 제외
+    // 배포/열람 구분을 위해 status 까지 가져와 전수 집계
     supabase
       .from("distributions")
-      .select("survey_id")
-      .neq("status", "pending"),
+      .select("survey_id, status"),
   ]);
 
   if (!surveys) return [];
@@ -57,10 +61,14 @@ async function getSurveysWithResponses(supabase: Awaited<ReturnType<typeof creat
     }
   });
 
-  const distCountBySurvey: Record<string, number> = {};
+  const distTotal: Record<string, number> = {};
+  const distEngaged: Record<string, number> = {};
   (dists ?? []).forEach((d) => {
     if (!d.survey_id) return;
-    distCountBySurvey[d.survey_id] = (distCountBySurvey[d.survey_id] ?? 0) + 1;
+    distTotal[d.survey_id] = (distTotal[d.survey_id] ?? 0) + 1;
+    if ((ENGAGED_STATUSES as readonly string[]).includes(d.status)) {
+      distEngaged[d.survey_id] = (distEngaged[d.survey_id] ?? 0) + 1;
+    }
   });
 
   return surveys
@@ -76,7 +84,8 @@ async function getSurveysWithResponses(supabase: Awaited<ReturnType<typeof creat
         status: s.status,
         session_name: session?.name ?? null,
         session_capacity: session?.capacity ?? null,
-        distribution_count: distCountBySurvey[s.id] ?? 0,
+        distribution_count: distTotal[s.id] ?? 0,
+        engaged_count: distEngaged[s.id] ?? 0,
         course_name: course?.name ?? null,
         project_name: project?.name ?? null,
         submission_count: submissionCount,
