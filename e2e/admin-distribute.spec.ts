@@ -9,7 +9,7 @@ import { hasAdminCreds, loginAsAdmin } from "./helpers/auth";
  * 함께 확장.
  *
  * ENV:
- *   E2E_ADMIN_EMAIL / E2E_ADMIN_PASSWORD — 관리자 계정
+ *   SURVEY_CS_ID / SURVEY_CS_PW — 운영 CS 관리 계정 (legacy E2E_ADMIN_EMAIL/PASSWORD 도 인식)
  *   NEXT_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_ANON_KEY
  *
  * 실행: npx playwright test e2e/admin-distribute.spec.ts --reporter=list
@@ -18,7 +18,7 @@ import { hasAdminCreds, loginAsAdmin } from "./helpers/auth";
 test.describe("/admin/distribute — smoke", () => {
   test.beforeAll(() => {
     if (!hasAdminCreds()) {
-      test.skip(true, "E2E_ADMIN_EMAIL/PASSWORD 미설정 — 스킵");
+      test.skip(true, "SURVEY_CS_ID/PW 미설정 — 스킵");
     }
   });
 
