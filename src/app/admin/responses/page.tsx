@@ -10,6 +10,7 @@ interface SurveyWithResponses {
   status: string;
   session_name: string | null;
   session_capacity: number | null;
+  distribution_count: number;
   course_name: string | null;
   project_name: string | null;
   submission_count: number;
@@ -17,7 +18,7 @@ interface SurveyWithResponses {
 }
 
 async function getSurveysWithResponses(supabase: Awaited<ReturnType<typeof createClient>>): Promise<SurveyWithResponses[]> {
-  const [{ data: surveys }, { data: submissions }] = await Promise.all([
+  const [{ data: surveys }, { data: submissions }, { data: dists }] = await Promise.all([
     supabase
       .from("edu_surveys")
       .select(`
@@ -35,6 +36,9 @@ async function getSurveysWithResponses(supabase: Awaited<ReturnType<typeof creat
       .from("edu_submissions")
       .select("survey_id, total_score")
       .eq("is_test", false),
+    supabase
+      .from("distributions")
+      .select("survey_id"),
   ]);
 
   if (!surveys) return [];
@@ -48,6 +52,12 @@ async function getSurveysWithResponses(supabase: Awaited<ReturnType<typeof creat
       statsMap[sub.survey_id].totalScore += sub.total_score;
       statsMap[sub.survey_id].scoreCount += 1;
     }
+  });
+
+  const distCountBySurvey: Record<string, number> = {};
+  (dists ?? []).forEach((d) => {
+    if (!d.survey_id) return;
+    distCountBySurvey[d.survey_id] = (distCountBySurvey[d.survey_id] ?? 0) + 1;
   });
 
   return surveys
@@ -64,6 +74,7 @@ async function getSurveysWithResponses(supabase: Awaited<ReturnType<typeof creat
         status: s.status,
         session_name: session?.name ?? null,
         session_capacity: session?.capacity ?? null,
+        distribution_count: distCountBySurvey[s.id] ?? 0,
         course_name: course?.name ?? null,
         project_name: project?.name ?? null,
         submission_count: submissionCount,
