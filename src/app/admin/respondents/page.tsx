@@ -22,10 +22,11 @@ async function getCustomers(supabase: Awaited<ReturnType<typeof createClient>>) 
 
 /**
  * 주소록 각 항목에 대해 발송·응답 이력 카운트 + 최근 응답일 집계.
- * respondent_id 기반 — PR #83 이후 누적되는 데이터만 반영된다(그 이전 제출은 대부분 null).
+ * - distributions / edu_submissions: PR #83 이후 시스템 통해 누적된 데이터 (respondent_id 기반).
+ * - respondent_cs_history: CSV 로 가져온 과거 응답이력 (CS 설문 외부 집계).
  */
 async function getRespondentStats(supabase: Awaited<ReturnType<typeof createClient>>) {
-  const [{ data: dists }, { data: subs }] = await Promise.all([
+  const [{ data: dists }, { data: subs }, { data: hist }] = await Promise.all([
     supabase
       .from("distributions")
       .select("respondent_id")
@@ -34,6 +35,9 @@ async function getRespondentStats(supabase: Awaited<ReturnType<typeof createClie
       .from("edu_submissions")
       .select("respondent_id, submitted_at, is_test")
       .not("respondent_id", "is", null),
+    supabase
+      .from("respondent_cs_history")
+      .select("respondent_id, responded_month, course_name"),
   ]);
 
   const sentCount = new Map<string, number>();
@@ -55,7 +59,31 @@ async function getRespondentStats(supabase: Awaited<ReturnType<typeof createClie
     }
   }
 
-  return { sentCount, responseCount, lastResponseAt };
+  // 과거 응답이력 (CSV 임포트 기반)
+  const historyCount = new Map<string, number>();
+  const historyLatestMonth = new Map<string, string>();
+  const historyLatestCourse = new Map<string, string>();
+  for (const h of hist ?? []) {
+    if (!h.respondent_id) continue;
+    historyCount.set(h.respondent_id, (historyCount.get(h.respondent_id) ?? 0) + 1);
+    const m = h.responded_month as string | null;
+    if (m) {
+      const prev = historyLatestMonth.get(h.respondent_id);
+      if (!prev || m > prev) {
+        historyLatestMonth.set(h.respondent_id, m);
+        if (h.course_name) historyLatestCourse.set(h.respondent_id, h.course_name);
+      }
+    }
+  }
+
+  return {
+    sentCount,
+    responseCount,
+    lastResponseAt,
+    historyCount,
+    historyLatestMonth,
+    historyLatestCourse,
+  };
 }
 
 export default async function RespondentsPage() {
@@ -72,6 +100,9 @@ export default async function RespondentsPage() {
     sent_count: stats.sentCount.get(r.id) ?? 0,
     response_count: stats.responseCount.get(r.id) ?? 0,
     last_response_at: stats.lastResponseAt.get(r.id) ?? null,
+    history_count: stats.historyCount.get(r.id) ?? 0,
+    history_latest_month: stats.historyLatestMonth.get(r.id) ?? null,
+    history_latest_course: stats.historyLatestCourse.get(r.id) ?? null,
   }));
 
   return <RespondentClient respondents={respondentsWithStats} customers={customers} />;

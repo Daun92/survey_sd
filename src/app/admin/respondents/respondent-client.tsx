@@ -13,6 +13,7 @@ import {
   Trash2,
   AlertCircle,
   Upload,
+  History,
 } from "lucide-react";
 import {
   createRespondent,
@@ -20,6 +21,10 @@ import {
   deleteRespondent,
   toggleRespondentActive,
   bulkImportRespondents,
+  previewResponseHistoryImport,
+  importResponseHistory,
+  type ResponseHistoryRow,
+  type ResponseHistoryDryRunResult,
 } from "./actions";
 
 interface Customer {
@@ -43,15 +48,28 @@ interface Respondent {
   sent_count: number;
   response_count: number;
   last_response_at: string | null;
+  history_count: number;
+  history_latest_month: string | null;
+  history_latest_course: string | null;
 }
 
-type FilterPreset = "all" | "not_sent" | "no_recent_response" | "active_only";
+type FilterPreset = "all" | "not_sent" | "no_recent_response" | "active_only" | "has_history";
 
 function formatMonth(iso: string | null): string {
   if (!iso) return "—";
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return "—";
   return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, "0")}`;
+}
+
+/** 숫자만 저장된 전화번호를 010-1234-5678 형태로 렌더 (입력은 그대로 보존) */
+function formatPhoneDisplay(raw: string | null): string {
+  if (!raw) return "—";
+  const d = raw.replace(/[^0-9]/g, "");
+  if (d.length === 11) return `${d.slice(0, 3)}-${d.slice(3, 7)}-${d.slice(7)}`;
+  if (d.length === 10) return `${d.slice(0, 3)}-${d.slice(3, 6)}-${d.slice(6)}`;
+  if (d.length === 8) return `${d.slice(0, 4)}-${d.slice(4)}`;
+  return raw;
 }
 
 /**
@@ -91,6 +109,52 @@ function parseCsv(text: string): {
       company: idx.company >= 0 ? cells[idx.company]?.trim() || undefined : undefined,
       department: idx.department >= 0 ? cells[idx.department]?.trim() || undefined : undefined,
       position: idx.position >= 0 ? cells[idx.position]?.trim() || undefined : undefined,
+    });
+  }
+  return out;
+}
+
+/**
+ * 응답이력 CSV 파서 — 과정명/고객사/이름/직급/전화번호/설문시기.
+ * 헤더명은 한글 또는 영문 alias 모두 허용.
+ */
+function parseResponseHistoryCsv(text: string): ResponseHistoryRow[] {
+  const lines = text.replace(/\r\n?/g, "\n").split("\n").filter((l) => l.trim() !== "");
+  if (lines.length < 2) return [];
+  const header = splitCsvLine(lines[0]).map((h) => h.trim().toLowerCase());
+  const idx = {
+    course: header.findIndex((h) => h === "course_name" || h === "과정명" || h === "과정"),
+    company: header.findIndex((h) => h === "company" || h === "회사" || h === "고객사" || h === "회사명"),
+    name: header.findIndex((h) => h === "name" || h === "이름"),
+    position: header.findIndex((h) => h === "position" || h === "직위" || h === "직급"),
+    phone: header.findIndex((h) => h === "phone" || h === "전화" || h === "전화번호"),
+    month: header.findIndex(
+      (h) =>
+        h === "responded_month" ||
+        h === "sent_month" ||
+        h === "설문시기" ||
+        h === "응답월" ||
+        h === "응답시기" ||
+        h === "발송월" ||
+        h === "시기",
+    ),
+  };
+  if (idx.name < 0) throw new Error("CSV 에 '이름' 헤더가 없습니다.");
+  if (idx.month < 0) throw new Error("CSV 에 '설문시기' 또는 '응답월' 헤더가 없습니다.");
+
+  const out: ResponseHistoryRow[] = [];
+  for (const line of lines.slice(1)) {
+    const cells = splitCsvLine(line);
+    const name = cells[idx.name]?.trim();
+    const responded_month = cells[idx.month]?.trim();
+    if (!name || !responded_month) continue;
+    out.push({
+      name,
+      responded_month,
+      phone: idx.phone >= 0 ? cells[idx.phone]?.trim() || undefined : undefined,
+      company: idx.company >= 0 ? cells[idx.company]?.trim() || undefined : undefined,
+      position: idx.position >= 0 ? cells[idx.position]?.trim() || undefined : undefined,
+      course_name: idx.course >= 0 ? cells[idx.course]?.trim() || undefined : undefined,
     });
   }
   return out;
@@ -151,15 +215,28 @@ export default function RespondentClient({
   const [bulkLoading, setBulkLoading] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const historyFileInputRef = useRef<HTMLInputElement>(null);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [historyPreview, setHistoryPreview] = useState<
+    | {
+        rows: ResponseHistoryRow[];
+        result: ResponseHistoryDryRunResult;
+      }
+    | null
+  >(null);
 
   const NINETY_DAYS_MS = 90 * 24 * 60 * 60 * 1000;
 
   const filtered = respondents.filter((r) => {
+    const q = search.trim();
+    const qDigits = q.replace(/[^0-9]/g, "");
+    const phoneDigits = r.phone?.replace(/[^0-9]/g, "") ?? "";
     const matchSearch =
-      !search ||
-      r.name.toLowerCase().includes(search.toLowerCase()) ||
-      r.email?.toLowerCase().includes(search.toLowerCase()) ||
-      r.department?.toLowerCase().includes(search.toLowerCase());
+      !q ||
+      r.name.toLowerCase().includes(q.toLowerCase()) ||
+      r.email?.toLowerCase().includes(q.toLowerCase()) ||
+      r.department?.toLowerCase().includes(q.toLowerCase()) ||
+      (qDigits.length >= 3 && phoneDigits.includes(qDigits));
     const matchCustomer =
       !filterCustomer || String(r.customer_id) === filterCustomer;
 
@@ -174,6 +251,8 @@ export default function RespondentClient({
       matchPreset = hasSent && !recent;
     } else if (preset === "active_only") {
       matchPreset = r.is_active;
+    } else if (preset === "has_history") {
+      matchPreset = r.history_count > 0;
     }
 
     return matchSearch && matchCustomer && matchPreset;
@@ -188,6 +267,7 @@ export default function RespondentClient({
       return hasSent && Date.now() - lastResp >= NINETY_DAYS_MS;
     }).length,
     active_only: respondents.filter((r) => r.is_active).length,
+    has_history: respondents.filter((r) => r.history_count > 0).length,
   };
 
   function showToast(msg: string) {
@@ -218,6 +298,15 @@ export default function RespondentClient({
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!form.name.trim()) return;
+    const phoneDigits = form.phone.replace(/[^0-9]/g, "");
+    if (!phoneDigits) {
+      showToast("휴대전화는 메시지 발송용 필수 값입니다.");
+      return;
+    }
+    if (phoneDigits.length < 10 || phoneDigits.length > 11) {
+      showToast("휴대전화 형식을 확인해주세요 (숫자 10~11자리).");
+      return;
+    }
     setLoading(true);
     try {
       const payload = {
@@ -269,6 +358,43 @@ export default function RespondentClient({
     return diff > 180 * 24 * 60 * 60 * 1000;
   }
 
+  async function handleHistoryFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setHistoryLoading(true);
+    try {
+      const text = await file.text();
+      const rows = parseResponseHistoryCsv(text);
+      if (rows.length === 0) {
+        showToast("업로드할 이력 레코드가 없습니다.");
+        return;
+      }
+      const result = await previewResponseHistoryImport(rows);
+      setHistoryPreview({ rows, result });
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : "응답이력 CSV 파싱 실패");
+    } finally {
+      setHistoryLoading(false);
+      if (historyFileInputRef.current) historyFileInputRef.current.value = "";
+    }
+  }
+
+  async function confirmHistoryImport() {
+    if (!historyPreview) return;
+    setHistoryLoading(true);
+    try {
+      const result = await importResponseHistory(historyPreview.rows);
+      showToast(
+        `이력 ${result.historyInserted}건 추가 (중복스킵 ${result.historyDuplicatesSkipped}) · 신규 인물 ${result.respondentsInserted} · 업데이트 ${result.respondentsUpdated}`,
+      );
+      setHistoryPreview(null);
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : "응답이력 업로드 실패");
+    } finally {
+      setHistoryLoading(false);
+    }
+  }
+
   async function handleBulkImport(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -301,15 +427,95 @@ export default function RespondentClient({
         </div>
       )}
 
+      {/* 응답이력 Dry-run Preview Modal */}
+      {historyPreview && (
+        <div className="fixed inset-0 z-[9998] flex items-center justify-center bg-black/40 p-4">
+          <div className="w-full max-w-lg rounded-xl bg-white p-6 shadow-xl">
+            <h2 className="text-lg font-bold text-stone-800">응답이력 업로드 확인</h2>
+            <p className="mt-1 text-sm text-stone-500">
+              실제 적용 전에 다음 요약을 확인해주세요.
+            </p>
+            <dl className="mt-4 grid grid-cols-2 gap-3 text-sm">
+              <div className="rounded-md bg-stone-50 p-3">
+                <dt className="text-xs text-stone-500">전체 행</dt>
+                <dd className="mt-0.5 font-semibold text-stone-800">{historyPreview.result.totalRows}</dd>
+              </div>
+              <div className="rounded-md bg-stone-50 p-3">
+                <dt className="text-xs text-stone-500">이력 insert 예정</dt>
+                <dd className="mt-0.5 font-semibold text-teal-700">{historyPreview.result.historyToInsert}</dd>
+              </div>
+              <div className="rounded-md bg-stone-50 p-3">
+                <dt className="text-xs text-stone-500">인물 (unique)</dt>
+                <dd className="mt-0.5 font-semibold text-stone-800">{historyPreview.result.distinctPeople}</dd>
+              </div>
+              <div className="rounded-md bg-stone-50 p-3">
+                <dt className="text-xs text-stone-500">신규 / 기존</dt>
+                <dd className="mt-0.5 font-semibold text-stone-800">
+                  <span className="text-emerald-600">{historyPreview.result.newPeople}</span>
+                  {" / "}
+                  <span className="text-stone-600">{historyPreview.result.existingPeople}</span>
+                </dd>
+              </div>
+              {(historyPreview.result.skippedEmptyName > 0 ||
+                historyPreview.result.skippedInvalidMonth > 0) && (
+                <div className="col-span-2 rounded-md bg-amber-50 p-3 text-xs text-amber-800">
+                  스킵: 이름누락 {historyPreview.result.skippedEmptyName}건 · 시기파싱실패 {historyPreview.result.skippedInvalidMonth}건
+                </div>
+              )}
+              {historyPreview.result.unmatchedCompanies.length > 0 && (
+                <div className="col-span-2 rounded-md bg-amber-50 p-3 text-xs text-amber-800">
+                  <div className="font-medium">매칭 실패 고객사 {historyPreview.result.unmatchedCompanies.length}건</div>
+                  <div className="mt-1 max-h-24 overflow-y-auto text-[11px] text-amber-700">
+                    {historyPreview.result.unmatchedCompanies.slice(0, 20).join(", ")}
+                    {historyPreview.result.unmatchedCompanies.length > 20 && " …"}
+                  </div>
+                  <div className="mt-1 text-[11px] text-amber-600">
+                    이 회사들은 customer_id = null 로 저장됩니다 (raw_company_name 은 유지).
+                  </div>
+                </div>
+              )}
+            </dl>
+            <div className="mt-5 flex justify-end gap-2">
+              <Button
+                variant="outline"
+                onClick={() => setHistoryPreview(null)}
+                disabled={historyLoading}
+              >
+                취소
+              </Button>
+              <Button onClick={confirmHistoryImport} disabled={historyLoading}>
+                {historyLoading ? "적용 중..." : "확정 적용"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-xl font-bold text-stone-800">대상자 주소록</h1>
           <p className="text-sm text-stone-500 mt-1">
-            CS 설문 발송 대상자를 한 곳에서 관리합니다. 배부 시 CSV 업로드로도 자동 축적됩니다.
+            메시지(SMS) 발송 중심으로 CS 설문 대상자 연락처를 관리합니다. 휴대전화가 기본 식별키이며, 이메일은 보조 채널입니다.
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            onClick={() => historyFileInputRef.current?.click()}
+            disabled={historyLoading}
+            title="과정명/고객사/이름/직급/전화번호/설문시기 컬럼을 가진 CSV"
+          >
+            <History size={16} className="mr-1.5" />
+            {historyLoading ? "분석 중..." : "응답이력 업로드"}
+          </Button>
+          <input
+            ref={historyFileInputRef}
+            type="file"
+            accept=".csv"
+            className="hidden"
+            onChange={handleHistoryFileChange}
+          />
           <Button variant="outline" onClick={() => fileInputRef.current?.click()} disabled={bulkLoading}>
             <Upload size={16} className="mr-1.5" />
             {bulkLoading ? "업로드 중..." : "CSV 업로드"}
@@ -351,20 +557,26 @@ export default function RespondentClient({
                   />
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-stone-700 mb-1 block">이메일</label>
+                  <label className="text-sm font-medium text-stone-700 mb-1 block">
+                    휴대전화 <span className="text-rose-500">*</span>
+                  </label>
+                  <Input
+                    value={form.phone}
+                    onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                    placeholder="010-1234-5678"
+                    required
+                    inputMode="tel"
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-stone-700 mb-1 block">
+                    이메일 <span className="text-xs font-normal text-stone-400">(보조)</span>
+                  </label>
                   <Input
                     type="email"
                     value={form.email}
                     onChange={(e) => setForm({ ...form, email: e.target.value })}
                     placeholder="email@company.com"
-                  />
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-stone-700 mb-1 block">전화번호</label>
-                  <Input
-                    value={form.phone}
-                    onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                    placeholder="010-1234-5678"
                   />
                 </div>
                 <div>
@@ -426,7 +638,7 @@ export default function RespondentClient({
             <Input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="이름, 이메일, 부서 검색"
+              placeholder="이름, 전화, 이메일, 부서 검색"
               className="pl-9"
             />
           </div>
@@ -451,6 +663,7 @@ export default function RespondentClient({
             { key: "active_only" as const, label: "활성만", count: presetCounts.active_only },
             { key: "not_sent" as const, label: "미발송", count: presetCounts.not_sent },
             { key: "no_recent_response" as const, label: "90일 무응답", count: presetCounts.no_recent_response },
+            { key: "has_history" as const, label: "응답이력 있음", count: presetCounts.has_history },
           ].map(({ key, label, count }) => (
             <button
               key={key}
@@ -484,8 +697,8 @@ export default function RespondentClient({
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-stone-200 bg-stone-50">
-                    <th className="px-4 py-3 text-left font-medium text-stone-600">이름</th>
-                    <th className="px-4 py-3 text-left font-medium text-stone-600">이메일</th>
+                    <th className="px-4 py-3 text-left font-medium text-stone-600">이름 / 이메일</th>
+                    <th className="px-4 py-3 text-left font-medium text-stone-600">휴대전화</th>
                     <th className="px-4 py-3 text-left font-medium text-stone-600">고객사</th>
                     <th className="px-4 py-3 text-left font-medium text-stone-600">부서/직위</th>
                     <th className="px-4 py-3 text-left font-medium text-stone-600">응답 이력</th>
@@ -499,8 +712,15 @@ export default function RespondentClient({
                     const sendable = isSendable(r.last_cs_survey_sent_at);
                     return (
                       <tr key={r.id} className="border-b border-stone-100 hover:bg-stone-50/50">
-                        <td className="px-4 py-3 font-medium text-stone-800">{r.name}</td>
-                        <td className="px-4 py-3 text-stone-600">{r.email || "—"}</td>
+                        <td className="px-4 py-3">
+                          <div className="font-medium text-stone-800">{r.name}</div>
+                          {r.email && (
+                            <div className="text-[11px] text-stone-400 mt-0.5">{r.email}</div>
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-stone-700 font-mono text-xs">
+                          {formatPhoneDisplay(r.phone)}
+                        </td>
                         <td className="px-4 py-3 text-stone-600">
                           {r.customers?.company_name || "—"}
                         </td>
@@ -516,6 +736,19 @@ export default function RespondentClient({
                           <div className="text-[11px] text-stone-400 mt-0.5">
                             최근 응답 {formatMonth(r.last_response_at)}
                           </div>
+                          {r.history_count > 0 && (
+                            <div className="mt-1 text-[11px] text-teal-700">
+                              과거이력 {r.history_count}회
+                              {r.history_latest_month && ` · ${formatMonth(r.history_latest_month)}`}
+                              {r.history_latest_course && (
+                                <span className="ml-1 text-stone-500" title={r.history_latest_course}>
+                                  {r.history_latest_course.length > 14
+                                    ? r.history_latest_course.slice(0, 14) + "…"
+                                    : r.history_latest_course}
+                                </span>
+                              )}
+                            </div>
+                          )}
                         </td>
                         <td className="px-4 py-3">
                           {r.last_cs_survey_sent_at ? (
