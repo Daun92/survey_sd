@@ -888,8 +888,8 @@ export default function DistributeTabs({
                 )}
               </CardContent>
             </Card>
-            <EmailSendPanel batchId={batchId} surveyId={selectedSurveyId} results={results} />
             <SmsSendPanel batchId={batchId} surveyId={selectedSurveyId} results={results.map(r => ({ ...r, phone: r.phone || '' }))} />
+            <EmailSendPanel batchId={batchId} surveyId={selectedSurveyId} results={results} />
           </div>
         )}
       </div>

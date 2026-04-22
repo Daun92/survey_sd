@@ -43,7 +43,8 @@ export default function SmsSendPanel({ batchId, surveyId, results }: Props) {
   const [loading, setLoading] = useState(false)
   const [loadingTemplates, setLoadingTemplates] = useState(true)
   const [result, setResult] = useState<{ queued?: number; error?: string } | null>(null)
-  const [showPanel, setShowPanel] = useState(false)
+  // SMS 는 주 발송 채널이므로 기본 열림.
+  const [showPanel, setShowPanel] = useState(true)
 
   // 편집 모드
   const [isEditing, setIsEditing] = useState(false)
