@@ -9,8 +9,6 @@ import {
 } from "lucide-react";
 import { TemplateActions } from "./template-actions";
 
-export const revalidate = 300;
-
 async function getTemplatesWithQuestionCounts() {
   const supabase = await createClient();
   const { data: templates } = await supabase

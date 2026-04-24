@@ -15,8 +15,6 @@ import {
   type ReportQuestion,
 } from "@/lib/report-aggregator";
 
-export const revalidate = 60;
-
 async function getSurveyReport(surveyId: string): Promise<SurveyReportData | null> {
   const supabase = await createClient();
   const { data: survey } = await supabase

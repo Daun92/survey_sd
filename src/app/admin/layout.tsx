@@ -1,38 +1,41 @@
+import { unstable_cache } from "next/cache";
 import { Sidebar } from "@/components/Sidebar";
 import { getUserProfile } from "@/lib/auth";
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 
-async function getSidebarBadges() {
-  const supabase = await createClient();
-  const now = new Date();
-  const dayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+/**
+ * 사이드바 배지(진행중 설문/최근 응답/실패 이메일) 집계.
+ * 서버측 RPC 1회 + 30초 tag cache. 모든 관리자 공통 데이터라 user-scoped 가 아님.
+ * unstable_cache 콜백은 cookies() 의존 클라이언트를 사용할 수 없어 service role 로 조회.
+ * 집계값(숫자)만 반환하므로 정보 누설 우려 없음.
+ * mutation 쪽에서 revalidateTag("admin-sidebar-badges") 호출 시 즉시 무효화.
+ */
+const getCachedBadges = unstable_cache(
+  async () => {
+    const supabase = createAdminClient();
+    const { data } = await supabase
+      .rpc("get_admin_sidebar_badges")
+      .single<{
+        active_surveys: number;
+        recent_responses: number;
+        failed_emails: number;
+      }>();
 
-  const [
-    { count: activeSurveys },
-    { count: recentResponses },
-    { count: failedEmails },
-  ] = await Promise.all([
-    supabase
-      .from("edu_surveys")
-      .select("*", { count: "exact", head: true })
-      .eq("status", "active"),
-    supabase
-      .from("edu_submissions")
-      .select("*", { count: "exact", head: true })
-      .gte("submitted_at", dayAgo.toISOString())
-      .eq("is_test", false),
-    supabase
-      .from("distributions")
-      .select("*", { count: "exact", head: true })
-      .eq("status", "failed"),
-  ]);
-
-  const badges: Record<string, number> = {};
-  if (activeSurveys && activeSurveys > 0) badges["/admin/surveys"] = activeSurveys;
-  if (recentResponses && recentResponses > 0) badges["/admin/responses"] = recentResponses;
-  if (failedEmails && failedEmails > 0) badges["/admin/distribute"] = failedEmails;
-  return badges;
-}
+    const badges: Record<string, number> = {};
+    if (data?.active_surveys && data.active_surveys > 0) {
+      badges["/admin/surveys"] = data.active_surveys;
+    }
+    if (data?.recent_responses && data.recent_responses > 0) {
+      badges["/admin/responses"] = data.recent_responses;
+    }
+    if (data?.failed_emails && data.failed_emails > 0) {
+      badges["/admin/distribute"] = data.failed_emails;
+    }
+    return badges;
+  },
+  ["admin-sidebar-badges"],
+  { revalidate: 30, tags: ["admin-sidebar-badges"] }
+);
 
 export default async function AdminLayout({
   children,
@@ -41,7 +44,7 @@ export default async function AdminLayout({
 }) {
   const [userProfile, badges] = await Promise.all([
     getUserProfile(),
-    getSidebarBadges(),
+    getCachedBadges(),
   ]);
 
   return (

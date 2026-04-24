@@ -11,8 +11,6 @@ import {
 } from "lucide-react";
 import { supabaseError } from "@/lib/supabase/errors";
 
-export const revalidate = 60;
-
 const statusLabels: Record<string, { label: string; className: string }> = {
   active: { label: "진행중", className: "bg-emerald-100 text-emerald-800" },
   completed: { label: "완료", className: "bg-stone-100 text-stone-800" },

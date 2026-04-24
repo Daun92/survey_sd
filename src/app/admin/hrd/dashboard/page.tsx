@@ -7,8 +7,6 @@ import {
   Activity,
 } from "lucide-react";
 
-export const revalidate = 30;
-
 const respondentStatusLabels: Record<
   string,
   { label: string; className: string }
@@ -23,6 +21,16 @@ const respondentStatusLabels: Record<
 // 진행중 라운드가 없으면 가장 최근 closed/analyzing/published 라운드를 fallback 으로 노출.
 const DASHBOARD_PRIMARY_STATUS = "collecting" as const;
 const DASHBOARD_FALLBACK_STATUSES = ["closed", "analyzing", "published"] as const;
+
+type SummaryRow = {
+  target_count: number;
+  total_count: number;
+  completed_count: number;
+  in_progress_count: number;
+  invited_count: number;
+};
+
+type BreakdownRow = { status: string; cnt: number | string };
 
 async function getData() {
   const supabase = await createClient();
@@ -48,26 +56,28 @@ async function getData() {
 
   if (!currentRound) return { currentRound: null, stats: null, breakdown: [] };
 
-  const { data: respondents } = await supabase
-    .from("hrd_respondents")
-    .select("id, respondent_name, company_name, status, completed_at")
-    .eq("round_id", currentRound.id);
+  const [summaryRes, breakdownRes] = await Promise.all([
+    supabase.rpc("get_hrd_respondent_summary", { p_round_id: currentRound.id }),
+    supabase.rpc("get_hrd_respondent_breakdown", {
+      p_round_id: currentRound.id,
+    }),
+  ]);
 
-  const list = respondents ?? [];
-  const totalCount = currentRound.target_count ?? list.length;
-  const completedCount = list.filter((r) => r.status === "completed").length;
-  const inProgressCount = list.filter(
-    (r) => r.status === "in_progress"
-  ).length;
-  const invitedCount = list.filter((r) => r.status === "invited").length;
+  const summaryRow =
+    ((summaryRes.data ?? []) as unknown as SummaryRow[])[0] ?? null;
+  const breakdownRows =
+    (breakdownRes.data ?? []) as unknown as BreakdownRow[];
+
+  // target_count 는 라운드에 설정된 값을 우선, 없으면 총 대상자 수로 대체
+  const respondentTotal = summaryRow?.total_count ?? 0;
+  const totalCount =
+    (summaryRow?.target_count ?? 0) > 0
+      ? summaryRow!.target_count
+      : respondentTotal;
+  const completedCount = summaryRow?.completed_count ?? 0;
   const responseRate =
     totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
-  const noResponseCount = totalCount - completedCount;
-
-  const statusBreakdown: Record<string, number> = {};
-  list.forEach((r) => {
-    statusBreakdown[r.status] = (statusBreakdown[r.status] ?? 0) + 1;
-  });
+  const noResponseCount = Math.max(totalCount - completedCount, 0);
 
   return {
     currentRound,
@@ -77,9 +87,9 @@ async function getData() {
       responseRate,
       noResponseCount,
     },
-    breakdown: Object.entries(statusBreakdown).map(([status, count]) => ({
-      status,
-      count,
+    breakdown: breakdownRows.map((row) => ({
+      status: row.status,
+      count: Number(row.cnt) || 0,
     })),
   };
 }

@@ -12,8 +12,6 @@ import {
 import { GeminiSettings } from "./gemini-settings";
 import { getUserProfile, canAccessSettings } from "@/lib/auth";
 
-export const revalidate = 300;
-
 async function getSettingsData(supabase: Awaited<ReturnType<typeof createClient>>) {
   const [{ data: appSettings }, { data: serviceTypes }] = await Promise.all([
     supabase.from("app_settings").select("*"),

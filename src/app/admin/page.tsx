@@ -10,7 +10,6 @@ import {
   FolderOpen,
   AlertTriangle,
   CheckCircle2,
-  Clock,
   MailOpen,
   MousePointerClick,
   Users,
@@ -20,25 +19,47 @@ import {
   BarChart3,
 } from "lucide-react";
 import { getUserProfile } from "@/lib/auth";
-
-export const revalidate = 30;
+import RecentActivity, { type ActivityItem } from "./recent-activity";
 
 // ─── 데이터 조회 ───
+
+type SubmissionCountRow = { survey_id: string; cnt: number | string };
+type DistAggregateRow = {
+  survey_id: string;
+  total: number | string;
+  pending: number | string;
+  opened: number | string;
+  started: number | string;
+  completed: number | string;
+};
+type DistBuckets = {
+  total: number;
+  pending: number;
+  opened: number;
+  started: number;
+  completed: number;
+};
 
 async function getDashboardData() {
   const supabase = await createClient();
   const now = new Date();
   const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
   const twoWeeksAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
+  // 최근 활동·배포 집계의 기준 기간 (알림/배포율은 "최근 60일" 기준)
+  const ACTIVITY_WINDOW_DAYS = 60;
+  const since = new Date(
+    now.getTime() - ACTIVITY_WINDOW_DAYS * 24 * 60 * 60 * 1000
+  );
 
   const [
-    { data: activeSurveys },
-    { count: totalSubmissions },
-    { data: recentSubmissions },
-    { data: prevWeekSubmissions },
-    { data: distributions },
-    { data: surveyDetails },
-    { data: submissionCounts },
+    activeSurveysRes,
+    totalSubmissionsRes,
+    recentSubmissionsRes,
+    prevWeekSubmissionsRes,
+    distAggregatesRes,
+    recentOpeningsRes,
+    surveyDetailsRes,
+    submissionCountsRes,
   ] = await Promise.all([
     // 진행중 설문
     supabase
@@ -63,10 +84,18 @@ async function getDashboardData() {
       .gte("submitted_at", twoWeeksAgo.toISOString())
       .lt("submitted_at", weekAgo.toISOString())
       .eq("is_test", false),
-    // 전체 배포 현황
+    // 설문별 배포 상태 집계 (최근 60일)
+    supabase.rpc("distribution_aggregates_by_survey", {
+      p_since: since.toISOString(),
+    }),
+    // 최근 열람 활동 (최근 60일 내 opened_at 있는 배포 20건)
     supabase
       .from("distributions")
-      .select("id, survey_id, status, recipient_name, recipient_email, opened_at, created_at, batch_id"),
+      .select("recipient_name, opened_at")
+      .not("opened_at", "is", null)
+      .gte("created_at", since.toISOString())
+      .order("opened_at", { ascending: false })
+      .limit(20),
     // 설문별 상세 (응답수 포함)
     supabase
       .from("edu_surveys")
@@ -80,43 +109,60 @@ async function getDashboardData() {
       `)
       .in("status", ["active", "draft"])
       .order("created_at", { ascending: false }),
-    // 설문별 응답 수 집계
-    supabase
-      .from("edu_submissions")
-      .select("survey_id")
-      .eq("is_test", false),
+    // 설문별 응답 수 집계 (서버측 GROUP BY)
+    supabase.rpc("edu_submission_counts_by_survey"),
   ]);
 
+  const activeSurveys = activeSurveysRes.data;
+  const totalSubmissions = totalSubmissionsRes.count;
+  const recentSubmissions = recentSubmissionsRes.data;
+  const prevWeekSubmissions = prevWeekSubmissionsRes.data;
+  const recentOpenings = recentOpeningsRes.data;
+  const surveyDetails = surveyDetailsRes.data;
+  const submissionCounts = (submissionCountsRes.data ??
+    []) as unknown as SubmissionCountRow[];
+  const distAggregates = (distAggregatesRes.data ??
+    []) as unknown as DistAggregateRow[];
+
   const submissionBySurvey: Record<string, number> = {};
-  (submissionCounts ?? []).forEach((s: any) => {
-    submissionBySurvey[s.survey_id] = (submissionBySurvey[s.survey_id] || 0) + 1;
+  submissionCounts.forEach((row) => {
+    submissionBySurvey[row.survey_id] = Number(row.cnt) || 0;
   });
 
-  // 배포 집계
-  const distList = distributions ?? [];
-  const totalDistributed = distList.length;
-  const distBySurvey: Record<string, { total: number; pending: number; opened: number; started: number; completed: number }> = {};
-  distList.forEach((d: any) => {
-    if (!distBySurvey[d.survey_id]) {
-      distBySurvey[d.survey_id] = { total: 0, pending: 0, opened: 0, started: 0, completed: 0 };
-    }
-    distBySurvey[d.survey_id].total++;
-    distBySurvey[d.survey_id][d.status as keyof typeof distBySurvey[string]]++;
+  // 배포 집계 (최근 60일)
+  const distBySurvey: Record<string, DistBuckets> = {};
+  let totalDistributed = 0;
+  let pendingCount = 0;
+  let openedCount = 0;
+  let startedCount = 0;
+  let completedCount = 0;
+  distAggregates.forEach((row) => {
+    const buckets: DistBuckets = {
+      total: Number(row.total) || 0,
+      pending: Number(row.pending) || 0,
+      opened: Number(row.opened) || 0,
+      started: Number(row.started) || 0,
+      completed: Number(row.completed) || 0,
+    };
+    distBySurvey[row.survey_id] = buckets;
+    totalDistributed += buckets.total;
+    pendingCount += buckets.pending;
+    openedCount += buckets.opened;
+    startedCount += buckets.started;
+    completedCount += buckets.completed;
   });
-
-  const pendingCount = distList.filter((d: any) => d.status === "pending").length;
-  const openedCount = distList.filter((d: any) => d.status === "opened").length;
-  const startedCount = distList.filter((d: any) => d.status === "started").length;
-  const completedCount = distList.filter((d: any) => d.status === "completed").length;
   const respondedCount = openedCount + startedCount + completedCount;
-  const responseRate = totalDistributed > 0 ? Math.round((respondedCount / totalDistributed) * 100) : 0;
+  const responseRate =
+    totalDistributed > 0
+      ? Math.round((respondedCount / totalDistributed) * 100)
+      : 0;
 
   // 이번 주 / 지난주 비교
   const thisWeekCount = (recentSubmissions ?? []).length;
   const prevWeekCount = (prevWeekSubmissions ?? []).length;
   const weekDiff = thisWeekCount - prevWeekCount;
 
-  // 주의 필요 항목 (배포했는데 응답 없는 설문)
+  // 주의 필요 항목 (최근 60일 내 배포했는데 응답 없는 설문)
   const alerts: { level: "red" | "yellow" | "green"; title: string; detail: string; surveyId: string }[] = [];
 
   (surveyDetails ?? []).forEach((s: any) => {
@@ -185,28 +231,24 @@ async function getDashboardData() {
     .sort((a, b) => b.responses - a.responses)
     .slice(0, 8);
 
-  // 최근 활동 (열람/응답 이벤트)
-  const recentActivity: { time: string; text: string }[] = [];
-  const recentOpened = distList
-    .filter((d: any) => d.opened_at)
-    .sort((a: any, b: any) => new Date(b.opened_at).getTime() - new Date(a.opened_at).getTime())
-    .slice(0, 3);
-  recentOpened.forEach((d: any) => {
-    recentActivity.push({
-      time: formatRelativeTime(d.opened_at),
-      text: `${d.recipient_name || '익명'} 열람`,
+  // 최근 활동 (열람/응답 이벤트) — 원본 타임스탬프로 실제 시간순 정렬
+  const activityItems: ActivityItem[] = [];
+  (recentOpenings ?? []).forEach((d) => {
+    if (!d.opened_at) return;
+    activityItems.push({
+      at: d.opened_at,
+      kind: "opened",
+      text: `${d.recipient_name || "익명"} 열람`,
     });
   });
-  const recentResponses = (recentSubmissions ?? [])
-    .sort((a: any, b: any) => new Date(b.submitted_at).getTime() - new Date(a.submitted_at).getTime())
-    .slice(0, 3);
-  recentResponses.forEach((s: any) => {
-    recentActivity.push({
-      time: formatRelativeTime(s.submitted_at),
-      text: '새 응답 제출',
+  (recentSubmissions ?? []).forEach((s: any) => {
+    activityItems.push({
+      at: s.submitted_at,
+      kind: "responded",
+      text: "새 응답 제출",
     });
   });
-  recentActivity.sort((a, b) => 0); // keep interleaved order
+  activityItems.sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime());
 
   return {
     stats: {
@@ -227,19 +269,8 @@ async function getDashboardData() {
     alerts,
     surveyRows,
     customerRows,
-    recentActivity: recentActivity.slice(0, 5),
+    recentActivity: activityItems.slice(0, 20),
   };
-}
-
-function formatRelativeTime(dateStr: string) {
-  const diff = Date.now() - new Date(dateStr).getTime();
-  const minutes = Math.floor(diff / 60000);
-  if (minutes < 1) return "방금";
-  if (minutes < 60) return `${minutes}분 전`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}시간 전`;
-  const days = Math.floor(hours / 24);
-  return `${days}일 전`;
 }
 
 // ─── 페이지 렌더 ───
@@ -526,24 +557,7 @@ export default async function DashboardPage() {
 
           {/* 최근 활동 */}
           {data.recentActivity.length > 0 && (
-            <div className="rounded-xl border border-stone-200 bg-white shadow-sm">
-              <div className="p-5 pb-0">
-                <h3 className="text-sm font-semibold text-stone-800 flex items-center gap-1.5">
-                  <Clock size={14} className="text-stone-500" />
-                  최근 활동
-                </h3>
-              </div>
-              <div className="p-5 pt-3">
-                <div className="space-y-0">
-                  {data.recentActivity.map((a, idx) => (
-                    <div key={idx} className="flex items-center gap-3 py-2 border-b border-stone-50 last:border-0">
-                      <span className="text-[11px] text-stone-400 w-16 flex-shrink-0">{a.time}</span>
-                      <span className="text-sm text-stone-600">{a.text}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
+            <RecentActivity items={data.recentActivity} />
           )}
 
           {/* 바로가기 */}

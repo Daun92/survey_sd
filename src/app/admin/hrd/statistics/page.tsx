@@ -6,7 +6,24 @@ import {
   TrendingUp,
 } from "lucide-react";
 
-export const revalidate = 60;
+type RoundSummaryRow = {
+  total_responses: number | string;
+  unique_respondents: number | string;
+  unique_items: number | string;
+  avg_score: number | string | null;
+};
+
+type PartStatRow = {
+  part_id: string;
+  part_code: string;
+  part_name: string;
+  sort_order: number;
+  response_count: number | string;
+  avg_score: number | string | null;
+};
+
+const formatScore = (v: number | string | null | undefined) =>
+  v === null || v === undefined ? "-" : Number(v).toFixed(2);
 
 async function getData() {
   const supabase = await createClient();
@@ -19,68 +36,35 @@ async function getData() {
   const currentRound = rounds?.[0] ?? null;
   if (!currentRound) return { currentRound: null, summary: null, parts: [] };
 
-  const [{ data: responses }, { data: parts }, { data: items }] = await Promise.all([
-    supabase
-      .from("hrd_responses")
-      .select("id, respondent_id, item_id, value_number")
-      .eq("round_id", currentRound.id),
-    supabase
-      .from("hrd_survey_parts")
-      .select("id, part_code, part_name, sort_order")
-      .eq("round_id", currentRound.id)
-      .order("sort_order", { ascending: true }),
-    supabase
-      .from("hrd_survey_items")
-      .select("id, part_id")
-      .eq("round_id", currentRound.id),
+  const [summaryRes, partsRes] = await Promise.all([
+    supabase.rpc("get_hrd_round_statistics", { p_round_id: currentRound.id }),
+    supabase.rpc("get_hrd_part_statistics", { p_round_id: currentRound.id }),
   ]);
 
-  const responseList = responses ?? [];
-  const partList = parts ?? [];
-  const itemList = items ?? [];
+  // RPC 는 SETOF 반환 → 배열. 요약은 1행.
+  const summaryRows = (summaryRes.data ?? []) as unknown as RoundSummaryRow[];
+  const partRows = (partsRes.data ?? []) as unknown as PartStatRow[];
+  const summaryRow = summaryRows[0];
 
-  // Map item_id -> part_id
-  const itemPartMap: Record<string, string> = {};
-  itemList.forEach((item) => { itemPartMap[item.id] = item.part_id; });
+  const summary = summaryRow
+    ? {
+        totalResponses: Number(summaryRow.total_responses) || 0,
+        uniqueRespondents: Number(summaryRow.unique_respondents) || 0,
+        uniqueItems: Number(summaryRow.unique_items) || 0,
+        avgScore: formatScore(summaryRow.avg_score),
+      }
+    : { totalResponses: 0, uniqueRespondents: 0, uniqueItems: 0, avgScore: "-" };
 
-  const totalResponses = responseList.length;
-  const uniqueRespondents = new Set(responseList.map((r) => r.respondent_id)).size;
-  const uniqueItems = new Set(responseList.map((r) => r.item_id)).size;
+  const parts = partRows.map((row) => ({
+    id: row.part_id,
+    part_code: row.part_code,
+    part_name: row.part_name,
+    sort_order: row.sort_order,
+    responseCount: Number(row.response_count) || 0,
+    avgScore: formatScore(row.avg_score),
+  }));
 
-  const numericValues = responseList
-    .map((r) => r.value_number)
-    .filter((v): v is number => v !== null && !isNaN(v));
-  const avgScore =
-    numericValues.length > 0
-      ? (numericValues.reduce((a, b) => a + b, 0) / numericValues.length).toFixed(2)
-      : "-";
-
-  const partStats = partList.map((part) => {
-    const partResponses = responseList.filter((r) => itemPartMap[r.item_id] === part.id);
-    const partNumeric = partResponses
-      .map((r) => r.value_number)
-      .filter((v): v is number => v !== null && !isNaN(v));
-    const partAvg =
-      partNumeric.length > 0
-        ? (partNumeric.reduce((a, b) => a + b, 0) / partNumeric.length).toFixed(2)
-        : "-";
-    return {
-      ...part,
-      responseCount: partResponses.length,
-      avgScore: partAvg,
-    };
-  });
-
-  return {
-    currentRound,
-    summary: {
-      totalResponses,
-      uniqueRespondents,
-      uniqueItems,
-      avgScore,
-    },
-    parts: partStats,
-  };
+  return { currentRound, summary, parts };
 }
 
 export default async function StatisticsPage() {

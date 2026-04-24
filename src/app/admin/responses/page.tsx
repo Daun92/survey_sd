@@ -2,8 +2,6 @@ import { createClient } from "@/lib/supabase/server";
 import { Inbox } from "lucide-react";
 import ResponsesView from "./responses-view";
 
-export const revalidate = 30;
-
 interface SurveyWithResponses {
   id: string;
   title: string;
