@@ -25,7 +25,7 @@ export interface CreateCustomerData {
   notes?: string | null;
 }
 
-export interface UpdateCustomerData extends Partial<CreateCustomerData> {}
+export type UpdateCustomerData = Partial<CreateCustomerData>;
 
 export const customerRepository = {
   /** 고객사 목록 조회 (페이지네이션 + 검색) */
