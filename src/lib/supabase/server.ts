@@ -1,6 +1,9 @@
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 
+// TODO(types): createServerClient<Database>() 로 점진 이행. 개별 쿼리 타입
+// 불일치 정리 후 적용. (PR 4 에선 src/types/supabase.ts 생성·파이프라인만)
+
 export async function createClient() {
   const cookieStore = await cookies();
 
