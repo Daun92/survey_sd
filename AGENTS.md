@@ -16,30 +16,22 @@ This version has breaking changes — APIs, conventions, and file structure may 
 
 ---
 
-# ⚠️ 라우팅 제1원칙 (작업 대상 선택 기준)
+# ⚠️ 라우팅 제1원칙
 
-**실사용 경로**는 **Supabase edu_\* 기반** 이며, `/admin/*` 관리자 콘솔과 `/s/[token]` · `/d/[token]` 응답자 URL 만 사용한다. **Prisma 기반 `(dashboard)/*` · `/respond/[token]` · `/survey/[token]` · `/api/respond/*` 는 deprecated** 이다.
+**실사용 경로**: `/admin/*` 관리자 콘솔(Supabase `edu_*` · `hrd_*` 기반), `/s/[token]` · `/d/[token]` 응답자 URL. **Prisma UI 전부 제거 완료**(2026-04-24 PR A4).
 
-신규 개선·리팩터·버그 수정은 **반드시 실사용 경로에서만** 수행한다. Prisma 기반 경로는 상단에 노란 경고 배너와 `@deprecated` JSDoc 이 붙어 있다. 작업 전에 **해당 경로가 deprecated 인지부터 확인**할 것.
+**레거시 Prisma 잔존**: `/api/customers`, `/api/training`, `/api/interviews`, `/api/responses/manual`, `/api/service-types`, `/api/workflow/status` API 라우트만 남음 — **consumer UI 는 이미 삭제**되어 호출처 없음. 외부 스크립트에서 호출할 가능성 대비해 유지 중. Sprint B (customers/training/interviews 이관) 완료 시 동반 제거 예정.
+
+신규 개선·리팩터·버그 수정은 `/admin/*` 에서만. 위 API 6개와 `src/lib/db.ts`·`src/lib/repositories/`·`prisma/` 는 **신규 기능 추가 금지**.
 
 ## 데이터 모델 매핑
 
-| 실사용 (Supabase edu_\*) | Deprecated (Prisma) |
+| 실사용 (Supabase) | 레거시 (Prisma, UI 제거 완료) |
 |---|---|
 | `edu_surveys` / `edu_questions` / `edu_submissions` | `Survey` / `SurveyQuestion` / `Response` / `ResponseAnswer` |
-| `distribution_batches` / `distributions` (Supabase UUID) | `Distribution` (Prisma int) |
+| `distribution_batches` / `distributions` (UUID) | `Distribution` (int PK) |
 | `sessions` / `courses` / `projects` / `class_groups` | — |
-
-| 실사용 라우트 | 데이터 | 대응 deprecated |
-|---|---|---|
-| `/admin/surveys/[id]` 빌더 | `edu_*` | `(dashboard)/surveys/[id]` |
-| `/admin/distribute` | `distribution_batches` | `(dashboard)/distribute` |
-| `/admin/reports` | `edu_submissions` 집계 | `(dashboard)/reports` |
-| `/s/[token]` 응답자 (full flow) | `edu_surveys.url_token` | `/survey/[token]` |
-| `/d/[token]` 응답자 (개인 링크) | `distributions.unique_token` | `/respond/[token]` |
-| `/api/surveys/[token]/submit` (Supabase insert) | — | `/api/respond/[token]` |
-
-Deprecated 경로에 공용 자산·UX 개선을 얹지 않는다. 실수 방지 체크리스트: ① 대상 파일이 `(dashboard)/` · `/respond` · `/survey` · `/api/respond` · `/api/distributions` · `/api/reports` 에 있나? ② 있다면 멈추고 `/admin/*` 에서 동일 작업 가능한지 재검토.
+| (미이관) | `Customer` / `TrainingRecord` / `Interview` — API 만 잔존 |
 
 ---
 
@@ -56,9 +48,16 @@ Deprecated 경로에 공용 자산·UX 개선을 얹지 않는다. 실수 방지
 - **`/admin/responses/[surveyId]`** — 응답자별 전체 답 테이블.
 - **`/admin/hrd/*`** — HRD 실태조사 도메인.
 
-### 관리자 (`(dashboard)` group — **부분 DEPRECATED**, Prisma)
-신규 작업 금지. `/admin/*` 으로 이관 안 된 Prisma 전용 페이지만 남아있다 (고객사·교육 실시·인터뷰·임포트). 설문/배포/리포트/대시보드 Prisma 페이지 · 관련 `/api/*` 는 2026-04-22 PR 2 에서 모두 제거됨.
-- `(dashboard)/customers` · `(dashboard)/training` · `(dashboard)/interviews` · `(dashboard)/import` — 아직 `/admin/*` 이관 전. 유지만 하고 신규 기능 금지.
+### (dashboard) group — **2026-04-24 완전 제거**
+2026-04-22 PR 2 에서 설문/배포/리포트 제거, 2026-04-24 PR A4 에서 customers/training/interviews/import 페이지·layout 과 `src/components/layout/{app-shell,sidebar,header,deprecated-banner}.tsx` 모두 삭제됨. `(dashboard)` 경로 전체가 없어졌다.
+
+잔존 레거시는 **Prisma 기반 API 6개** (consumer UI 없음):
+- `/api/customers/*` (4 route) — `Customer` CRUD/export/import
+- `/api/training/*` (3 route) — `TrainingRecord`
+- `/api/interviews/*` (2 route) — `Interview`
+- `/api/responses/manual`, `/api/service-types`, `/api/workflow/status` — 단일 route
+
+Sprint B (customers/training/interviews Supabase 이관) 때 동반 제거. 그때까지 외부 스크립트 호출 대비용으로만 유지.
 
 ### 응답자 (공개)
 - **`/s/[token]`** · **`/d/[token]`** — CS 설문 응답 (공통 URL / 개인 링크).
@@ -79,7 +78,7 @@ Deprecated 경로에 공용 자산·UX 개선을 얹지 않는다. 실수 방지
 ## 데이터 소스 구분
 
 - **실사용 — Supabase (`edu_*`, `distribution_batches`, `distributions`, `sessions`, `courses`, `projects`, `class_groups`, `hrd_*`)**. `src/lib/supabase/*` 의 `createClient()` 로 접근. server component 에서 `await createClient()`, server action (`src/app/admin/distribute/actions.ts` 등) 에서는 `createAdminClient()` 사용.
-- **잔존 Prisma — `(dashboard)/customers`, `(dashboard)/training`, `(dashboard)/interviews`, `(dashboard)/import` 전용**. `src/lib/db.ts`, `src/lib/repositories/customer.repository.ts` 만 남음. 신규 기능 추가 금지, `/admin/*` 이관 예정.
+- **잔존 Prisma — API only** (consumer UI 삭제 완료). `src/lib/db.ts`, `src/lib/repositories/customer.repository.ts` 남음. 신규 기능 추가 금지, Sprint B (customers/training/interviews Supabase 이관) 때 제거.
 
 ## API 라우트
 
@@ -91,7 +90,8 @@ Deprecated 경로에 공용 자산·UX 개선을 얹지 않는다. 실수 방지
 - `/api/distributions/[id]/status` — `/s/[token]` 진입 시 상태 업데이트
 - `/api/surveys/[token]/submit` — `/s/[token]` 응답 제출 (Supabase insert)
 - `/api/surveys/[id]/export` — `/admin/reports` CSV export (Supabase 집계)
-- `/api/customers/*`, `/api/training/*`, `/api/interviews/*`, `/api/responses/manual`, `/api/hrd/responses/save`, `/api/service-types`, `/api/workflow/status`, `/api/settings`, `/api/upload` — 일부 `(dashboard)/*` 잔존 페이지 + `/admin` 에서 사용
+- `/api/hrd/responses/save`, `/api/settings`, `/api/upload` — `/admin/*` 에서 사용
+- `/api/customers/*`, `/api/training/*`, `/api/interviews/*`, `/api/responses/manual`, `/api/service-types`, `/api/workflow/status` — Prisma 기반, **consumer UI 없음**. 외부 스크립트 호출 대비용 보존. Sprint B 때 제거 예정
 
 ### 제거됨 (2026-04-22 PR 2)
 - `/api/surveys/route`, `/api/surveys/[id]/route`, `/api/surveys/[id]/questions`, `/api/surveys/templates` — Prisma 빌더 CRUD
@@ -222,6 +222,6 @@ PR 리뷰 시 이 체크리스트 위반이 있으면 머지 보류.
 
 ## 주의
 
-- **응답자 라우트·차트 기존 동작 보존**: 리팩터는 항상 `(dashboard)` 나 `/admin` 내부로 한정.
+- **응답자 라우트·차트 기존 동작 보존**: 리팩터는 항상 `/admin` 내부로 한정.
 - **Prisma 스키마 변경은 별도 작업**: 마이그레이션 동반. 프론트엔드 Phase 와 분리.
 - **플래그 게이팅은 한시적**: 리팩터 머지 후 1 릴리스 사이클 내 플래그·레거시 제거를 기본 원칙.
