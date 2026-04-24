@@ -161,12 +161,31 @@ export async function deleteSurvey(surveyId: string) {
 
 // ─── Question actions ───
 
+async function nextSortOrder(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  surveyId: string
+): Promise<number> {
+  const { data } = await supabase
+    .from("edu_questions")
+    .select("sort_order")
+    .eq("survey_id", surveyId)
+    .order("sort_order", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  return ((data?.sort_order as number | undefined) ?? 0) + 10;
+}
+
 export async function addQuestion(surveyId: string, data: AddQuestionInput) {
   const supabase = await createClient();
   const parsed = addQuestionSchema.safeParse(data);
   if (!parsed.success) {
     throw new Error("입력값 오류: " + parsed.error.issues[0].message);
   }
+
+  const sortOrder =
+    parsed.data.sort_order && parsed.data.sort_order > 0
+      ? parsed.data.sort_order
+      : await nextSortOrder(supabase, surveyId);
 
   const insertData: Record<string, unknown> = {
     survey_id: surveyId,
@@ -175,7 +194,7 @@ export async function addQuestion(surveyId: string, data: AddQuestionInput) {
     question_code: parsed.data.question_code || null,
     section: parsed.data.section || "일반",
     is_required: parsed.data.is_required ?? true,
-    sort_order: parsed.data.sort_order ?? 0,
+    sort_order: sortOrder,
     options: parsed.data.options ? JSON.stringify(parsed.data.options) : null,
   };
   const skipLogic = (data as Record<string, unknown>).skip_logic;
@@ -192,6 +211,52 @@ export async function addQuestion(surveyId: string, data: AddQuestionInput) {
   if (error) throw new Error("문항 추가 실패: " + error.message);
   revalidatePath(`/admin/surveys/${surveyId}`);
   return question;
+}
+
+export async function bulkAddQuestions(
+  surveyId: string,
+  items: AddQuestionInput[]
+) {
+  if (items.length === 0) return [];
+  const supabase = await createClient();
+
+  const parsed = items.map((d, idx) => {
+    const r = addQuestionSchema.safeParse(d);
+    if (!r.success) {
+      throw new Error(`문항 #${idx + 1} 입력값 오류: ${r.error.issues[0].message}`);
+    }
+    return { data: r.data, raw: d };
+  });
+
+  const base = await nextSortOrder(supabase, surveyId);
+
+  const rows = parsed.map(({ data, raw }, idx) => {
+    const row: Record<string, unknown> = {
+      survey_id: surveyId,
+      question_text: data.question_text,
+      question_type: data.question_type,
+      question_code: data.question_code || null,
+      section: data.section || "일반",
+      is_required: data.is_required ?? true,
+      sort_order:
+        data.sort_order && data.sort_order > 0 ? data.sort_order : base + idx * 10,
+      options: data.options ? JSON.stringify(data.options) : null,
+    };
+    const skipLogic = (raw as Record<string, unknown>).skip_logic;
+    if (skipLogic) row.skip_logic = skipLogic;
+    const metadata = (raw as Record<string, unknown>).metadata;
+    if (metadata) row.metadata = metadata;
+    return row;
+  });
+
+  const { data: inserted, error } = await supabase
+    .from("edu_questions")
+    .insert(rows)
+    .select("*");
+
+  if (error) throw new Error("문항 일괄 추가 실패: " + error.message);
+  revalidatePath(`/admin/surveys/${surveyId}`);
+  return inserted ?? [];
 }
 
 export async function updateQuestion(

@@ -46,23 +46,21 @@ Deprecated 경로에 공용 자산·UX 개선을 얹지 않는다. 실수 방지
 - **`/admin/responses/[surveyId]`** — 응답자별 전체 답 테이블.
 - **`/admin/hrd/*`** — HRD 실태조사 도메인.
 
-### 관리자 (`(dashboard)` group — **DEPRECATED**, Prisma)
-신규 작업 금지. 각 페이지 상단에 `DeprecatedPageBanner` 가 붙어 있다. 실사용 대체는 위 `/admin/*`.
-- `(dashboard)/surveys` · `(dashboard)/surveys/[id]` — 빌더 (Phase A-1 에서 3-컬럼 리팩터되었으나 실사용 안 됨, `/admin/surveys` 사용)
-- `(dashboard)/distribute` · `(dashboard)/distribute/[surveyId]`
-- `(dashboard)/reports` · `(dashboard)/reports/[surveyId]` · `(dashboard)/reports/annual`
-- **`/admin/hrd/*`** — HRD 실태조사 도메인.
+### 관리자 (`(dashboard)` group — **부분 DEPRECATED**, Prisma)
+신규 작업 금지. `/admin/*` 으로 이관 안 된 Prisma 전용 페이지만 남아있다 (고객사·교육 실시·인터뷰·임포트). 설문/배포/리포트/대시보드 Prisma 페이지 · 관련 `/api/*` 는 2026-04-22 PR 2 에서 모두 제거됨.
+- `(dashboard)/customers` · `(dashboard)/training` · `(dashboard)/interviews` · `(dashboard)/import` — 아직 `/admin/*` 이관 전. 유지만 하고 신규 기능 금지.
 
 ### 응답자 (공개)
-- **`/s/[token]`** · **`/d/[token]`** · **`/respond/[token]`** — CS 설문 응답 (채널별 경로).
+- **`/s/[token]`** · **`/d/[token]`** — CS 설문 응답 (공통 URL / 개인 링크).
 - **`/hrd/[token]`** — HRD 실태조사 응답.
+- _(deprecated `/respond/[token]`, `/survey/[token]` 은 2026-04-22 삭제됨)_
 
 ## 핵심 컴포넌트 디렉터리
 
 | 경로 | 역할 |
 |---|---|
-| `src/components/survey/builder/` | 빌더 V2 전부. `BuilderShell` 이 state 소유, `BuilderOutline/Canvas/Inspector` 로 분할. `QuestionPreview` 가 응답자 뷰 어댑터 |
-| `src/components/survey/wizard-panel.tsx` | AI 마법사 (빌더 Sheet 로 호출) |
+| `src/app/admin/surveys/[id]/SurveyEditor.tsx` | 실사용 설문 편집기. Supabase edu_surveys/edu_questions 를 server action (`./actions.ts`) 으로 조작 |
+| `src/app/admin/surveys/[id]/ai-fab.tsx` | AI 마법사 · 템플릿 적용. `addQuestion`, `bulkAddQuestions` server action 호출 |
 | `src/components/survey/LikertScale.tsx` | 리커트 공용 렌더러 (`disabled` prop 지원) |
 | `src/app/admin/reports/ReportTabs.tsx` | 5탭 client 컴포넌트. SSR 집계 결과를 탭으로 분할 |
 | `src/components/charts/` | 공용 차트 (score-bar, likert-distribution, section-score-table, respondent-matrix 등) |
@@ -71,7 +69,7 @@ Deprecated 경로에 공용 자산·UX 개선을 얹지 않는다. 실수 방지
 ## 데이터 소스 구분
 
 - **실사용 — Supabase (`edu_*`, `distribution_batches`, `distributions`, `sessions`, `courses`, `projects`, `class_groups`, `hrd_*`)**. `src/lib/supabase/*` 의 `createClient()` 로 접근. server component 에서 `await createClient()`, server action (`src/app/admin/distribute/actions.ts` 등) 에서는 `createAdminClient()` 사용.
-- **Deprecated — Prisma (`Survey`/`SurveyQuestion`/`Response`/`ResponseAnswer`/`Distribution`/`Customer`)**. `src/lib/db.ts`, `src/lib/repositories/`. `(dashboard)/*` 및 일부 `/api/*` 만 참조. 신규 기능 추가 금지.
+- **잔존 Prisma — `(dashboard)/customers`, `(dashboard)/training`, `(dashboard)/interviews`, `(dashboard)/import` 전용**. `src/lib/db.ts`, `src/lib/repositories/customer.repository.ts` 만 남음. 신규 기능 추가 금지, `/admin/*` 이관 예정.
 
 ## API 라우트
 
@@ -80,18 +78,20 @@ Deprecated 경로에 공용 자산·UX 개선을 얹지 않는다. 실수 방지
 - `/api/ai/report-comment`, `/api/ai/analyze-responses`, `/api/ai/generate-questions` — Gemini 호출. `app_settings.gemini_api_key` 필요
 - `/api/cron/*` — Vercel cron (이메일·SMS 일 1회)
 - `/api/distributions/cs-bridge` — 외부 CS 플랫폼 연동 (Phase 1)
+- `/api/distributions/[id]/status` — `/s/[token]` 진입 시 상태 업데이트
 - `/api/surveys/[token]/submit` — `/s/[token]` 응답 제출 (Supabase insert)
+- `/api/surveys/[id]/export` — `/admin/reports` CSV export (Supabase 집계)
+- `/api/customers/*`, `/api/training/*`, `/api/interviews/*`, `/api/responses/manual`, `/api/hrd/responses/save`, `/api/service-types`, `/api/workflow/status`, `/api/settings`, `/api/upload` — 일부 `(dashboard)/*` 잔존 페이지 + `/admin` 에서 사용
 
-### Deprecated (Prisma, 신규 사용 금지)
-- `/api/surveys/*` (빌더 전용 Prisma CRUD)
+### 제거됨 (2026-04-22 PR 2)
+- `/api/surveys/route`, `/api/surveys/[id]/route`, `/api/surveys/[id]/questions`, `/api/surveys/templates` — Prisma 빌더 CRUD
 - `/api/reports/*` (stats/voc/export/annual/generate-ppt — Prisma 집계)
-- `/api/distributions/*` (cs-bridge 제외 — Prisma Distribution CRUD)
-- `/api/respond/[token]` (Prisma 응답 제출)
+- `/api/distributions/route`, `[id]/route`, `send`, `remind`, `send-sms` (cs-bridge, `[id]/status` 제외)
+- `/api/respond/[token]`, `/api/dashboard`
 
 ## URL 상태 동기화 규약 (Phase A cleanup)
 
-두 client 페이지는 `useSearchParams` + `router.replace(…, { scroll: false })` 로 상태를 URL 에 반영:
-- `/surveys/[id]?q=<questionId>` — BuilderShell 의 선택 문항
+client 페이지는 `useSearchParams` + `router.replace(…, { scroll: false })` 로 상태를 URL 에 반영:
 - `/admin/reports?survey=<id>&tab=<key>` — ReportTabs 의 활성 탭 (`summary` 는 URL 제외, 나머지만 기록)
 
 새로 추가되는 client 페이지도 이 패턴을 따를 것.
@@ -105,8 +105,8 @@ Deprecated 경로에 공용 자산·UX 개선을 얹지 않는다. 실수 방지
 - **현 스펙**:
   - `cs-bridge.spec.ts` — `/api/distributions/cs-bridge` 회귀.
   - `survey-response.spec.ts` — 응답자 flow.
-  - `survey-builder.spec.ts` — 빌더 3-컬럼 스모크 (4 tests).
   - `admin-reports-tabs.spec.ts` — 교육 리포트 5탭 스모크 (4 tests).
+  - _(구 `survey-builder.spec.ts` 는 2026-04-22 BuilderShell 제거와 함께 삭제됨 — 후속 PR 에서 `/admin/surveys/[id]` SurveyEditor 기반 신규 스펙 작성 예정)_
 
 ## 커밋·PR 컨벤션
 
@@ -142,6 +142,22 @@ Deprecated 경로에 공용 자산·UX 개선을 얹지 않는다. 실수 방지
 - 기존 `001_..~031_..` 는 건드리지 않는다 (이미 프로덕션 반영됨).
 - PR 시점에 "원격 Supabase 에 마이그레이션 수동 apply 필요" 여부를 PR 본문 Test plan 에 명기할 것.
 - 긴급 적용이 필요하면 Supabase SQL Editor 또는 Supabase MCP `apply_migration` 사용 가능. 단 MCP 사용 시 `schema_migrations` 에 기록이 남는 버전이 MCP 측 타임스탬프라, 추후 CLI `db push` 와 동기 유지되도록 주의.
+
+### DROP SCHEMA 체크리스트 (2026-04-22 사고 재발 방지)
+
+**쉬운 풀이.** 우리 앱이 DB 와 대화하는 방식은 두 경로다. ① 우리가 직접 쓰는 SQL (MCP / SQL Editor) — 테이블이 있으면 바로 읽는다. ② Next.js 서버가 `supabase.from(...)` 으로 호출하는 Supabase REST API — 내부적으로 **PostgREST** 라는 서비스가 "어떤 스키마·테이블·컬럼이 있고 어떻게 연결되는지"를 미리 **카탈로그(=schema cache)** 로 만들어 놓고 거기에 맞춰 쿼리를 번역한다.
+
+이 카탈로그는 "내가 볼 스키마 목록" 이라는 설정(`pgrst.db_schemas`)을 기준으로 만들어지는데, 이 설정은 `authenticator` 라는 DB role 에 **DB 에 영구 저장**되어 있다. 과거 어느 시점에 BRIS 도메인도 REST 로 노출하려고 `public, graphql_public, bris` 로 잡아뒀었다. 오늘 새벽 `DROP SCHEMA bris` 를 실행하면서 이 설정만 같이 지우지 않은 게 문제. PostgREST 입장에선 "bris 도 훑어야 하는데 그런 스키마가 없다" 는 에러가 카탈로그 작성 단계에서 계속 터지고, 카탈로그가 못 만들어지니 **모든 REST 호출이 503/PGRST002** 로 막힌다. 테이블과 데이터는 멀쩡하지만 "창구 직원이 안내 책자를 못 만들어서 손님을 아무도 못 받는" 상태였던 것.
+
+즉 이 유형의 사고는 **DB 에 조용히 남아 있는 옛날 설정이 새 스키마 상태와 어긋날 때** 터진다. 그래서 "스키마를 지우면 그 스키마를 참조하는 설정·메타데이터도 같은 트랜잭션에서 함께 정리한다" 가 규칙이다.
+
+`DROP SCHEMA` 를 포함하는 마이그레이션을 작성할 때는 같은 파일 안에서 아래를 함께 정리할 것:
+
+1. **PostgREST 노출 목록에서 제거** — `ALTER ROLE authenticator SET pgrst.db_schemas = '<기존 목록에서 해당 스키마 제거>';` (현재 값은 `SELECT rolconfig FROM pg_roles WHERE rolname='authenticator';` 로 확인)
+2. **역할별 `search_path` 점검** — `postgres`, `authenticator`, `supabase_admin` 등에서 드랍 대상 스키마가 들어 있으면 제거.
+3. **해당 스키마를 참조하는 public 함수/뷰** — `pg_get_functiondef` / `pg_views.definition` 에 `<schema>.` 문자열이 남아 있지 않은지 grep.
+4. **PostgREST reload 트리거** — 마이그레이션 말미에 `NOTIFY pgrst, 'reload config'; NOTIFY pgrst, 'reload schema';` 추가.
+5. **복구 절차 기록** — 만약 적용 후에도 REST 가 503 이면 Supabase SQL Editor 나 MCP `execute_sql` 로 (1)+(4) 를 수동 실행. Postgres 로그 (`get_logs service=postgres`) 에서 `schema "X" does not exist` 가 찍히면 이 가설이 맞다.
 
 ## 주의
 

@@ -1,0 +1,40 @@
+name: Supabase types drift check
+
+on:
+  pull_request:
+    paths:
+      - "supabase/migrations/**"
+      - "src/types/supabase.ts"
+      - "package.json"
+      - ".github/workflows/types-check.yml"
+
+jobs:
+  types-drift:
+    runs-on: ubuntu-latest
+    # SUPABASE_ACCESS_TOKEN 없으면 skip — CI secret 미설정 환경에서도 PR 이 막히지 않도록
+    if: ${{ vars.ENABLE_TYPES_DRIFT_CHECK == 'true' }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - run: npm ci
+
+      - name: Generate types from remote Supabase
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: npm run types:gen
+
+      - name: Fail if types drifted from committed src/types/supabase.ts
+        run: |
+          if ! git diff --exit-code src/types/supabase.ts; then
+            echo ""
+            echo "::error::src/types/supabase.ts 가 원격 스키마와 어긋납니다."
+            echo "로컬에서 'npm run types:gen' 실행 후 커밋해 주세요."
+            exit 1
+          fi
