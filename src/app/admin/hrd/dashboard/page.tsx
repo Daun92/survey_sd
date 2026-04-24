@@ -18,15 +18,33 @@ const respondentStatusLabels: Record<
   in_progress: { label: "진행중", className: "bg-amber-100 text-amber-800" },
 };
 
+// hrd_survey_rounds.status CHECK: 'draft' | 'collecting' | 'closed' | 'analyzing' | 'published'
+// '현재 진행 중' 은 collecting. 이전 코드는 존재하지 않는 'active' 를 필터해 항상 0건 반환.
+// 진행중 라운드가 없으면 가장 최근 closed/analyzing/published 라운드를 fallback 으로 노출.
+const DASHBOARD_PRIMARY_STATUS = "collecting" as const;
+const DASHBOARD_FALLBACK_STATUSES = ["closed", "analyzing", "published"] as const;
+
 async function getData() {
   const supabase = await createClient();
-  const { data: currentRound } = await supabase
+  const { data: collectingRound } = await supabase
     .from("hrd_survey_rounds")
     .select("id, title, year, round_number, status, target_count")
-    .eq("status", "active")
+    .eq("status", DASHBOARD_PRIMARY_STATUS)
     .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle();
+
+  const currentRound =
+    collectingRound ??
+    (
+      await supabase
+        .from("hrd_survey_rounds")
+        .select("id, title, year, round_number, status, target_count")
+        .in("status", [...DASHBOARD_FALLBACK_STATUSES])
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle()
+    ).data;
 
   if (!currentRound) return { currentRound: null, stats: null, breakdown: [] };
 
