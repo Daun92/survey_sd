@@ -187,8 +187,22 @@ DATABASE_URL="$SESSION_URL" npx prisma db pull
   # 원격 schema_migrations 와 비교해 없는 파일만 순차 apply
   ```
 - 기존 `001_..~031_..` 는 건드리지 않는다 (이미 프로덕션 반영됨).
+- **신규 파일은 반드시 14-digit 타임스탬프 (`YYYYMMDDHHMMSS_<snake_case>.sql`)** — 연번 (`NNN_`) 절대 금지.
+- **같은 타임스탬프·같은 prefix 중복 금지** — 과거 `002_..`·`015_..` 중복으로 CLI 추적이 꼬여 한 차례 정상화 작업(2026-04-24) 이 필요했다.
 - PR 시점에 "원격 Supabase 에 마이그레이션 수동 apply 필요" 여부를 PR 본문 Test plan 에 명기할 것.
-- 긴급 적용이 필요하면 Supabase SQL Editor 또는 Supabase MCP `apply_migration` 사용 가능. 단 MCP 사용 시 `schema_migrations` 에 기록이 남는 버전이 MCP 측 타임스탬프라, 추후 CLI `db push` 와 동기 유지되도록 주의.
+- 긴급 적용이 필요하면 Supabase SQL Editor 또는 Supabase MCP `apply_migration` 사용 가능. 단 MCP 사용 시 `schema_migrations` 에 기록이 남는 버전이 MCP 측 타임스탬프라, 추후 CLI `db push` 와 동기 유지되도록 주의 — 가능하면 **항상 CLI `db push` 를 정식 경로로 쓰고**, MCP 는 로컬 환경에서 CLI 가 안 되는 상황의 마지막 수단으로만.
+
+### Idempotent 체크리스트 (모든 신규 SQL 파일 필수)
+
+신규 마이그레이션은 rollback 안전성과 재실행 안전성을 위해 다음 패턴을 따른다:
+
+- **CREATE**: `CREATE TABLE IF NOT EXISTS`, `CREATE INDEX IF NOT EXISTS`, `CREATE OR REPLACE FUNCTION`, `CREATE OR REPLACE VIEW`
+- **ALTER**: 컬럼 추가는 `ADD COLUMN IF NOT EXISTS`, 제약 추가는 `DO $$ BEGIN ... EXCEPTION WHEN duplicate_object THEN NULL; END $$;` 패턴
+- **DROP**: 반드시 `IF EXISTS`. 데이터가 있는 테이블 DROP 은 PR Test plan 에 영향 범위 · 복구 계획 명시
+- **INSERT (seed)**: `ON CONFLICT DO NOTHING` 또는 `ON CONFLICT ... DO UPDATE` — 재실행으로 중복 행 생성 방지
+- **GRANT/REVOKE**: 권한은 멱등하지만 명시적 `REVOKE ... FROM anon, authenticated` 후 필요 권한만 `GRANT` 로 화이트리스트화
+
+PR 리뷰 시 이 체크리스트 위반이 있으면 머지 보류.
 
 ### DROP SCHEMA 체크리스트 (2026-04-22 사고 재발 방지)
 
