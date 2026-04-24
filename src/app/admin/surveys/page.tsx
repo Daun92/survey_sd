@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import Link from "next/link";
 import { Plus } from "lucide-react";
 import { SurveyToolbar, type SurveyItem } from "./survey-toolbar";
+import { supabaseError } from "@/lib/supabase/errors";
 
 export const revalidate = 60;
 
@@ -32,7 +33,8 @@ async function getSurveys(supabase: Awaited<ReturnType<typeof createClient>>, st
 
   const { data: surveys, error } = await q;
 
-  if (error || !surveys) return [];
+  if (error) throw supabaseError(error, "설문 목록을 불러오지 못했습니다");
+  if (!surveys) return [];
 
   // Track 1: 날짜 기반 자동 상태 전환
   const now = new Date().toISOString();
