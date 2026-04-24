@@ -1,8 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import RespondentClient from "./respondent-client";
 
-export const revalidate = 30;
-
 async function getRespondents(supabase: Awaited<ReturnType<typeof createClient>>) {
   const { data } = await supabase
     .from("respondents")

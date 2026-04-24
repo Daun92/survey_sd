@@ -3,8 +3,6 @@ import Link from "next/link";
 import { MessageSquare } from "lucide-react";
 import DistributeTabs from "./distribute-tabs";
 
-export const revalidate = 0;
-
 async function getSurveyData(supabase: Awaited<ReturnType<typeof createClient>>) {
   const { data: surveys } = await supabase
     .from("edu_surveys")

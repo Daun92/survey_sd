@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { redirect } from "next/navigation";
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
@@ -16,8 +17,10 @@ export interface UserProfile {
 /**
  * 현재 로그인한 사용자 정보를 가져옵니다.
  * 인증되지 않은 경우 로그인 페이지로 리다이렉트합니다.
+ *
+ * React cache(): 동일 요청 내 Supabase auth.getUser() 중복 왕복 제거.
  */
-export async function requireAuth() {
+export const requireAuth = cache(async () => {
   const supabase = await createClient();
   const {
     data: { user },
@@ -28,13 +31,16 @@ export async function requireAuth() {
   }
 
   return user;
-}
+});
 
 /**
  * 인증 + 역할 + 부서를 한번에 가져옵니다.
  * user_roles 레코드가 없으면 viewer/부서없음 기본값.
+ *
+ * React cache(): admin layout + hrd layout 등 같은 요청 내 중복 호출에서
+ * auth.getUser() + get_user_role RPC 왕복을 1회로 단축.
  */
-export async function getUserProfile(): Promise<UserProfile> {
+export const getUserProfile = cache(async (): Promise<UserProfile> => {
   const supabase = await createClient();
   const {
     data: { user },
@@ -60,7 +66,7 @@ export async function getUserProfile(): Promise<UserProfile> {
     role: (data?.role as AppRole) || "viewer",
     department: (data?.department as AppDepartment) || null,
   };
-}
+});
 
 /**
  * 현재 사용자의 역할을 가져옵니다.

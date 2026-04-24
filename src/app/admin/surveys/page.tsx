@@ -4,8 +4,6 @@ import { Plus } from "lucide-react";
 import { SurveyToolbar, type SurveyItem } from "./survey-toolbar";
 import { supabaseError } from "@/lib/supabase/errors";
 
-export const revalidate = 60;
-
 async function getSurveys(supabase: Awaited<ReturnType<typeof createClient>>, statusFilter?: string, query?: string): Promise<SurveyItem[]> {
   let q = supabase
     .from("edu_surveys")

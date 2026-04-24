@@ -2,8 +2,6 @@ import { createClient } from "@/lib/supabase/server";
 import { formatDate } from "@/lib/utils";
 import { Building2, FileText } from "lucide-react";
 
-export const revalidate = 60;
-
 const statusLabels: Record<string, { label: string; className: string }> = {
   generated: {
     label: "생성완료",

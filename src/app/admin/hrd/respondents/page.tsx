@@ -3,8 +3,6 @@ import { formatDate } from "@/lib/utils";
 import { Users } from "lucide-react";
 import { RespondentActions } from "./respondent-actions";
 
-export const revalidate = 60;
-
 const statusLabels: Record<string, { label: string; className: string }> = {
   completed: { label: "완료", className: "bg-emerald-100 text-emerald-800" },
   invited: { label: "초대됨", className: "bg-blue-100 text-blue-800" },

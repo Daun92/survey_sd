@@ -9,8 +9,6 @@ import {
 } from "lucide-react";
 import { HrdRoundActions } from "./round-actions";
 
-export const revalidate = 60;
-
 const statusLabels: Record<string, { label: string; className: string }> = {
   collecting: { label: "수집 중", className: "bg-emerald-100 text-emerald-800" },
   closed: { label: "수집 완료", className: "bg-rose-100 text-rose-800" },
