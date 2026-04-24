@@ -112,7 +112,7 @@ export default async function DesignPage() {
                       비활성
                     </span>
                   )}
-                  <DesignActions partId={part.id} partName={part.part_name} mode="part" />
+                  <DesignActions part={part} mode="part" />
                 </div>
               </div>
 
@@ -146,7 +146,8 @@ export default async function DesignPage() {
                             <span className="text-[10px] text-rose-500">필수</span>
                           )}
                           <DesignActions
-                            itemId={item.id}
+                            item={item}
+                            allItems={part.items}
                             mode="item"
                           />
                         </div>
