@@ -701,33 +701,42 @@ export async function resendBatchEmails(
   let sent = 0
   let failed = 0
 
-  for (const dist of distributions) {
-    // 기존 큐에서 subject/body 가져오기
-    const { data: prevQueue } = await supabase
-      .from("email_queue")
-      .select("subject, body_html")
-      .eq("distribution_id", dist.id)
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .single()
+  // N+1 제거: 기본 템플릿은 1회만 조회
+  const { data: defaultTpl } = await supabase
+    .from("email_templates")
+    .select("subject, body_html")
+    .eq("is_default", true)
+    .limit(1)
+    .maybeSingle()
 
+  // N+1 제거: 이전 큐 entry 도 distribution_id 단위로 일괄 조회 후 JS 에서 최신 1건씩 매핑
+  const distIds = distributions.map((d) => d.id)
+  const { data: prevQueueRows } = await supabase
+    .from("email_queue")
+    .select("distribution_id, subject, body_html, created_at")
+    .in("distribution_id", distIds)
+    .order("created_at", { ascending: false })
+
+  const prevQueueByDist = new Map<string, { subject: string; body_html: string }>()
+  for (const row of prevQueueRows ?? []) {
+    if (!prevQueueByDist.has(row.distribution_id)) {
+      prevQueueByDist.set(row.distribution_id, { subject: row.subject, body_html: row.body_html })
+    }
+  }
+
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://survey.exc.co.kr"
+
+  for (const dist of distributions) {
     let subject: string
     let bodyHtml: string
 
-    if (prevQueue) {
-      subject = prevQueue.subject
-      bodyHtml = prevQueue.body_html
+    const prev = prevQueueByDist.get(dist.id)
+    if (prev) {
+      subject = prev.subject
+      bodyHtml = prev.body_html
     } else {
-      const { data: defaultTpl } = await supabase
-        .from("email_templates")
-        .select("subject, body_html")
-        .eq("is_default", true)
-        .limit(1)
-        .single()
-
       if (!defaultTpl) continue
 
-      const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://survey.exc.co.kr"
       const vars = getTemplateVariables({
         recipientName: dist.recipient_name ?? undefined,
         surveyLink: `${baseUrl}/d/${dist.unique_token}`,
@@ -1264,32 +1273,42 @@ export async function resendBatchSms(
   let sent = 0
   let failed = 0
 
-  for (const dist of distributions) {
-    const { data: prevQueue } = await supabase
-      .from("sms_queue")
-      .select("body_text, message_type")
-      .eq("distribution_id", dist.id)
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .single()
+  // N+1 제거: 기본 SMS 템플릿은 1회만 조회
+  const { data: defaultTpl } = await supabase
+    .from("sms_templates")
+    .select("body_text")
+    .eq("is_default", true)
+    .limit(1)
+    .maybeSingle()
 
+  // N+1 제거: 이전 큐 entry 도 distribution_id 단위로 일괄 조회 후 JS 에서 최신 1건씩 매핑
+  const distIds = distributions.map((d) => d.id)
+  const { data: prevQueueRows } = await supabase
+    .from("sms_queue")
+    .select("distribution_id, body_text, message_type, created_at")
+    .in("distribution_id", distIds)
+    .order("created_at", { ascending: false })
+
+  const prevQueueByDist = new Map<string, { body_text: string; message_type: string }>()
+  for (const row of prevQueueRows ?? []) {
+    if (!prevQueueByDist.has(row.distribution_id)) {
+      prevQueueByDist.set(row.distribution_id, { body_text: row.body_text, message_type: row.message_type })
+    }
+  }
+
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://survey.exc.co.kr"
+
+  for (const dist of distributions) {
     let bodyText: string
     let messageType: "SMS" | "LMS"
 
-    if (prevQueue) {
-      bodyText = prevQueue.body_text
-      messageType = prevQueue.message_type as "SMS" | "LMS"
+    const prev = prevQueueByDist.get(dist.id)
+    if (prev) {
+      bodyText = prev.body_text
+      messageType = prev.message_type as "SMS" | "LMS"
     } else {
-      const { data: defaultTpl } = await supabase
-        .from("sms_templates")
-        .select("body_text")
-        .eq("is_default", true)
-        .limit(1)
-        .single()
-
       if (!defaultTpl) continue
 
-      const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://survey.exc.co.kr"
       const vars = getSmsTemplateVariables({
         recipientName: dist.recipient_name ?? undefined,
         surveyLink: `${baseUrl}/d/${dist.unique_token}`,
