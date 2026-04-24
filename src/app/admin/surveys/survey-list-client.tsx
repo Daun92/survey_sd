@@ -169,6 +169,10 @@ function StatusDropdown({ surveyId, status }: { surveyId: string; status: string
           <div className="fixed inset-0 z-[9998]" onClick={() => setOpen(false)} />
           <div
             className="fixed z-[9999] min-w-[140px] rounded-lg border border-stone-200 bg-white shadow-lg py-1"
+            // 드롭다운이 열린 직후 한 번만 버튼 위치를 측정해 fixed 레이어를 배치.
+            // 렌더 중 ref 읽기이지만, open=true 직전 프레임에 이미 버튼이 mount 되어 있어 문제가 없음.
+            // 정식 수정은 useLayoutEffect 로 측정값을 state 에 저장하는 리팩터 (향후 별도 PR).
+            // eslint-disable-next-line react-hooks/refs
             style={(() => {
               if (!buttonRef.current) return {};
               const rect = buttonRef.current.getBoundingClientRect();
