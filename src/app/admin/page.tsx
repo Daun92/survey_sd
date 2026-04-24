@@ -262,9 +262,11 @@ async function getDashboardData() {
       totalSubmissions: totalSubmissions ?? 0,
     },
     funnel: {
+      // 모두 최근 60일 distributions 집계 기반 (같은 window, 같은 소스) —
+      // 분자/분모 time window 가 달라 %가 100 을 넘는 버그 방지.
       distributed: totalDistributed,
       opened: openedCount + startedCount + completedCount,
-      responded: totalSubmissions ?? 0,
+      responded: completedCount,
     },
     alerts,
     surveyRows,
@@ -285,7 +287,10 @@ export default async function DashboardPage() {
       <div className="mb-6 flex items-center justify-between">
         <div>
           <h1 className="text-xl font-bold text-stone-800">대시보드</h1>
-          <p className="text-sm text-stone-500 mt-0.5">교육 설문 운영 현황</p>
+          <p className="text-sm text-stone-500 mt-0.5">
+            교육 설문 운영 현황
+            <span className="ml-2 text-xs text-stone-400">(배포·응답 지표는 최근 60일 기준)</span>
+          </p>
         </div>
         <div className="flex items-center gap-2">
           <Link
@@ -370,7 +375,10 @@ export default async function DashboardPage() {
       {/* ── 응답 퍼널 ── */}
       {data.funnel.distributed > 0 && (
         <div className="rounded-xl border border-stone-200 bg-white shadow-sm p-5 mb-6">
-          <h3 className="text-sm font-semibold text-stone-700 mb-4">응답 퍼널</h3>
+          <div className="mb-4 flex items-baseline justify-between">
+            <h3 className="text-sm font-semibold text-stone-700">응답 퍼널</h3>
+            <span className="text-[11px] text-stone-400">최근 60일 기준</span>
+          </div>
           <div className="flex items-center gap-2">
             {/* 배포 */}
             <div className="flex-1">
