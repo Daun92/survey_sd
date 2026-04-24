@@ -5,7 +5,7 @@ import { Mail, Send, Clock, CalendarClock, Loader2, CheckCircle2, AlertTriangle,
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { renderTemplate } from "@/lib/email/template-renderer"
-import { getEmailTemplates, scheduleEmailBatch, sendTestEmail } from "./actions"
+import { getEmailTemplates, scheduleEmailBatch, sendTestEmail } from "./email-actions"
 
 interface EmailTemplate {
   id: string
