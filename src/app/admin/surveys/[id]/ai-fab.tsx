@@ -8,6 +8,7 @@ import {
   Sparkles, X, Loader2, Plus, FileText, Check, Upload, Paperclip,
   Wand2, Send,
 } from 'lucide-react'
+import { addQuestion, bulkAddQuestions } from './actions'
 
 interface GeneratedQuestion {
   section: string
@@ -152,49 +153,80 @@ export default function AIFab({ surveyId, educationType, templates, onQuestionsA
 
   const addSingleQuestion = async (q: GeneratedQuestion, msgIdx: number, qIdx: number) => {
     const key = `${msgIdx}-${qIdx}`
-    const res = await fetch(`/api/surveys/${surveyId}/questions`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
+    try {
+      await addQuestion(surveyId, {
         section: q.sectionLabel || q.section || '추가 문항',
         question_text: q.text,
         question_type: q.type === 'text' ? 'text' : 'likert_5',
         is_required: q.required,
-      }),
-    })
-    if (res.ok) {
+      })
       setAddedIds((prev) => new Set(prev).add(key))
       onQuestionsAdded()
+    } catch (e) {
+      setMessages((prev) => [
+        ...prev,
+        { role: 'assistant', content: e instanceof Error ? e.message : '문항 추가 실패' },
+      ])
     }
   }
 
   const addAllFromMessage = async (questions: GeneratedQuestion[], msgIdx: number) => {
     setLoading(true)
-    for (let i = 0; i < questions.length; i++) {
-      const key = `${msgIdx}-${i}`
-      if (!addedIds.has(key)) await addSingleQuestion(questions[i], msgIdx, i)
+    try {
+      const pending = questions
+        .map((q, i) => ({ q, i, key: `${msgIdx}-${i}` }))
+        .filter(({ key }) => !addedIds.has(key))
+
+      if (pending.length === 0) return
+
+      await bulkAddQuestions(
+        surveyId,
+        pending.map(({ q }) => ({
+          section: q.sectionLabel || q.section || '추가 문항',
+          question_text: q.text,
+          question_type: q.type === 'text' ? 'text' : 'likert_5',
+          is_required: q.required,
+        })),
+      )
+      setAddedIds((prev) => {
+        const next = new Set(prev)
+        for (const { key } of pending) next.add(key)
+        return next
+      })
+      onQuestionsAdded()
+    } catch (e) {
+      setMessages((prev) => [
+        ...prev,
+        { role: 'assistant', content: e instanceof Error ? e.message : '문항 추가 실패' },
+      ])
+    } finally {
+      setLoading(false)
     }
-    setLoading(false)
   }
 
   const applyTemplate = async (template: Template) => {
     if (!template.question_config?.length) return
     setAddingTemplate(true)
-    for (const q of template.question_config) {
-      await fetch(`/api/surveys/${surveyId}/questions`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+    try {
+      await bulkAddQuestions(
+        surveyId,
+        template.question_config.map((q) => ({
           section: q.section || '템플릿 문항',
           question_text: q.question_text,
           question_type: q.question_type || 'likert_5',
           is_required: q.is_required ?? true,
-        }),
-      })
+        })),
+      )
+      onQuestionsAdded()
+      setSelectedTemplateId(null)
+    } catch (e) {
+      setMessages((prev) => [
+        ...prev,
+        { role: 'assistant', content: e instanceof Error ? e.message : '템플릿 추가 실패' },
+      ])
+    } finally {
+      setAddingTemplate(false)
     }
-    setAddingTemplate(false)
-    onQuestionsAdded()
-    setSelectedTemplateId(null)
   }
 
   const selectedTemplate = templates.find((t) => t.id === selectedTemplateId)
