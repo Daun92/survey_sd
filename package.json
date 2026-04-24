@@ -7,6 +7,8 @@
     "build": "prisma generate && next build",
     "start": "next start",
     "lint": "eslint",
+    "test": "vitest",
+    "test:ci": "vitest run",
     "types:gen": "supabase gen types typescript --project-id gdwhbacuzhynvegkfoga --schema public > src/types/supabase.ts",
     "types:check": "npm run types:gen && git diff --exit-code src/types/supabase.ts"
   },
@@ -55,9 +57,11 @@
     "dotenv": "^17.3.1",
     "eslint": "^9",
     "eslint-config-next": "16.2.1",
+    "happy-dom": "^17.6.3",
     "supabase": "^2.40.7",
     "tailwindcss": "^4",
     "tsx": "^4.21.0",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^2.1.9"
   }
 }

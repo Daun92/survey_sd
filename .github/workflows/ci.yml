@@ -1,0 +1,62 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  typecheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+      - run: npm ci
+      - run: npx prisma generate
+      - run: npx tsc --noEmit
+
+  lint:
+    runs-on: ubuntu-latest
+    # TODO: 기존 코드에 pre-existing 에러 ~82건 (any, react-hooks/refs 등).
+    # CI 파이프라인 도입 자체를 막지 않도록 당분간 non-blocking.
+    # 후속 청소 PR 머지 후 continue-on-error 제거하여 blocking 전환 예정.
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+      - run: npm ci
+      - run: npx eslint src/
+
+  unit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+      - run: npm ci
+      - run: npm run test:ci
+
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+      - run: npm ci
+      - name: next build (prisma generate 포함)
+        # 런타임에 프로덕션 Supabase URL 이 필요 없도록 dummy 제공
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: "https://build-placeholder.supabase.co"
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: "build-placeholder-key"
+          DATABASE_URL: "postgresql://user:pass@localhost:5432/db?schema=public"
+        run: npm run build

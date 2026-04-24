@@ -99,7 +99,7 @@ client 페이지는 `useSearchParams` + `router.replace(…, { scroll: false })`
 ## E2E 테스트 (`e2e/`)
 
 - Playwright (`playwright.config.ts`). baseURL 기본 프로덕션 URL, 로컬 대상이면 `E2E_BASE_URL` 설정.
-- **인증 모델**: 공개 토큰 URL(`E2E_SURVEY_TOKEN`) 혹은 Supabase service-role(`SUPABASE_SERVICE_ROLE_KEY`). 관리자 UI 테스트는 `e2e/helpers/auth.ts` 의 `loginAsAdmin(page)` 사용. `E2E_ADMIN_EMAIL` / `E2E_ADMIN_PASSWORD` 없으면 자동 `test.skip()`.
+- **인증 모델**: 공개 토큰 URL(`E2E_SURVEY_TOKEN`) 혹은 Supabase service-role(`SUPABASE_SERVICE_ROLE_KEY`). 관리자 UI 테스트는 `e2e/helpers/auth.ts` 의 `loginAsAdmin(page)` 사용. `SURVEY_CS_ID` / `SURVEY_CS_PW` (운영 CS 관리 계정) 없으면 자동 `test.skip()`. legacy `E2E_ADMIN_EMAIL` / `E2E_ADMIN_PASSWORD` 도 fallback 으로 허용.
 - **데이터**: 필요 시 `beforeAll` 에서 service-role 로 seed, `afterAll` 에서 cleanup (예: `cs-bridge.spec.ts`).
 - **실행**: `npx playwright test e2e/<spec>.spec.ts --reporter=list`
 - **현 스펙**:
