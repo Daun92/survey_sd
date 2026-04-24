@@ -55,22 +55,28 @@ export default function SmsSendPanel({ batchId, surveyId, results }: Props) {
   const [testSending, setTestSending] = useState(false)
   const [testResult, setTestResult] = useState<{ success?: boolean; error?: string } | null>(null)
 
-  useEffect(() => {
-    async function load() {
-      const data = await getSmsTemplates()
-      setTemplates(data)
-      const defaultTpl = data.find((t) => t.is_default)
-      if (defaultTpl) setSelectedTemplateId(defaultTpl.id)
-      else if (data.length > 0) setSelectedTemplateId(data[0].id)
-      setLoadingTemplates(false)
-    }
-    load()
-  }, [])
-
-  useEffect(() => {
+  // 템플릿 선택 시 편집 상태까지 함께 초기화 (useEffect 재귀 setState 회피)
+  const selectTemplate = (id: string) => {
+    setSelectedTemplateId(id)
     setCustomBodyText(null)
     setIsEditing(false)
-  }, [selectedTemplateId])
+  }
+
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      const data = await getSmsTemplates()
+      if (cancelled) return
+      setTemplates(data)
+      const defaultTpl = data.find((t) => t.is_default)
+      if (defaultTpl) selectTemplate(defaultTpl.id)
+      else if (data.length > 0) selectTemplate(data[0].id)
+      setLoadingTemplates(false)
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   const selectedTemplate = templates.find((t) => t.id === selectedTemplateId)
   const activeBodyText = customBodyText ?? selectedTemplate?.body_text ?? ""
@@ -195,7 +201,7 @@ export default function SmsSendPanel({ batchId, surveyId, results }: Props) {
           ) : (
             <select
               value={selectedTemplateId}
-              onChange={(e) => setSelectedTemplateId(e.target.value)}
+              onChange={(e) => selectTemplate(e.target.value)}
               className="w-full rounded-lg border border-stone-200 px-3 py-2 text-sm focus:border-teal-400 focus:outline-none"
             >
               {templates.map((t) => (

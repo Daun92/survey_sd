@@ -63,16 +63,25 @@ export default function EmailProviderSettings() {
   const [testResult, setTestResult] = useState<{ success?: boolean; error?: string } | null>(null)
   const [formError, setFormError] = useState<string | null>(null)
 
-  useEffect(() => {
-    loadProviders()
-  }, [])
-
   const loadProviders = async () => {
     setLoading(true)
     const data = await getEmailProviders()
     setProviders(data as ProviderItem[])
     setLoading(false)
   }
+
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      const data = await getEmailProviders()
+      if (cancelled) return
+      setProviders(data as ProviderItem[])
+      setLoading(false)
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   const resetForm = () => {
     setFormName('')
