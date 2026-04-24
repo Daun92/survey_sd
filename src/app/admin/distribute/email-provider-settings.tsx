@@ -5,7 +5,7 @@ import { Settings, Plus, Trash2, Loader2, CheckCircle2, AlertTriangle, TestTube,
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { getEmailProviders, saveEmailProvider, deleteEmailProvider, testEmailProvider } from "./actions"
+import { getEmailProviders, saveEmailProvider, deleteEmailProvider, testEmailProvider } from "./email-actions"
 
 type ProviderType = 'hiworks' | 'smtp' | 'gmail' | 'outlook'
 
