@@ -6,6 +6,16 @@ This version has breaking changes — APIs, conventions, and file structure may 
 
 ---
 
+# 배포·환경 좌표
+
+- **Vercel 프로젝트**: `exc-survey` (team `daun92's projects`, id `prj_PgjIppaIsTazIkQxrA63EIlbfBjm`)
+- **배포 URL**: https://exc-survey.vercel.app — `main` push → Vercel 프로덕션 자동 배포
+- **Supabase 프로젝트**: `cs-survey` (ref `gdwhbacuzhynvegkfoga`, region `ap-northeast-2`)
+- **GitHub**: https://github.com/Daun92/survey_sd
+- **Cron**: Vercel cron `/api/cron/send-emails`, `/api/cron/send-sms` (일 1회)
+
+---
+
 # ⚠️ 라우팅 제1원칙 (작업 대상 선택 기준)
 
 **실사용 경로**는 **Supabase edu_\* 기반** 이며, `/admin/*` 관리자 콘솔과 `/s/[token]` · `/d/[token]` 응답자 URL 만 사용한다. **Prisma 기반 `(dashboard)/*` · `/respond/[token]` · `/survey/[token]` · `/api/respond/*` 는 deprecated** 이다.
@@ -122,6 +132,43 @@ client 페이지는 `useSearchParams` + `router.replace(…, { scroll: false })`
 - `npx tsc --noEmit` — 타입체크.
 - `npx eslint <path>` — 린트.
 - Prisma: `npx prisma generate` (`postinstall` 자동) · `npx prisma migrate dev` (스키마 변경 시).
+
+## 로컬 개발 환경 세팅 (신규 clone / worktree)
+
+```bash
+# 1) Vercel 프로젝트 링크
+vercel link --yes --project exc-survey
+
+# 2) 환경변수 내려받기 (preview 기준 + CRON_SECRET 수동 보강)
+vercel env pull .env.local --environment=preview --yes
+vercel env pull .env.development.tmp --environment=development --yes
+grep "^CRON_SECRET=" .env.development.tmp >> .env.local
+echo 'NEXT_PUBLIC_APP_URL="http://localhost:3000"' >> .env.local
+rm .env.development.tmp
+
+# 3) 의존성 + Prisma client
+npm install
+npx prisma generate
+
+# 4) dev 서버
+npm run dev   # http://localhost:3000
+```
+
+**주의**: `NEXT_PUBLIC_SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_ANON_KEY` / `NEXT_PUBLIC_APP_URL` 는 Vercel **Development 환경에는 없고** Preview/Production 에만 있어서 `--environment=preview` 로 pull 한다. `CRON_SECRET` 은 반대로 Development 에만 있으니 별도로 합친다.
+
+### Prisma introspect (필요할 때만)
+
+**실사용 경로는 Supabase 기반이라 대부분 introspect 불필요**. 드물게 잔존 Prisma 모델(`Customer` 등)을 DB 와 맞춰야 할 때만:
+
+기본 `DATABASE_URL` 은 Supabase Transaction Pooler (port 6543). `prisma db pull` 은 이 포트에서 timeout 나므로 Session Pooler(port 5432) 로 바꿔서 실행:
+
+```bash
+DB_URL=$(grep "^DATABASE_URL=" .env.local | head -1 | sed 's/^DATABASE_URL=//;s/^"//;s/"$//')
+SESSION_URL=$(echo "$DB_URL" | sed 's|:6543/|:5432/|')
+DATABASE_URL="$SESSION_URL" npx prisma db pull
+```
+
+`auth.users` 크로스 스키마 FK 때문에 `datasource db { schemas = ["public","auth"] }` 설정 필요.
 
 ## Supabase 마이그레이션 컨벤션
 
