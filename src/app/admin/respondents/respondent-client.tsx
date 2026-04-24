@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import Link from "next/link";
 import {
   UserCheck,
   Plus,
@@ -14,6 +15,7 @@ import {
   AlertCircle,
   Upload,
   History,
+  Activity,
 } from "lucide-react";
 import {
   createRespondent,
@@ -778,6 +780,13 @@ export default function RespondentClient({
                         </td>
                         <td className="px-4 py-3 text-right">
                           <div className="flex items-center justify-end gap-1">
+                            <Link
+                              href={`/admin/respondents/${r.id}/timeline`}
+                              className="rounded-md p-1.5 text-stone-400 hover:bg-teal-50 hover:text-teal-600"
+                              title="발송·응답 타임라인"
+                            >
+                              <Activity size={14} />
+                            </Link>
                             <button
                               onClick={() => startEdit(r)}
                               className="rounded-md p-1.5 text-stone-400 hover:bg-stone-100 hover:text-stone-600"
