@@ -171,6 +171,19 @@ export async function createDistributionBatch(input: CreateBatchInput) {
     .select("id, recipient_name, recipient_company, recipient_email, recipient_phone, unique_token")
 
   if (distErr || !distributions) {
+    // distributions insert 실패 시 orphan batch 를 정리 (부분 성공으로 인한 DB 불일치 방지).
+    // Supabase 는 RLS 하 트랜잭션 미지원이므로 RPC 대신 compensating delete 로 에뮬레이트.
+    const { error: cleanupErr } = await supabase
+      .from("distribution_batches")
+      .delete()
+      .eq("id", batch.id)
+    if (cleanupErr) {
+      console.error("[createDistributionBatch] orphan batch cleanup 실패", {
+        batchId: batch.id,
+        distErr: distErr?.message,
+        cleanupErr: cleanupErr.message,
+      })
+    }
     return { error: "개인 링크 생성에 실패했습니다: " + (distErr?.message ?? "") }
   }
 
