@@ -5,7 +5,7 @@ import { Smartphone, Plus, Trash2, Loader2, CheckCircle2, AlertTriangle, TestTub
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { getSmsProviders, saveSmsProvider, deleteSmsProvider, testSmsProvider } from "./actions"
+import { getSmsProviders, saveSmsProvider, deleteSmsProvider, testSmsProvider } from "./sms-actions"
 
 type ProviderType = 'aligo' | 'ppurio' | 'naver_cloud' | 'twilio'
 
