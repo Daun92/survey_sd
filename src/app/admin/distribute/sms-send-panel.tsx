@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { renderTemplate } from "@/lib/email/template-renderer"
 import { getSmsByteLength, getSmsMessageType } from "@/lib/sms/template-renderer"
-import { getSmsTemplates, scheduleSmsBatch, sendTestSms } from "./actions"
+import { getSmsTemplates, scheduleSmsBatch, sendTestSms } from "./sms-actions"
 
 interface SmsTemplate {
   id: string
