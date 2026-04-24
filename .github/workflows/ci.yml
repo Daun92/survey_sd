@@ -20,10 +20,8 @@ jobs:
 
   lint:
     runs-on: ubuntu-latest
-    # TODO: 기존 코드에 pre-existing 에러 ~82건 (any, react-hooks/refs 등).
-    # CI 파이프라인 도입 자체를 막지 않도록 당분간 non-blocking.
-    # 후속 청소 PR 머지 후 continue-on-error 제거하여 blocking 전환 예정.
-    continue-on-error: true
+    # A-3: react-hooks/* 0건 (A-1-c), no-empty-object-type 해결, no-explicit-any 는 warn 로
+    # 완화하여 pre-existing 71건 을 가시화된 warning 으로 유지. 신규 회귀 blocking.
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
