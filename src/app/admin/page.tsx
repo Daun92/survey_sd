@@ -19,26 +19,18 @@ import {
   BarChart3,
 } from "lucide-react";
 import { getUserProfile } from "@/lib/auth";
-import RecentActivity, { type ActivityItem } from "./recent-activity";
+import RecentActivity from "./recent-activity";
+import {
+  aggregateDashboard,
+  type DistAggregateRow,
+  type SubmissionCountRow,
+  type ActiveSurvey,
+  type RecentOpening,
+  type RecentSubmission,
+  type SurveyDetail,
+} from "@/lib/dashboard-aggregator";
 
 // ─── 데이터 조회 ───
-
-type SubmissionCountRow = { survey_id: string; cnt: number | string };
-type DistAggregateRow = {
-  survey_id: string;
-  total: number | string;
-  pending: number | string;
-  opened: number | string;
-  started: number | string;
-  completed: number | string;
-};
-type DistBuckets = {
-  total: number;
-  pending: number;
-  opened: number;
-  started: number;
-  completed: number;
-};
 
 async function getDashboardData() {
   const supabase = await createClient();
@@ -113,166 +105,19 @@ async function getDashboardData() {
     supabase.rpc("edu_submission_counts_by_survey"),
   ]);
 
-  const activeSurveys = activeSurveysRes.data;
-  const totalSubmissions = totalSubmissionsRes.count;
-  const recentSubmissions = recentSubmissionsRes.data;
-  const prevWeekSubmissions = prevWeekSubmissionsRes.data;
-  const recentOpenings = recentOpeningsRes.data;
-  const surveyDetails = surveyDetailsRes.data;
-  const submissionCounts = (submissionCountsRes.data ??
-    []) as unknown as SubmissionCountRow[];
-  const distAggregates = (distAggregatesRes.data ??
-    []) as unknown as DistAggregateRow[];
-
-  const submissionBySurvey: Record<string, number> = {};
-  submissionCounts.forEach((row) => {
-    submissionBySurvey[row.survey_id] = Number(row.cnt) || 0;
+  return aggregateDashboard({
+    now,
+    activeSurveys: activeSurveysRes.data as ActiveSurvey[] | null,
+    totalSubmissions: totalSubmissionsRes.count,
+    recentSubmissions: recentSubmissionsRes.data as RecentSubmission[] | null,
+    prevWeekSubmissions: prevWeekSubmissionsRes.data as RecentSubmission[] | null,
+    distAggregates: (distAggregatesRes.data ??
+      []) as unknown as DistAggregateRow[],
+    recentOpenings: recentOpeningsRes.data as RecentOpening[] | null,
+    surveyDetails: surveyDetailsRes.data as unknown as SurveyDetail[] | null,
+    submissionCounts: (submissionCountsRes.data ??
+      []) as unknown as SubmissionCountRow[],
   });
-
-  // 배포 집계 (최근 60일)
-  const distBySurvey: Record<string, DistBuckets> = {};
-  let totalDistributed = 0;
-  let pendingCount = 0;
-  let openedCount = 0;
-  let startedCount = 0;
-  let completedCount = 0;
-  distAggregates.forEach((row) => {
-    const buckets: DistBuckets = {
-      total: Number(row.total) || 0,
-      pending: Number(row.pending) || 0,
-      opened: Number(row.opened) || 0,
-      started: Number(row.started) || 0,
-      completed: Number(row.completed) || 0,
-    };
-    distBySurvey[row.survey_id] = buckets;
-    totalDistributed += buckets.total;
-    pendingCount += buckets.pending;
-    openedCount += buckets.opened;
-    startedCount += buckets.started;
-    completedCount += buckets.completed;
-  });
-  const respondedCount = openedCount + startedCount + completedCount;
-  const responseRate =
-    totalDistributed > 0
-      ? Math.round((respondedCount / totalDistributed) * 100)
-      : 0;
-
-  // 이번 주 / 지난주 비교
-  const thisWeekCount = (recentSubmissions ?? []).length;
-  const prevWeekCount = (prevWeekSubmissions ?? []).length;
-  const weekDiff = thisWeekCount - prevWeekCount;
-
-  // 주의 필요 항목 (최근 60일 내 배포했는데 응답 없는 설문)
-  const alerts: { level: "red" | "yellow" | "green"; title: string; detail: string; surveyId: string }[] = [];
-
-  (surveyDetails ?? []).forEach((s: any) => {
-    const dist = distBySurvey[s.id];
-    const responses = submissionBySurvey[s.id] || 0;
-    const session = s.sessions as any;
-    const customerName = session?.courses?.projects?.customers?.company_name;
-    const label = customerName ? `${customerName} — ${s.title}` : s.title;
-
-    if (s.status === "active" && dist && dist.total > 0 && responses === 0) {
-      const daysSince = Math.floor((now.getTime() - new Date(s.created_at).getTime()) / (1000 * 60 * 60 * 24));
-      alerts.push({
-        level: "red",
-        title: label,
-        detail: `${dist.total}건 배포, 0건 응답 (${daysSince}일 경과)`,
-        surveyId: s.id,
-      });
-    } else if (s.status === "draft" && dist && dist.total > 0) {
-      alerts.push({
-        level: "yellow",
-        title: label,
-        detail: `draft 상태 — ${dist.total}건 배포됨 (설문 활성화 필요)`,
-        surveyId: s.id,
-      });
-    } else if (s.status === "active" && dist && dist.total > 0 && dist.pending > dist.total * 0.8) {
-      alerts.push({
-        level: "yellow",
-        title: label,
-        detail: `${dist.total}건 배포 중 ${dist.pending}건 미열람 (${Math.round((dist.pending / dist.total) * 100)}%)`,
-        surveyId: s.id,
-      });
-    }
-  });
-
-  // 설문별 현황 테이블 (active 설문)
-  const surveyRows = (activeSurveys ?? []).map((s: any) => {
-    const dist = distBySurvey[s.id] || { total: 0, pending: 0, opened: 0, started: 0, completed: 0 };
-    const responses = submissionBySurvey[s.id] || 0;
-    const detail = (surveyDetails ?? []).find((d: any) => d.id === s.id);
-    const detailSession = detail?.sessions as any;
-    const customerName = detailSession?.courses?.projects?.customers?.company_name;
-    return {
-      id: s.id,
-      title: s.title,
-      customerName: customerName || null,
-      distributed: dist.total,
-      opened: dist.opened + dist.started + dist.completed,
-      responses,
-      responseRate: dist.total > 0 ? Math.round((responses / dist.total) * 100) : null,
-      createdAt: s.created_at,
-    };
-  });
-
-  // 고객사별 현황
-  const customerMap: Record<string, { surveys: number; responses: number }> = {};
-  (surveyDetails ?? []).forEach((s: any) => {
-    const sess = s.sessions as any;
-    const customerName = sess?.courses?.projects?.customers?.company_name;
-    if (!customerName) return;
-    if (!customerMap[customerName]) customerMap[customerName] = { surveys: 0, responses: 0 };
-    customerMap[customerName].surveys++;
-    customerMap[customerName].responses += (submissionBySurvey[s.id] || 0);
-  });
-  const customerRows = Object.entries(customerMap)
-    .map(([name, data]) => ({ name, ...data }))
-    .sort((a, b) => b.responses - a.responses)
-    .slice(0, 8);
-
-  // 최근 활동 (열람/응답 이벤트) — 원본 타임스탬프로 실제 시간순 정렬
-  const activityItems: ActivityItem[] = [];
-  (recentOpenings ?? []).forEach((d) => {
-    if (!d.opened_at) return;
-    activityItems.push({
-      at: d.opened_at,
-      kind: "opened",
-      text: `${d.recipient_name || "익명"} 열람`,
-    });
-  });
-  (recentSubmissions ?? []).forEach((s: any) => {
-    activityItems.push({
-      at: s.submitted_at,
-      kind: "responded",
-      text: "새 응답 제출",
-    });
-  });
-  activityItems.sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime());
-
-  return {
-    stats: {
-      activeSurveyCount: (activeSurveys ?? []).length,
-      responseRate,
-      pendingCount,
-      thisWeekCount,
-      weekDiff,
-      totalDistributed,
-      respondedCount,
-      totalSubmissions: totalSubmissions ?? 0,
-    },
-    funnel: {
-      // 모두 최근 60일 distributions 집계 기반 (같은 window, 같은 소스) —
-      // 분자/분모 time window 가 달라 %가 100 을 넘는 버그 방지.
-      distributed: totalDistributed,
-      opened: openedCount + startedCount + completedCount,
-      responded: completedCount,
-    },
-    alerts,
-    surveyRows,
-    customerRows,
-    recentActivity: activityItems.slice(0, 20),
-  };
 }
 
 // ─── 페이지 렌더 ───
