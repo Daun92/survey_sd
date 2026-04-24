@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState } from 'react'
 import {
   ChevronLeft,
   ChevronRight,
@@ -9,8 +9,8 @@ import {
   CheckCircle2,
   AlertCircle,
 } from 'lucide-react'
-import type { HrdSurveyRound, HrdSurveyPart, HrdSurveyItem, HrdRespondent, AnswerOption } from '@/types/hrd-survey'
-import { HRD_PART_NAMES } from '@/types/hrd-survey'
+import type { HrdSurveyRound, HrdSurveyPart, HrdSurveyItem, HrdRespondent } from '@/types/hrd-survey'
+import { AnswerTypeInput } from '@/components/hrd/answer-type-input'
 
 interface Props {
   respondent: HrdRespondent
@@ -191,195 +191,11 @@ export function HrdSurveyForm({ respondent, round, parts, existingResponses, tok
         </div>
 
         <div className="mt-3">
-          {/* 텍스트 입력 */}
-          {item.answer_type === 'text' && (
-            <input
-              type="text"
-              value={(value as string) || ''}
-              onChange={e => setAnswer(item.id, e.target.value)}
-              placeholder={item.placeholder || '입력해 주세요'}
-              className="w-full rounded-lg border border-stone-200 px-3 py-2 text-sm focus:border-teal-400 focus:outline-none focus:ring-1 focus:ring-teal-400"
-            />
-          )}
-
-          {/* 숫자 입력 */}
-          {(item.answer_type === 'number' || item.answer_type === 'currency' || item.answer_type === 'percent') && (
-            <div className="flex items-center gap-2">
-              <input
-                type="number"
-                value={(value as number) ?? ''}
-                onChange={e => setAnswer(item.id, e.target.value ? parseFloat(e.target.value) : '')}
-                placeholder="0"
-                className="w-48 rounded-lg border border-stone-200 px-3 py-2 text-right text-sm focus:border-teal-400 focus:outline-none focus:ring-1 focus:ring-teal-400"
-              />
-              {item.unit && (
-                <span className="text-sm text-stone-500">{item.unit}</span>
-              )}
-            </div>
-          )}
-
-          {/* 5점 척도 */}
-          {item.answer_type === 'likert_5' && (
-            <div className="flex gap-2">
-              {[5, 4, 3, 2, 1].map(n => (
-                <button
-                  key={n}
-                  onClick={() => setAnswer(item.id, n)}
-                  className={`flex h-10 w-10 items-center justify-center rounded-lg border text-sm font-medium transition-colors ${
-                    value === n
-                      ? 'border-teal-500 bg-teal-500 text-white'
-                      : 'border-stone-200 text-stone-600 hover:border-teal-300 hover:bg-teal-50'
-                  }`}
-                >
-                  {n}
-                </button>
-              ))}
-              <div className="ml-2 flex items-center text-xs text-stone-400">
-                <span>5=매우 높음</span>
-                <span className="mx-2">~</span>
-                <span>1=매우 낮음</span>
-              </div>
-            </div>
-          )}
-
-          {/* 중요도-수행도 */}
-          {item.answer_type === 'likert_importance_performance' && (
-            <div className="space-y-2">
-              <div className="flex items-center gap-3">
-                <span className="w-16 text-xs text-stone-500">중요도</span>
-                <div className="flex gap-1.5">
-                  {[5, 4, 3, 2, 1].map(n => (
-                    <button
-                      key={n}
-                      onClick={() => {
-                        const current = (value as { importance?: number; performance?: number }) || {}
-                        setAnswer(item.id, { ...current, importance: n })
-                      }}
-                      className={`flex h-8 w-8 items-center justify-center rounded border text-xs font-medium transition-colors ${
-                        (value as Record<string, number>)?.importance === n
-                          ? 'border-blue-500 bg-blue-500 text-white'
-                          : 'border-stone-200 text-stone-600 hover:border-blue-300'
-                      }`}
-                    >
-                      {n}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <div className="flex items-center gap-3">
-                <span className="w-16 text-xs text-stone-500">수행도</span>
-                <div className="flex gap-1.5">
-                  {[5, 4, 3, 2, 1].map(n => (
-                    <button
-                      key={n}
-                      onClick={() => {
-                        const current = (value as { importance?: number; performance?: number }) || {}
-                        setAnswer(item.id, { ...current, performance: n })
-                      }}
-                      className={`flex h-8 w-8 items-center justify-center rounded border text-xs font-medium transition-colors ${
-                        (value as Record<string, number>)?.performance === n
-                          ? 'border-emerald-500 bg-emerald-500 text-white'
-                          : 'border-stone-200 text-stone-600 hover:border-emerald-300'
-                      }`}
-                    >
-                      {n}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* 단일 선택 */}
-          {item.answer_type === 'single_choice' && item.answer_options && (
-            <div className="space-y-1.5">
-              {(item.answer_options as AnswerOption[]).map((opt, i) => (
-                <label
-                  key={i}
-                  className={`flex items-center gap-2.5 rounded-lg border px-3 py-2 text-sm cursor-pointer transition-colors ${
-                    value === opt.value
-                      ? 'border-teal-400 bg-teal-50 text-teal-700'
-                      : 'border-stone-100 text-stone-600 hover:border-stone-200 hover:bg-stone-50'
-                  }`}
-                >
-                  <input
-                    type="radio"
-                    name={item.id}
-                    checked={value === opt.value}
-                    onChange={() => setAnswer(item.id, opt.value)}
-                    className="accent-teal-600"
-                  />
-                  {opt.label}
-                </label>
-              ))}
-            </div>
-          )}
-
-          {/* 복수 선택 */}
-          {item.answer_type === 'multiple_choice' && item.answer_options && (
-            <div className="space-y-1.5">
-              {(item.answer_options as AnswerOption[]).map((opt, i) => {
-                const selected = Array.isArray(value) ? (value as (string | number)[]).includes(opt.value) : false
-                return (
-                  <label
-                    key={i}
-                    className={`flex items-center gap-2.5 rounded-lg border px-3 py-2 text-sm cursor-pointer transition-colors ${
-                      selected
-                        ? 'border-teal-400 bg-teal-50 text-teal-700'
-                        : 'border-stone-100 text-stone-600 hover:border-stone-200 hover:bg-stone-50'
-                    }`}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={selected}
-                      onChange={() => {
-                        const current = (Array.isArray(value) ? value : []) as (string | number)[]
-                        const next = selected
-                          ? current.filter(v => v !== opt.value)
-                          : [...current, opt.value]
-                        setAnswer(item.id, next)
-                      }}
-                      className="accent-teal-600"
-                    />
-                    {opt.label}
-                  </label>
-                )
-              })}
-            </div>
-          )}
-
-          {/* 년-월 */}
-          {item.answer_type === 'year_month' && (
-            <input
-              type="text"
-              value={(value as string) || ''}
-              onChange={e => setAnswer(item.id, e.target.value)}
-              placeholder="예: 5년 3개월"
-              className="w-40 rounded-lg border border-stone-200 px-3 py-2 text-sm focus:border-teal-400 focus:outline-none"
-            />
-          )}
-
-          {/* 이메일 */}
-          {item.answer_type === 'email' && (
-            <input
-              type="email"
-              value={(value as string) || ''}
-              onChange={e => setAnswer(item.id, e.target.value)}
-              placeholder="example@company.com"
-              className="w-64 rounded-lg border border-stone-200 px-3 py-2 text-sm focus:border-teal-400 focus:outline-none"
-            />
-          )}
-
-          {/* 전화번호 */}
-          {item.answer_type === 'phone' && (
-            <input
-              type="tel"
-              value={(value as string) || ''}
-              onChange={e => setAnswer(item.id, e.target.value)}
-              placeholder="02-000-0000"
-              className="w-48 rounded-lg border border-stone-200 px-3 py-2 text-sm focus:border-teal-400 focus:outline-none"
-            />
-          )}
+          <AnswerTypeInput
+            item={item}
+            value={value}
+            onChange={(v) => setAnswer(item.id, v)}
+          />
         </div>
 
         {error && (
