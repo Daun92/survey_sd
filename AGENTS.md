@@ -143,6 +143,22 @@ Deprecated 경로에 공용 자산·UX 개선을 얹지 않는다. 실수 방지
 - PR 시점에 "원격 Supabase 에 마이그레이션 수동 apply 필요" 여부를 PR 본문 Test plan 에 명기할 것.
 - 긴급 적용이 필요하면 Supabase SQL Editor 또는 Supabase MCP `apply_migration` 사용 가능. 단 MCP 사용 시 `schema_migrations` 에 기록이 남는 버전이 MCP 측 타임스탬프라, 추후 CLI `db push` 와 동기 유지되도록 주의.
 
+### DROP SCHEMA 체크리스트 (2026-04-22 사고 재발 방지)
+
+**쉬운 풀이.** 우리 앱이 DB 와 대화하는 방식은 두 경로다. ① 우리가 직접 쓰는 SQL (MCP / SQL Editor) — 테이블이 있으면 바로 읽는다. ② Next.js 서버가 `supabase.from(...)` 으로 호출하는 Supabase REST API — 내부적으로 **PostgREST** 라는 서비스가 "어떤 스키마·테이블·컬럼이 있고 어떻게 연결되는지"를 미리 **카탈로그(=schema cache)** 로 만들어 놓고 거기에 맞춰 쿼리를 번역한다.
+
+이 카탈로그는 "내가 볼 스키마 목록" 이라는 설정(`pgrst.db_schemas`)을 기준으로 만들어지는데, 이 설정은 `authenticator` 라는 DB role 에 **DB 에 영구 저장**되어 있다. 과거 어느 시점에 BRIS 도메인도 REST 로 노출하려고 `public, graphql_public, bris` 로 잡아뒀었다. 오늘 새벽 `DROP SCHEMA bris` 를 실행하면서 이 설정만 같이 지우지 않은 게 문제. PostgREST 입장에선 "bris 도 훑어야 하는데 그런 스키마가 없다" 는 에러가 카탈로그 작성 단계에서 계속 터지고, 카탈로그가 못 만들어지니 **모든 REST 호출이 503/PGRST002** 로 막힌다. 테이블과 데이터는 멀쩡하지만 "창구 직원이 안내 책자를 못 만들어서 손님을 아무도 못 받는" 상태였던 것.
+
+즉 이 유형의 사고는 **DB 에 조용히 남아 있는 옛날 설정이 새 스키마 상태와 어긋날 때** 터진다. 그래서 "스키마를 지우면 그 스키마를 참조하는 설정·메타데이터도 같은 트랜잭션에서 함께 정리한다" 가 규칙이다.
+
+`DROP SCHEMA` 를 포함하는 마이그레이션을 작성할 때는 같은 파일 안에서 아래를 함께 정리할 것:
+
+1. **PostgREST 노출 목록에서 제거** — `ALTER ROLE authenticator SET pgrst.db_schemas = '<기존 목록에서 해당 스키마 제거>';` (현재 값은 `SELECT rolconfig FROM pg_roles WHERE rolname='authenticator';` 로 확인)
+2. **역할별 `search_path` 점검** — `postgres`, `authenticator`, `supabase_admin` 등에서 드랍 대상 스키마가 들어 있으면 제거.
+3. **해당 스키마를 참조하는 public 함수/뷰** — `pg_get_functiondef` / `pg_views.definition` 에 `<schema>.` 문자열이 남아 있지 않은지 grep.
+4. **PostgREST reload 트리거** — 마이그레이션 말미에 `NOTIFY pgrst, 'reload config'; NOTIFY pgrst, 'reload schema';` 추가.
+5. **복구 절차 기록** — 만약 적용 후에도 REST 가 503 이면 Supabase SQL Editor 나 MCP `execute_sql` 로 (1)+(4) 를 수동 실행. Postgres 로그 (`get_logs service=postgres`) 에서 `schema "X" does not exist` 가 찍히면 이 가설이 맞다.
+
 ## 주의
 
 - **응답자 라우트·차트 기존 동작 보존**: 리팩터는 항상 `(dashboard)` 나 `/admin` 내부로 한정.
