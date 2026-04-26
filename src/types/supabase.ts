@@ -3993,6 +3993,24 @@ export type Database = {
     }
     Functions: {
       check_cs_sendable: { Args: { p_respondent_id: string }; Returns: boolean }
+      distribution_aggregates_by_survey: {
+        Args: { p_since?: string }
+        Returns: {
+          completed: number
+          opened: number
+          pending: number
+          started: number
+          survey_id: string
+          total: number
+        }[]
+      }
+      edu_submission_counts_by_survey: {
+        Args: never
+        Returns: {
+          cnt: number
+          survey_id: string
+        }[]
+      }
       fn_cs_create_batch_and_scan: {
         Args: {
           p_batch_name: string
@@ -4094,6 +4112,51 @@ export type Database = {
       fn_cs_sync_start: {
         Args: { p_end: string; p_start: string }
         Returns: string
+      }
+      get_admin_sidebar_badges: {
+        Args: never
+        Returns: {
+          active_surveys: number
+          failed_emails: number
+          recent_responses: number
+        }[]
+      }
+      get_hrd_part_statistics: {
+        Args: { p_round_id: string }
+        Returns: {
+          avg_score: number
+          part_code: string
+          part_id: string
+          part_name: string
+          response_count: number
+          sort_order: number
+        }[]
+      }
+      get_hrd_respondent_breakdown: {
+        Args: { p_round_id: string }
+        Returns: {
+          cnt: number
+          status: string
+        }[]
+      }
+      get_hrd_respondent_summary: {
+        Args: { p_round_id: string }
+        Returns: {
+          completed_count: number
+          in_progress_count: number
+          invited_count: number
+          target_count: number
+          total_count: number
+        }[]
+      }
+      get_hrd_round_statistics: {
+        Args: { p_round_id: string }
+        Returns: {
+          avg_score: number
+          total_responses: number
+          unique_items: number
+          unique_respondents: number
+        }[]
       }
       get_user_role: {
         Args: { p_user_id: string }
