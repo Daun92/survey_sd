@@ -48,3 +48,7 @@ next-env.d.ts
 
 /src/generated/prisma
 .env*.local
+
+# Sprint B Prisma 박제 — 외부 저장소 이동용 임시 export 디렉터리
+tmp-prisma-archive/
+
