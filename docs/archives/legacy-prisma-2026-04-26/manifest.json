@@ -1,0 +1,96 @@
+{
+  "exportedAt": "2026-04-26T00:22:33.825Z",
+  "sourceDatabase": "Supabase (cs-survey, ref gdwhbacuzhynvegkfoga)",
+  "purpose": "Sprint B Scenario A — Prisma 인프라 폐기 전 잔존 데이터 영구 박제. 외부 저장소(Google Drive 등) 로 이동 후 tmp-prisma-archive/ 디렉터리 삭제.",
+  "tables": [
+    {
+      "table": "service_types",
+      "rows": 5,
+      "csvHash": "e67dcf844b894e014909e3bff21adc4986bbb11d75ab68a2c4b99d0689fc2830",
+      "jsonHash": "880efbe9ad20ec88eeec8e3fd07a28e0f16ab8beee6e1c15df1e903491c87e91",
+      "csvBytes": 294,
+      "jsonBytes": 715
+    },
+    {
+      "table": "customers",
+      "rows": 706,
+      "csvHash": "7ffabc8be95ba3a70bd169faf29c28158e86392a05f71d2c44527af8f5a1c867",
+      "jsonHash": "162a3ddb13b9b5d94345cdb357a38d920fe2f16fa5f2950ebf1d02ee20f88e87",
+      "csvBytes": 76473,
+      "jsonBytes": 284017
+    },
+    {
+      "table": "training_records",
+      "rows": 0,
+      "csvHash": "510c690a399b659cb05f20e6e833846e6e176118ae27199c03856f4977d9a886",
+      "jsonHash": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+      "csvBytes": 118,
+      "jsonBytes": 3
+    },
+    {
+      "table": "interviews",
+      "rows": 0,
+      "csvHash": "c2872aa3eb7402e2a71b3c083755719b1e4dd40c5cd490a9c0fd659b04da4fc1",
+      "jsonHash": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+      "csvBytes": 176,
+      "jsonBytes": 3
+    },
+    {
+      "table": "surveys",
+      "rows": 0,
+      "csvHash": "4467ac08799a2cb6a45e285cd8727ec80435a979781347f9413b615edc15651e",
+      "jsonHash": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+      "csvBytes": 140,
+      "jsonBytes": 3
+    },
+    {
+      "table": "survey_questions",
+      "rows": 0,
+      "csvHash": "45a2ea3da426bd562309c61a13aa7e26ee47fffb93fb86d8897bd1331864d5ec",
+      "jsonHash": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+      "csvBytes": 91,
+      "jsonBytes": 3
+    },
+    {
+      "table": "question_templates",
+      "rows": 0,
+      "csvHash": "84e4ebaf8faa627e85ba5b143a7dd1bcf0ed52db74c15b817b536a448ad70358",
+      "jsonHash": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+      "csvBytes": 71,
+      "jsonBytes": 3
+    },
+    {
+      "table": "responses",
+      "rows": 0,
+      "csvHash": "1a2e5178a8d3a6580cc05a46c795187572ea193b42343cb0d5bbe0a213dccc2f",
+      "jsonHash": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+      "csvBytes": 74,
+      "jsonBytes": 3
+    },
+    {
+      "table": "response_answers",
+      "rows": 0,
+      "csvHash": "1fd1900bec293ecc36a09739b0a04fd6dd8009f8af41a43968bd790cc7e01b34",
+      "jsonHash": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+      "csvBytes": 67,
+      "jsonBytes": 3
+    },
+    {
+      "table": "monthly_reports",
+      "rows": 0,
+      "csvHash": "2c5da602f97cedc8cf9ec058ca34ec3230d5b701c5cd22f0483831bd1aaf5e4d",
+      "jsonHash": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+      "csvBytes": 112,
+      "jsonBytes": 3
+    },
+    {
+      "table": "import_logs",
+      "rows": 0,
+      "csvHash": "1839c8bd5631400afb4a3054e2223c2b4682d6c53f8f39a53f273ee9553d08be",
+      "jsonHash": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+      "csvBytes": 105,
+      "jsonBytes": 3
+    }
+  ],
+  "totalRows": 711
+}
