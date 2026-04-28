@@ -1625,6 +1625,7 @@ export type Database = {
           channel: string
           completed_count: number | null
           created_at: string | null
+          cs_batch_id: string | null
           id: string
           is_test: boolean | null
           label: string | null
@@ -1640,6 +1641,7 @@ export type Database = {
           channel?: string
           completed_count?: number | null
           created_at?: string | null
+          cs_batch_id?: string | null
           id?: string
           is_test?: boolean | null
           label?: string | null
@@ -1655,6 +1657,7 @@ export type Database = {
           channel?: string
           completed_count?: number | null
           created_at?: string | null
+          cs_batch_id?: string | null
           id?: string
           is_test?: boolean | null
           label?: string | null
@@ -1689,6 +1692,8 @@ export type Database = {
           channel: string
           completed_at: string | null
           created_at: string | null
+          cs_batch_id: string | null
+          cs_target_id: string | null
           error_message: string | null
           id: string
           last_reminder_at: string | null
@@ -1712,6 +1717,8 @@ export type Database = {
           channel?: string
           completed_at?: string | null
           created_at?: string | null
+          cs_batch_id?: string | null
+          cs_target_id?: string | null
           error_message?: string | null
           id?: string
           last_reminder_at?: string | null
@@ -1735,6 +1742,8 @@ export type Database = {
           channel?: string
           completed_at?: string | null
           created_at?: string | null
+          cs_batch_id?: string | null
+          cs_target_id?: string | null
           error_message?: string | null
           id?: string
           last_reminder_at?: string | null
@@ -3271,6 +3280,7 @@ export type Database = {
       respondents: {
         Row: {
           created_at: string | null
+          cs_contact_id: string | null
           customer_id: number | null
           department: string | null
           email: string | null
@@ -3285,6 +3295,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string | null
+          cs_contact_id?: string | null
           customer_id?: number | null
           department?: string | null
           email?: string | null
@@ -3299,6 +3310,7 @@ export type Database = {
         }
         Update: {
           created_at?: string | null
+          cs_contact_id?: string | null
           customer_id?: number | null
           department?: string | null
           email?: string | null
@@ -4214,8 +4226,8 @@ export type Database = {
       fn_cs_dispatch_batch: {
         Args: {
           p_batch_id: string
-          p_channel?: string
-          p_survey_base_url?: string
+          p_channel: string
+          p_survey_base_url: string
         }
         Returns: {
           dispatched: number
