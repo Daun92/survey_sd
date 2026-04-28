@@ -153,6 +153,48 @@ export type Database = {
           },
         ]
       }
+      cs_automation_settings: {
+        Row: {
+          alert_email: string | null
+          auto_dispatch_cron: string
+          auto_dispatch_enabled: boolean
+          bris_fetch_cron: string
+          daily_send_limit: number
+          dry_run_default: boolean
+          id: string
+          monthly_batch_cron: string
+          notes: string | null
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          alert_email?: string | null
+          auto_dispatch_cron?: string
+          auto_dispatch_enabled?: boolean
+          bris_fetch_cron?: string
+          daily_send_limit?: number
+          dry_run_default?: boolean
+          id?: string
+          monthly_batch_cron?: string
+          notes?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          alert_email?: string | null
+          auto_dispatch_cron?: string
+          auto_dispatch_enabled?: boolean
+          bris_fetch_cron?: string
+          daily_send_limit?: number
+          dry_run_default?: boolean
+          id?: string
+          monthly_batch_cron?: string
+          notes?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       cs_bris_raw_pages: {
         Row: {
           bris_url: string
@@ -522,6 +564,118 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "cs_bris_raw_records"
             referencedColumns: ["id"]
+          },
+        ]
+      }
+      cs_dispatch_alerts: {
+        Row: {
+          body: string | null
+          context: Json | null
+          created_at: string
+          failed_reason: string | null
+          id: string
+          sent_at: string | null
+          severity: string
+          source: string
+          status: string
+          subject: string
+        }
+        Insert: {
+          body?: string | null
+          context?: Json | null
+          created_at?: string
+          failed_reason?: string | null
+          id?: string
+          sent_at?: string | null
+          severity: string
+          source: string
+          status?: string
+          subject: string
+        }
+        Update: {
+          body?: string | null
+          context?: Json | null
+          created_at?: string
+          failed_reason?: string | null
+          id?: string
+          sent_at?: string | null
+          severity?: string
+          source?: string
+          status?: string
+          subject?: string
+        }
+        Relationships: []
+      }
+      cs_dispatch_attempts: {
+        Row: {
+          attempted_at: string
+          batch_id: string | null
+          candidates_count: number
+          created_at: string
+          daily_limit_at_attempt: number | null
+          daily_total_after: number | null
+          daily_total_before: number | null
+          dispatched_count: number
+          errors_count: number
+          id: string
+          mode: string
+          reason: string
+          response_payload: Json | null
+          skipped_count: number
+        }
+        Insert: {
+          attempted_at?: string
+          batch_id?: string | null
+          candidates_count?: number
+          created_at?: string
+          daily_limit_at_attempt?: number | null
+          daily_total_after?: number | null
+          daily_total_before?: number | null
+          dispatched_count?: number
+          errors_count?: number
+          id?: string
+          mode: string
+          reason: string
+          response_payload?: Json | null
+          skipped_count?: number
+        }
+        Update: {
+          attempted_at?: string
+          batch_id?: string | null
+          candidates_count?: number
+          created_at?: string
+          daily_limit_at_attempt?: number | null
+          daily_total_after?: number | null
+          daily_total_before?: number | null
+          dispatched_count?: number
+          errors_count?: number
+          id?: string
+          mode?: string
+          reason?: string
+          response_payload?: Json | null
+          skipped_count?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cs_dispatch_attempts_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "cs_target_batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cs_dispatch_attempts_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "v_cs_batch_dashboard"
+            referencedColumns: ["batch_id"]
+          },
+          {
+            foreignKeyName: "cs_dispatch_attempts_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "v_cs_dispatch_summary"
+            referencedColumns: ["batch_id"]
           },
         ]
       }
@@ -1425,6 +1579,7 @@ export type Database = {
       }
       cs_target_batches: {
         Row: {
+          auto_dispatch_mode: string
           batch_name: string
           confirmed_at: string | null
           created_at: string | null
@@ -1442,6 +1597,7 @@ export type Database = {
           total_candidates: number | null
         }
         Insert: {
+          auto_dispatch_mode?: string
           batch_name: string
           confirmed_at?: string | null
           created_at?: string | null
@@ -1459,6 +1615,7 @@ export type Database = {
           total_candidates?: number | null
         }
         Update: {
+          auto_dispatch_mode?: string
           batch_name?: string
           confirmed_at?: string | null
           created_at?: string | null
@@ -3876,6 +4033,51 @@ export type Database = {
       }
     }
     Views: {
+      v_cs_automation_status: {
+        Row: {
+          alerts_pending: number | null
+          auto_dispatch_cron: string | null
+          auto_dispatch_enabled: boolean | null
+          batches_auto_on: number | null
+          batches_dry_run: number | null
+          bris_fetch_cron: string | null
+          daily_send_limit: number | null
+          dry_run_default: boolean | null
+          last_attempt_at: string | null
+          monthly_batch_cron: string | null
+          today_dispatched: number | null
+          today_remaining: number | null
+        }
+        Insert: {
+          alerts_pending?: never
+          auto_dispatch_cron?: string | null
+          auto_dispatch_enabled?: boolean | null
+          batches_auto_on?: never
+          batches_dry_run?: never
+          bris_fetch_cron?: string | null
+          daily_send_limit?: number | null
+          dry_run_default?: boolean | null
+          last_attempt_at?: never
+          monthly_batch_cron?: string | null
+          today_dispatched?: never
+          today_remaining?: never
+        }
+        Update: {
+          alerts_pending?: never
+          auto_dispatch_cron?: string | null
+          auto_dispatch_enabled?: boolean | null
+          batches_auto_on?: never
+          batches_dry_run?: never
+          bris_fetch_cron?: string | null
+          daily_send_limit?: number | null
+          dry_run_default?: boolean | null
+          last_attempt_at?: never
+          monthly_batch_cron?: string | null
+          today_dispatched?: never
+          today_remaining?: never
+        }
+        Relationships: []
+      }
       v_cs_batch_dashboard: {
         Row: {
           batch_id: string | null
@@ -4205,6 +4407,55 @@ export type Database = {
           survey_id: string
         }[]
       }
+      fn_cs_automation_count_today_sends: { Args: never; Returns: number }
+      fn_cs_automation_enqueue_alert: {
+        Args: {
+          p_body?: string
+          p_context?: Json
+          p_severity: string
+          p_source: string
+          p_subject: string
+        }
+        Returns: string
+      }
+      fn_cs_automation_get_settings: {
+        Args: never
+        Returns: {
+          alert_email: string | null
+          auto_dispatch_cron: string
+          auto_dispatch_enabled: boolean
+          bris_fetch_cron: string
+          daily_send_limit: number
+          dry_run_default: boolean
+          id: string
+          monthly_batch_cron: string
+          notes: string | null
+          updated_at: string
+          updated_by: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "cs_automation_settings"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      fn_cs_automation_log_attempt: {
+        Args: {
+          p_batch_id: string
+          p_candidates: number
+          p_daily_after: number
+          p_daily_before: number
+          p_daily_limit: number
+          p_dispatched: number
+          p_errors: number
+          p_mode: string
+          p_reason: string
+          p_response?: Json
+          p_skipped: number
+        }
+        Returns: string
+      }
       fn_cs_create_batch_and_scan: {
         Args: {
           p_batch_name: string
@@ -4218,6 +4469,7 @@ export type Database = {
         }[]
       }
       fn_cs_cron_lineage_audit: { Args: never; Returns: Json }
+      fn_cs_cron_monthly_batch: { Args: never; Returns: Json }
       fn_cs_cron_raw_retention: {
         Args: { p_keep_days?: number }
         Returns: Json
