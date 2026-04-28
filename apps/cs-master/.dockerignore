@@ -1,0 +1,67 @@
+# VCS / 에디터
+.git
+.gitignore
+.claude
+.vscode
+.idea
+*.swp
+
+# 로컬 실행 결과물
+__pycache__
+*.py[cod]
+*.egg-info
+.pytest_cache
+node_modules
+dist/
+build/
+
+# Phase 1 JS 패키지 빌드 산출물 — 런타임에 필요 없음
+lib/bris-parser/dist/
+lib/bris-parser/node_modules/
+lib/bris-parser/test/fixtures/real/*.html
+lib/bris-parser/test/fixtures/real/*.json
+
+# CS 프로젝트 로컬 데이터 (이미지에 불필요)
+*.xlsx
+*.csv
+*.docx
+*.pdf
+*.json
+!**/pyproject.toml
+!**/package.json
+!**/expected.json
+!**/test_output.json
+
+backup/
+version/
+v2/
+
+# 배포 전용 / 비-API 파일
+index.html
+index_*.html
+index__*.html
+cs_dashboard.html
+cs대상자관리_통합.html
+고객정보상세*.html
+과정리스트.html
+교육세부.html
+프로젝트*.html
+default.asp
+bris_proxy.asp
+bris_cron_runner.sh
+fetch_bris.js
+
+# 비밀/환경
+.env
+.env.*
+!.env.example
+secrets/
+
+# Playwright / 기타
+.playwright-mcp
+
+# Docker 아티팩트 자체
+Dockerfile
+docker-compose.yml
+.dockerignore
+Makefile

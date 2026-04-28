@@ -1,0 +1,20 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "bris-parser"
+version = "0.1.0"
+description = "BRIS HTML 파서 (Python) — 통합 페이지 파싱, JS 파서와 동등성 보장"
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = ["beautifulsoup4>=4.12"]
+
+[project.optional-dependencies]
+dev = ["pytest>=7"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

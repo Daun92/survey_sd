@@ -1,0 +1,37 @@
+{
+  "name": "bris-parser",
+  "version": "0.1.0",
+  "description": "BRIS(사내 교육관리 시스템) HTML 응답 파서 — DOM API만 의존하는 순수 함수 모음",
+  "type": "module",
+  "main": "./dist/bris-parser.cjs",
+  "module": "./dist/bris-parser.esm.mjs",
+  "browser": "./dist/bris-parser.iife.js",
+  "exports": {
+    ".": {
+      "import": "./dist/bris-parser.esm.mjs",
+      "require": "./dist/bris-parser.cjs",
+      "browser": "./dist/bris-parser.iife.js",
+      "default": "./src/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "src",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "node build.js",
+    "test": "node --test test/parser.test.js",
+    "prepublishOnly": "npm run build && npm test"
+  },
+  "devDependencies": {
+    "esbuild": "^0.21.0",
+    "linkedom": "^0.18.0"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "keywords": ["bris", "parser", "html"],
+  "license": "UNLICENSED",
+  "private": true
+}

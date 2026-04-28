@@ -1,0 +1,689 @@
+
+<html>
+
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<link rel="StyleSheet" href="/bris.css" type="text/css">
+<title>Expert Consulting Bris ver.2021</title>
+<!-- <script language=javascript src="/share/js/expertHelper.js"></script> -->
+<script src="/share/js/jquery.min.js"></script>
+<script type="text/javascript" src="/share/common.js?1773676755"></script>
+<script src="/util/log/vpageLog.js"></script>
+</head>
+
+<script language=javascript>
+<!--
+//마우스 클릭이 LimitTime동안 없을경우
+//자동 로그아웃
+var LimitTime=60*20//60*20;//20분
+var CheckTime=0;
+
+function ClearTime() {
+	CheckTime=0;
+}
+
+function TimeFormat(arg) {
+	var min,sec;
+
+	min=parseInt(arg/60);
+	sec=arg%60;
+	return "자동 로그아웃 "+min+":"+sec+" 남음"
+}
+
+function initTime() {
+	CheckTime++;
+	setTimeout("initTime();",1000);
+	if(CheckTime>=(LimitTime))
+		top.location.href='/logout.asp?CHK=TimeOut';
+	defaultStatus=TimeFormat(LimitTime-CheckTime);
+}
+
+//initTime();
+//document.onmousedown=ClearTime;
+//-->
+
+</script>
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<title>::: BRIS ver.2022 (Expert Business Resources Imformation System) :::</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<link rel="StyleSheet" href="/common/css/common.css?v20221027_1128" type="text/css">
+<script src="/common/js/jquery-3.6.0.min.js"></script>
+<script type="text/javascript" src="/common/common.js?20260203"></script>
+
+<style>
+.searchFrame{
+	position:absolute;
+	background-color:white;
+	top:80px;
+	left:300px;
+	display:none;
+	z-index:200;
+}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+
+</head>
+ 
+<body topmargin=0 >
+
+
+<body topmargin=0>
+
+
+<input type="hidden" id="businessId" name="businessId" value="72757">
+
+<table border="0" width="800" cellspacing="0" cellpadding="0">
+	<tr>
+		<td width="100%" height=28> HOME &gt; 사업관리 &gt; 사내교육 &gt; <font color="blue">교육내역</font> &gt;</td>
+	<tr>
+		<td width="100%">
+			<table border="1" width="100%" bordercolordark="#FFFFFF" cellspacing="0" cellpadding="2">
+				<tr>
+					<td width="100" align="center" bgcolor="#DDECB4"><b>*수주코드</b></td>
+					<td width="330"><a href="/business/success/project_view.asp?PROJECT_ID=34690">2603-116</a>&nbsp;</td>
+					<td width="100" valign="middle" align="center" bgcolor="#DDECB4"><b>비대면(온라인)</b></td>
+					<td>
+						 대면
+						 
+						 
+					</td>
+				</tr>
+				<tr>
+					<td width="100" align="center" bgcolor="#DDECB4"><b>*회사명</b></td>
+					<td width="330">대한제당 </td>
+					<td width="100" valign="middle" align="center" bgcolor="#DDECB4"><b>*인원/시간</b></td>
+					<td valign="top">23/13</td>
+				</tr>
+				<tr>
+					<td width="100" align="center" bgcolor="#DDECB4"><b>*담당자</b></td>
+					<td width="330">김영빈</td>
+					<td width="100" valign="middle" align="center" bgcolor="#DDECB4"><b>대상자</b></td>
+					<td valign="top">현장사원</td>
+				</tr>
+				<tr>
+					<td width="100" align="center" bgcolor="#DDECB4"><b>*과정명</b></td>
+					<td width="330">현장관리자 교육
+					</td>
+					<td width="100" valign="middle" align="center" bgcolor="#DDECB4"><b>*프로그램명</b></td>
+					<td valign="top">현장 사원 교육</td>
+				</tr>
+				<tr>
+					<td width="100" align="center" bgcolor="#DDECB4"><b>*기간</b></td>
+					<td width="330">2026/03/16 ~ 2026/03/17</td>
+					<td width="100" valign="middle" align="center" bgcolor="#DDECB4"><b>*교육장</b></td>
+					<td valign="top">TS인재개발원</td>
+				</tr>
+				<tr>
+					<td width="100" align="center" bgcolor="#DDECB4"><b>차수/총차수</b></td>
+					<td width="330">1/1</td>
+					<td width="100" valign="middle" align="center" bgcolor="#DDECB4"><b>교육장전화</b></td>
+					<td valign="top">&nbsp;</td>
+				</tr>
+			</table>
+
+			<table border="0" width="100%" height="25" cellspacing="0" cellpadding="0">
+				<tr>
+					<td><b>※ 매출 금액 정보</b></td>
+				</tr>
+			</table>
+
+			<table border="1" width="100%" bordercolordark="#FFFFFF" cellspacing="0" cellpadding="2">
+				<tr>
+				<td width="100" align="center" bgcolor="#DDECB4"><b>*강사료/시간</b></td>
+				<td width="330">350,000/h</td>
+				<td width="100" valign="middle" align="center" bgcolor="#DDECB4"><b>*주매출</b></td>
+				<td valign="top">0</td>
+				</tr>
+			 
+			 
+			</table>
+			 
+			<table border="0" width="100%" height="25" cellspacing="0" cellpadding="0">
+				<tr>
+					<td><b>※ 진행자  정보</b></td>
+				</tr>
+			</table>
+
+			<table border="1" width="100%" bordercolordark="#FFFFFF" cellspacing="0" cellpadding="2" id="app">
+				<tr>
+				<td width="100" align="center" bgcolor="#DDECB4"><b>진행자</b></td>
+				<td width="330" colspan=3  >
+					<button   v-for="(person ,index) in al_person" class="lec m  " @click="editLec(person.person_no)">{{person.name}}/{{person.birthYY}}/{{person.companyName}} 
+						<span v-show="person.position!=''">&nbsp;{{person.position}}</span>
+						<!--<span v-show="(person.pay!='' && person.pay!='미입력') || person.mem_no=='' ">(</span>-->
+						<span v-show="person.pay!='' ">(</span>
+						<span v-show="person.pay!='' ">{{person.totalCost}}</span>
+						<span v-show="person.mem_no==''"></span>
+						<span v-show="person.pay!='' ">)</span>
+					</button>
+					 
+				
+				</td>
+
+				 
+				</tr>
+			</table>
+			 
+
+			
+			 
+			 
+			 
+			 
+			<br>
+			
+			<table width=100%>
+				<tr>
+					<td>
+						
+							<!--
+							<input type=button value="기업정보" onclick="location.href='business_students_edit.asp?BUSINESS_ID=72757'">
+							<input type=button value="강의리뷰" onclick="location.href='business_review_edit.asp?BUSINESS_ID=72757'">
+							<input type=button value="수행요청내역" onclick="location.href='business_request_edit.asp?BUSINESS_ID=72757'">
+							-->
+							
+							<input type=button value="기업정보" onclick="location.href='business_students_edit.asp?BUSINESS_ID=72757'">
+							<input type=button value="강의리뷰" onclick="location.href='business_review_view.asp?BUSINESS_ID=72757'">
+
+
+							<!--&nbsp;<button onclick="location.href='/business/account/account_reg.asp?business_id=72757&place_id=15978&DIVISION=1'">계산서발행</button> -->
+							&nbsp;<button type="button" onclick="editSubProgram()">과정모듈</button>
+
+							
+					<td align="right">
+					
+					<script>
+						function golist(){
+
+							var gourl
+							//gourl=GetCookie("programListBackUrl")
+							gourl=""
+							try{
+								str=(gourl.length)
+
+								if (gourl!=""){
+									location.href=gourl
+								}else{
+									location.href='inhouse.asp?page=&NICKNAME=&PROGRAM=&PM=&SD=&ED='
+								}
+							}catch(e){
+								location.href='inhouse.asp?page=&NICKNAME=&PROGRAM=&PM=&SD=&ED='
+							}
+						}
+
+						function gocost(){
+
+						}
+
+						
+						</script>
+
+						<input type=button value="목록으로" onclick="golist()">
+								
+								<input type=button value="강의 MECE" onclick="go_mece()">
+								<script>
+									function go_mece(){
+										location.href="lecturer_mece_Detail.asp?DIVISION=1&BUSINESS_ID=72757";
+									}
+								</script>
+
+								<input type=button value="중복등록" onclick="copyRecord(0);">
+									<input type=button value="수정" onclick="modiUrl(72757);">
+									<input type=button value="삭제" onclick="Delete();">
+								
+						<script>
+							function modiUrl(business_id){
+								SetCookie("programListBackUrl","/business/inhouse.asp");
+								location.href="program_mng_edit.asp?BUSINESS_ID="+ business_id
+							}
+						</script>
+					</td>
+				</tr>
+			</table>
+			<table width=800 border=0 cellpadding="1" cellspacing="3" bgcolor=#f6f6f6>
+				<tr>
+					<td width="15%" bgcolor="#DDECB4" align="center" background="/images/underline.gif"><b>강사명</b></td>
+					<td width="25%" bgcolor="#DDECB4" align="center" background="/images/underline.gif"><b>모듈명</b></td>
+					<td width="40%" bgcolor="#DDECB4" align="center" background="/images/underline.gif"><b>기간</b></td>
+					
+					<td width="8%" bgcolor="#DDECB4" align="center" background="/images/underline.gif"><b>시간수</b></td>
+					<td width="16%" bgcolor="#DDECB4" align="center" background="/images/underline.gif"><b>교육비계</b></td>
+					<!-- 
+					<td width="10%"	bgcolor="#DDECB4" align="center" background="/images/underline.gif"><b>평가</b></td>
+					-->
+				</tr>
+				
+							<tr>
+								<td align="center" background="/images/underline2.gif">
+								<a href="inst_fee_edit.asp?DIVISION=1&BUSINESS_ID=72757&SCHEDULE_ID=110682&successCode=2603-116">김효정</a>
+								</td>
+								<td background="/images/underline2.gif"  >M4.협업: 정글로드</td>
+								<td style="padding-left:10px;" background="/images/underline2.gif">03/17 09:00 → 12:00</td>
+								
+								<td background="/images/underline2.gif" align=center>3</td>
+								<td align="right" background="/images/underline2.gif">1,050,000</td>
+								<!--
+								<td align=right>&nbsp;</td>
+								-->
+							</tr>
+							
+							<tr>
+								<td align="center" background="/images/underline2.gif">
+								<a href="inst_fee_edit.asp?DIVISION=1&BUSINESS_ID=72757&SCHEDULE_ID=110681&successCode=2603-116">이영철</a>
+								</td>
+								<td background="/images/underline2.gif"  >M1.주인의식 / M3.갈등관리</td>
+								<td style="padding-left:10px;" background="/images/underline2.gif">03/16 10:00 → 18:00</td>
+								
+								<td background="/images/underline2.gif" align=center>5</td>
+								<td align="right" background="/images/underline2.gif">1,750,000</td>
+								<!--
+								<td align=right>&nbsp;</td>
+								-->
+							</tr>
+							
+						<tr>
+							<td align="center" background="/images/underline2.gif" colspan=3 bgcolor=#DDECB4><b>합&nbsp;&nbsp;&nbsp;&nbsp;계</b></td>
+							<td background="/images/underline2.gif" align=center bgcolor=#e0e0e0>8</td>
+							<td align="right" background="/images/underline2.gif" bgcolor=#e0e0e0>2,800,000</td>
+							<td>&nbsp;</td>
+							 
+						</tr>
+						
+			</table>
+			
+						<table width=100%>
+							<tr>
+								<td width=100% align=right>
+									
+											<table align=right> 
+												<Tr>
+													<td>
+											<input type="button" value="강사료 마감" onclick="javascript:Schedule_End();">
+											<td>
+											<input type="button" value="강의일정 추가(A)" onclick="location.href='inst_fee_edit.asp?BUSINESS_ID=72757'" title="직원강사 및 네트워크 강사">
+											<td>
+											 
+											 
+												
+												<input type="button" value="강의일정 추가(B)" onclick="location.href='/business/echo/lecture/inst_fee_edit.asp?BUSINESS_ID=72757&successCode=2603-116'" title="그 외 (예 :1회성 특강)">
+												
+											 
+											
+											<tr>
+													<td>
+													<td> 
+													<td> 
+											</table>
+												
+											
+								</td>
+							</tr>
+						</table>
+					
+
+			<fieldset style="border:silver 1px solid">
+			<legend style="font-weight:900;">Complain & Claim</legend>
+			<table width=800 border=0 cellpadding="1" cellspacing="3" bgcolor=#f6f6f6>
+				<tr>
+					<td width="7%"	bgcolor="#DDECB4" background="/images/underline.gif" align="center" ><b>No.</b></td>
+					<td width="12%" bgcolor="#DDECB4" background="/images/underline.gif" align="center"><b>구분</b></td>
+					<td width="23%"bgcolor="#DDECB4" background="/images/underline.gif" align="center"><b>사업장명</b></td>
+					<td bgcolor="#DDECB4" background="/images/underline.gif" align="center"><b>제목</b></td>
+					<td width="12%" bgcolor="#DDECB4" background="/images/underline.gif" align="center"><b>등록일자</b></td>
+				</tr>
+				
+			</table>
+
+			<table width=100%>
+				<tr>
+					<td width=100% align=right>
+						<input type="button" value="클레임 및 컴플레인 추가" onclick="location.href='complain_cmd.asp?BUSINESS_ID=72757&division=1&board_id=&SuccessCode=2603-116'">
+					</td>
+				</tr>
+			</table>
+			</fieldset>
+		</td>
+	</tr>
+	
+	<tr>
+		<td>
+			<fieldset style="border:silver 1px solid">
+			<legend style="font-weight:900;">수행 상세내역</legend>
+			<table width=800 border=0 cellpadding="1" cellspacing="3" bgcolor=#f6f6f6>
+				<tr>
+					<td  bgcolor="#DDECB4" align="center" background="/images/underline.gif"><b>이름</b></td>
+					<td  bgcolor="#DDECB4" align="center" background="/images/underline.gif"><b>지원유형</b></td>
+					<td  bgcolor="#DDECB4" align="center" background="/images/underline.gif"><b>작업명</b></td>
+					<td  bgcolor="#DDECB4" align="center" background="/images/underline.gif"><b>만족도</b></td>
+					
+			</table>
+			<table width=100%>
+				<tr>
+					<td width=100% align=right>
+						<input type="button" value="수행내역등록" onclick="location.href='support_inputForm.asp?BUSINESS_ID=72757&division=1'">
+					</td>
+				</tr>
+			</table>
+			<tr>
+<td background="/images/underline.gif">　&nbsp;</td>
+</tr>
+<tr>
+<td width="100%" bgcolor=#F0FFCD>※ 설명
+<br>&nbsp;&nbsp;&nbsp;교육내역의 [기간]의 데이터수정시에는 강의일정의 기간의 유효성을 확인해 주시기 바랍니다.<Br>
+
+
+수행요청내역은 [수주]만이 등록하는 내용입니다. 기업정보는 [수주][수행]이 등록합니다<br>
+
+</td>
+</tr>
+
+</table>
+<br>
+<br><br>
+
+<script>
+
+const grantLfEdit=false
+
+function editSubProgram(){
+tf = document.hiddenform;
+
+tf.action="program_mng_edit_subProgram_edit.asp";
+tf.submit();
+}
+</script>
+<form name="hiddenform" method="post">
+<input type="hidden" name="business_id" value="72757">
+<input type="hidden" name="division" value="1">
+<input type="hidden" name="page" value="1">
+<input type="hidden" name="NICKNAME" value="">
+<input type="hidden" name="PROGRAM" value="">
+<input type="hidden" name="PM" value="">
+<input type="hidden" name="SD" value="20260316">
+<input type="hidden" name="ED" value="20260316">
+<input type="hidden" name="inst" value="">
+</form>
+
+
+
+<div id="income" style="display:none; position:absolute; width:350px; height:200px; z-index:1; left: 460px; top: 595px" >
+<table border="1" width="340" cellspacing="0" cellpadding="0" bordercolordark="#FFFFFF" bordercolor="#000000">
+	<tr>
+		<td width=100%>
+			<table border="0" width="100%" cellspacing="0" cellpadding="2" bgcolor="#FFFFE0">
+				<tr>
+					<td width="50%" height="18" colspan="2" bgcolor="#FFF0C0"><b>× 원천징수 상세</b></td>
+					<td width="50%" align=right bgcolor="#FFF0C0">[<a href="javascript:display_income();">닫기</a>]</td>
+				</tr>
+			</table>
+			<table border="1" width="100%" cellspacing="0" cellpadding="2" bgcolor="#FFFFE0">
+				<tr>
+					<td bgcolor=#DDECB4 align=center><b>강사명</b></td>
+					<td bgcolor=#DDECB4 align=center><b>금액</b></td>
+					<td width=80 bgcolor=#DDECB4 align=center><b>입금여부</b></td>
+				</tr>
+				
+			</table>
+		</td>
+	</tr>
+</table>
+</div>
+ <iframe name="searchFrame" class="searchFrame" width=550px src="/business/echo/person/searchPerson.asp"  ></iframe>
+<script language=javascript>
+var business_idx="67939"
+var Bz_Schedule_Close="N"
+$(document).ready(function(){
+	 $(".btnSearchPerson").on("click",function(){
+	   $(".searchFrame").attr("src","/business/echo/person/searchPerson.asp?business_idx="+ business_idx)
+	   $(".searchFrame").show();
+   });
+
+   $(".js-Assignment").on("click", function(){
+
+		var lfGrantCode, lfGrantState, businessId;		
+
+		lfGrantCode 	= $(this).data("lfgrantcode");
+		lfGrantState 	= $(this).data("lfgrantstate");		
+
+		businessId = $("#businessId").val();
+
+		if (lfGrantCode == "" || lfGrantCode == "" || businessId == "") {
+			alert("필수값이 없습니다.");
+			return false;
+		}
+
+		var confirmMsg = confirm('재배정 하시겠습니까?');
+
+		if(confirmMsg) {
+			$.ajax({
+				type: "post",
+				url: "/business/echo/person/person_process.asp",
+				dataType: "json",
+				data: {
+					"mode": "addAssignment",
+					"lfGrantLocationCode": lfGrantCode,
+					"lfGrantState": lfGrantState,
+					"lfBusinessId": businessId
+				},
+				success: function(result) {
+					if (result.response_code == 200) {
+						alert(result.msg);	
+					} else {
+						alert(result.msg + " - CODE: " + result.response_code);
+					}
+					
+					//location.replace(location.href);
+					window.location.reload();
+				},
+				error: function(result) {
+					alert(result.msg);
+					return;
+				}
+			})
+		}
+	})
+ 
+   
+});
+	function Delete() {
+		if(confirm('사내교육내역을 삭제합니다.\n\n수지내역 및 강의일정등도 함께 삭제됩니다.\n\n정말 삭제하시겠습니까?'))
+			location.href='program_mng_process.asp?PROCESS=Del&BUSINESS_ID=72757&BUSINESS_IDx=67939';
+	}
+
+	function Schedule_End() {
+		if(confirm('강사료를 마감하면 강의일정 추가 및 수정이 불가능합니다.\n\n정말 마감하시겠습니까?'))
+			location.href='inst_fee_close.asp?PROCESS=End&BUSINESS_ID=72757&LCfeeClose=&sd=202603161000';
+	}
+
+	function copyRecord(num) {
+		//alert(num);
+		if(confirm("교육내역을 중복 등록합니다.\n\n교육내역 및 강의일정이 똑같이 복사됩니다.\n\n중복 등록 하시려면'확인'을 누르세요")){
+			if(num>0){
+				if(confirm("사업지원 내역도 함께 복사 하시겠습니까? \n\n'확인'을 누르면 사업지원 내역도 함께 복사됩니다. \n\n'취소'를 누르면 교육내역 및 강의 일정만 복사됩니다.")){
+					location.href='program_mng_copy_sup.asp?BUSINESS_ID=72757&BUSINESS_IDX=67939&Teamcode=201201002';
+				}else{
+					location.href='program_mng_copy.asp?BUSINESS_ID=72757&BUSINESS_IDX=67939&Teamcode=201201002';
+				}
+			}else{
+				location.href='program_mng_copy.asp?BUSINESS_ID=72757&BUSINESS_IDX=67939&Teamcode=201201002';
+			}
+		}
+	}
+
+	function SetCookie (name, value) {
+		var argv = SetCookie.arguments;
+		var argc = SetCookie.arguments.length;
+		var expires = (argc > 2) ? argv[2] : null;
+		var path = (argc > 3) ? argv[3] : null;
+		var domain = (argc > 4) ? argv[4] : null;
+		var secure = (argc > 5) ? argv[5] : false;
+		document.cookie = name + "=" + escape (value) +
+		((path == null) ? "" : ("; path=" + path)) +
+		((domain == null) ? "" : ("; domain=" + domain)) +
+		((secure == true) ? "; secure" : "");
+	}
+
+	function GetCookie(sName){
+
+		var aCookie = document.cookie.split("; ");
+		for (var i=0; i < aCookie.length; i++){
+
+			var aCrumb = aCookie[i].split("=");
+			if (sName == aCrumb[0])
+			return unescape(aCrumb[1]);
+		}
+
+		return null;
+	}
+
+	function settingConsulting(){
+		newWin= window.open("result_consulting_list.asp?business_id=72757","w","width=600,height=450,scrollbars,resizable")
+		newWn.focus();
+	}
+
+	function display_income() {
+		var dest = document.all["income"];
+
+		if (dest.style.display == "")
+			dest.style.display = "none";
+		else
+			dest.style.display = "";
+		return;
+	}
+</script>
+ <script>
+function searchPersonResult(person_no){
+	formData= {
+		person_no:person_no,
+		mode:"addPerson",
+		rType:"json"
+	}
+
+	updateProc(formData);
+} 
+
+
+
+
+
+
+function updateProc(formData){	
+	formData.business_idx =business_idx;
+	timestamp = + new Date();
+//	 console.log(formData);		
+	if (formData.mode=="requestCommon"){
+		/*
+		var newForm = $('<form></form>'); 
+		newForm.attr("name","form_"+timestamp);
+		newForm.attr("method","post"); 
+		newForm.attr("action","lec_process.asp");
+		newForm.attr("target","processFrame"); 
+		for (key in formData) {
+			if (formData.hasOwnProperty(key)) {
+				v=""
+				if( formData[key]){
+					 
+					v=formData[key]
+				}
+				newForm.append($('<input/>', {type: 'hidden', name: key, value:v }));
+				//console.log("%c "+key + " = " + formData[key],"color:cyan");
+				//$(".workForm"+key).val(v);
+			}
+		}
+
+		// create element & set attribute (input)
+		
+		//append form (to body) 
+		newForm.appendTo('body');
+		newForm.submit();
+		//console.log(newForm)
+		*/
+	
+	}else{
+		$.ajax({
+		url:'/business/echo/person/person_process.asp',
+		data:formData,
+		dataType: 'json',
+		type: 'post',
+		success:function(data){
+			//console.log(data)
+			if(data.dbData){
+			} 
+			 if(data.resultMode=="addPerson"){
+				app.al_person= data.dbData
+			}
+			if(data.msg){
+				
+				if(data.msg!=""){
+					alert(data.msg)
+				}
+				
+			}
+				
+		},
+		error:function(request,status,error){
+			console.log(error);
+		}
+	});
+
+	}
+	
+	
+	
+	
+
+}
+
+
+var app = new Vue({
+	el: '#app',
+	data: {
+		 
+		al_person:[{person_no:"2171",name:"박진영",birthYY:"30",hp:"010-7600-1160",position:"",mem_no:"2444",prograssCost:"미입력",companyName:"엑스퍼트컨설팅",totalCost:"0원"}] 
+		 
+		
+		
+	},
+	methods:{
+		delLec:function(person_no){
+			if(confirm("해당 인력을 삭제합니다.")){
+				formData= {
+					person_no:person_no,
+					mode:"addPerson",
+					subMode:"delete",
+					rType:"json"
+				}
+
+				updateProc(formData);
+			}
+		},
+		editLec:function(person_no){
+			 
+				$(".searchFrame").attr("src","/business/echo/person/person_schedule.asp?business_idx="+ business_idx+ "&person_no="+ person_no)
+	   			$(".searchFrame").show();	
+			 
+
+			 
+		}
+
+
+	}
+});
+ </script>
+
+ 
+
+
+
+<script type="text/javascript" src="/common/js/common_init.js"></script>
+<script src="/util/log/vpageLog.js"></script>
+<iframe name="processFrame"   height=100  style="display:none"></iframe>
+
+
+ 
+</body>
+</html>
+
+

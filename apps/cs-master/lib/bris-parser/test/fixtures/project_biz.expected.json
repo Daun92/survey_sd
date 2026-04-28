@@ -1,0 +1,32 @@
+{
+  "sessions": [
+    {
+      "businessId": "2001",
+      "sessionIndex": 1,
+      "startDate": "2026-04-01",
+      "endDate": "2026-04-07",
+      "courseName": "리더십 과정 1차",
+      "nonFaceToFace": false,
+      "revenue": "500000"
+    },
+    {
+      "businessId": "2002",
+      "sessionIndex": 2,
+      "startDate": "2026-05-10",
+      "endDate": "2026-05-10",
+      "courseName": "리더십 과정 2차",
+      "nonFaceToFace": true,
+      "revenue": "300000"
+    },
+    {
+      "businessId": "2003",
+      "sessionIndex": 3,
+      "startDate": "2026-06-20",
+      "endDate": "2026-06-25",
+      "courseName": "리더십 과정 3차",
+      "nonFaceToFace": false,
+      "revenue": "700000"
+    }
+  ],
+  "totalCount": 3
+}

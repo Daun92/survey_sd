@@ -1,0 +1,2354 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CS 대상자 관리</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root {
+  --bg:#fafafa; --surface:#fff; --border:#e8e8e8;
+  --text:#1a1a1a; --text2:#666; --text3:#999;
+  --blue:#2563eb; --blue-bg:#eff6ff;
+  --green:#059669; --green-bg:#ecfdf5;
+  --amber:#d97706; --amber-bg:#fffbeb;
+  --red:#dc2626; --red-bg:#fef2f2;
+  --r:8px;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,'Pretendard',sans-serif;background:var(--bg);color:var(--text);font-size:13px;line-height:1.6}
+
+/* Layout */
+.shell{display:flex;min-height:100vh}
+nav{width:200px;background:#fff;border-right:1px solid var(--border);position:fixed;height:100vh;overflow-y:auto;padding:16px 0}
+main{margin-left:200px;flex:1;padding:24px 28px;max-width:1200px}
+
+/* Nav */
+.logo{padding:0 16px 16px;font-size:14px;font-weight:700;color:var(--text);border-bottom:1px solid var(--border);margin-bottom:8px}
+.logo small{display:block;font-size:11px;font-weight:400;color:var(--text3);margin-top:1px}
+.nv{display:block;padding:7px 16px;color:var(--text2);text-decoration:none;font-size:12px;border-left:2px solid transparent;transition:all .1s}
+.nv:hover{color:var(--text);background:#f5f5f5}
+.nv.on{color:var(--blue);font-weight:600;border-left-color:var(--blue);background:var(--blue-bg)}
+.nv .cnt{float:right;font-size:10px;background:var(--border);color:var(--text2);padding:0 5px;border-radius:8px;line-height:18px}
+.nv.on .cnt{background:var(--blue);color:#fff}
+.nsep{font-size:10px;color:var(--text3);padding:12px 16px 4px;font-weight:600;letter-spacing:.3px}
+
+/* Page header */
+.ph{margin-bottom:20px;display:flex;justify-content:space-between;align-items:flex-start}
+.ph h1{font-size:18px;font-weight:700}
+.ph p{font-size:12px;color:var(--text3);margin-top:2px}
+.acts{display:flex;gap:6px}
+
+/* Buttons */
+.btn{padding:6px 14px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid var(--border);background:#fff;color:var(--text);transition:all .1s}
+.btn:hover{background:#f5f5f5}
+.btn-p{background:var(--blue);color:#fff;border-color:var(--blue)}
+.btn-p:hover{background:#1d4ed8}
+.btn-g{background:var(--green);color:#fff;border-color:var(--green)}
+.btn-s{padding:4px 10px;font-size:11px}
+
+/* Cards */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:16px;margin-bottom:16px}
+.card h3{font-size:11px;font-weight:600;color:var(--text3);margin-bottom:10px;text-transform:uppercase;letter-spacing:.3px}
+
+/* Grid */
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+.g4{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.g5{display:grid;grid-template-columns:repeat(5,1fr);gap:12px}
+
+/* Stat */
+.st{text-align:center;padding:14px 8px;border-radius:var(--r);background:var(--bg)}
+.st .n{font-size:24px;font-weight:700;line-height:1.2}
+.st .l{font-size:11px;color:var(--text3);margin-top:2px}
+.st.bl .n{color:var(--blue)}.st.bl{background:var(--blue-bg)}
+.st.gr .n{color:var(--green)}.st.gr{background:var(--green-bg)}
+.st.am .n{color:var(--amber)}.st.am{background:var(--amber-bg)}
+.st.rd .n{color:var(--red)}.st.rd{background:var(--red-bg)}
+
+/* Pipeline */
+.pipe{display:flex;align-items:center;gap:0;margin:16px 0}
+.pipe-s{flex:1;text-align:center;position:relative;padding:0 4px}
+.pipe-s::after{content:'';position:absolute;top:16px;right:-2px;width:calc(100% - 32px);height:2px;background:var(--border);z-index:0;left:calc(50% + 16px)}
+.pipe-s:last-child::after{display:none}
+.pipe-d{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 6px;font-size:12px;font-weight:700;position:relative;z-index:1}
+.pipe-d.dn{background:var(--green);color:#fff}
+.pipe-d.ac{background:var(--blue);color:#fff;box-shadow:0 0 0 4px rgba(37,99,235,.15)}
+.pipe-d.wt{background:var(--border);color:var(--text3)}
+.pipe-t{font-size:11px;color:var(--text2)}
+.pipe-n{font-size:16px;font-weight:700;margin-top:2px}
+
+/* Table */
+.tw{overflow-x:auto}
+table{width:100%;border-collapse:collapse}
+th{text-align:left;font-size:11px;font-weight:600;color:var(--text3);padding:8px 10px;border-bottom:1px solid var(--border)}
+td{padding:8px 10px;border-bottom:1px solid #f0f0f0;font-size:12px}
+tr:hover td{background:#fafafa}
+td strong{font-weight:600;color:var(--text)}
+td .sub{font-size:10px;color:var(--text3);display:block;margin-top:1px}
+
+/* Tags */
+.tag{display:inline-block;padding:1px 7px;border-radius:4px;font-size:10px;font-weight:600}
+.tag-b{background:var(--blue-bg);color:var(--blue)}
+.tag-g{background:var(--green-bg);color:var(--green)}
+.tag-a{background:var(--amber-bg);color:var(--amber)}
+.tag-r{background:var(--red-bg);color:var(--red)}
+.tag-n{background:#f3f4f6;color:var(--text3)}
+
+/* Filter */
+.flt{display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap}
+.flt input,.flt select{padding:5px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;background:#fff}
+.flt input:focus,.flt select:focus{outline:none;border-color:var(--blue)}
+
+/* Progress */
+.prog{height:6px;background:#f0f0f0;border-radius:3px;overflow:hidden}
+.prog-f{height:100%;border-radius:3px}
+
+/* Bar chart (simple) */
+.bar-row{display:flex;align-items:center;gap:8px;margin-bottom:8px;font-size:12px}
+.bar-label{width:100px;color:var(--text2);text-align:right;flex-shrink:0}
+.bar-track{flex:1;height:18px;background:#f0f0f0;border-radius:3px;overflow:hidden}
+.bar-fill{height:100%;border-radius:3px;display:flex;align-items:center;padding-left:6px;font-size:10px;color:#fff;font-weight:600;min-width:20px}
+.bar-val{width:35px;font-size:11px;color:var(--text3);text-align:right;flex-shrink:0}
+
+/* Slide panel */
+.mask{position:fixed;inset:0;background:rgba(0,0,0,.2);z-index:199;display:none;transition:opacity .2s}
+.mask.on{display:block}
+.panel{position:fixed;right:-440px;top:0;width:440px;height:100vh;background:#fff;z-index:200;transition:right .25s;overflow-y:auto;border-left:1px solid var(--border);padding:20px}
+.panel.on{right:0}
+.panel-close{position:absolute;top:12px;right:14px;background:none;border:none;font-size:18px;color:var(--text3);cursor:pointer}
+.panel h2{font-size:16px;font-weight:700;margin-bottom:2px}
+.panel .sub-h{font-size:12px;color:var(--text3);margin-bottom:16px}
+.sect{margin-bottom:16px}
+.sect-t{font-size:11px;font-weight:600;color:var(--text3);margin-bottom:6px;padding-bottom:4px;border-bottom:1px solid #f0f0f0}
+.drow{display:flex;padding:3px 0;font-size:12px}
+.drow .dl{width:80px;color:var(--text3);flex-shrink:0}
+.drow .dv{color:var(--text);font-weight:500}
+
+/* Steps in panel */
+.stp{display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:6px;font-size:12px;margin-bottom:4px}
+.stp.dn{background:var(--green-bg)}
+.stp.ac{background:var(--blue-bg)}
+.stp.wt{background:#f5f5f5}
+.stp-n{width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:10px;flex-shrink:0;color:#fff}
+.stp.dn .stp-n{background:var(--green)}
+.stp.ac .stp-n{background:var(--blue)}
+.stp.wt .stp-n{background:var(--text3)}
+
+/* Checkbox */
+.ck{width:14px;height:14px;accent-color:var(--blue)}
+
+/* Workflow 통합 뷰 (p-wf) */
+.wf-section{border:1px solid var(--border);border-radius:var(--r);margin-bottom:14px;background:#fff;overflow:hidden}
+.wf-section[open]{box-shadow:0 1px 2px rgba(0,0,0,.03)}
+.wf-section-h{cursor:pointer;padding:12px 16px;list-style:none;display:flex;align-items:center;gap:10px;font-size:13px;font-weight:600;background:#fafafa;border-bottom:1px solid transparent}
+.wf-section[open] .wf-section-h{border-bottom-color:var(--border)}
+.wf-section-h::-webkit-details-marker{display:none}
+.wf-section-h::before{content:'▼';font-size:10px;color:var(--text3);transition:transform .15s;display:inline-block}
+.wf-section:not([open]) .wf-section-h::before{transform:rotate(-90deg)}
+.wf-num{background:var(--blue);color:#fff;width:22px;height:22px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:700}
+.wf-title{flex:1}
+.wf-badge{background:var(--bg);color:var(--text2);padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600;border:1px solid var(--border)}
+.wf-actions{margin-left:8px}
+.wf-body{padding:14px 16px 16px}
+.wf-sticky-bar{position:sticky;top:0;z-index:10;background:#fff;margin-bottom:16px}
+
+/* 6개월 발송이력 CSV 드롭존 */
+.hist-drop{border:2px dashed var(--border);border-radius:8px;padding:30px;text-align:center;cursor:pointer;transition:all .1s;color:var(--text2)}
+.hist-drop:hover{border-color:var(--blue);background:var(--blue-bg);color:var(--blue)}
+.hist-drop.dragging{border-color:var(--blue);background:var(--blue-bg)}
+
+/* Dashboard month nav */
+#dash-cumul-btn.active{background:var(--blue);color:#fff;border-color:var(--blue)}
+/* Trend bar chart */
+.trend-bar{display:flex;flex-direction:column;align-items:center;flex:1;gap:4px}
+.trend-bar-fill{width:100%;border-radius:3px 3px 0 0;transition:height .3s}
+.trend-bar-label{font-size:10px;color:var(--text3);white-space:nowrap}
+.trend-bar-val{font-size:11px;font-weight:600;color:var(--text)}
+
+@media(max-width:900px){
+  nav{display:none}main{margin-left:0;padding:16px}
+  .g4,.g5{grid-template-columns:1fr 1fr}.g2,.g3{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+<div class="shell">
+<nav>
+  <div class="logo">CS 대상자 관리<small>Survey Target Manager</small></div>
+  <a class="nv on" onclick="go('dash')">대시보드</a>
+  <div class="nsep">워크플로우</div>
+  <a class="nv" onclick="go('wf')">통합 보기</a>
+  <a class="nv" onclick="go('s1')">1 교육 종료 확인<span class="cnt" id="cnt-s1">0</span></a>
+  <a class="nv" onclick="go('s2')">2 최종 과정 확인<span class="cnt" id="cnt-s2">0</span></a>
+  <a class="nv" onclick="go('s3')">3 마감 여부 확인<span class="cnt" id="cnt-s3">0</span></a>
+  <a class="nv" onclick="go('s4')">4 설문 이력 확인<span class="cnt" id="cnt-s4">0</span></a>
+  <a class="nv" onclick="go('s5')">5 대상자 확정<span class="cnt" id="cnt-s5">0</span></a>
+  <div class="nsep">데이터</div>
+  <a class="nv" onclick="go('proj')">프로젝트</a>
+  <a class="nv" onclick="go('cont')">담당자 DB</a>
+  <a class="nv" onclick="go('sync')">BRIS 동기화</a>
+</nav>
+
+<main>
+
+<!-- ========== 대시보드 ========== -->
+<div id="p-dash" class="pg">
+  <div class="ph">
+    <div>
+      <h1>대시보드</h1>
+      <div id="dash-nav" style="display:flex;align-items:center;gap:8px;margin-top:4px">
+        <button class="btn btn-s" id="dash-prev-btn" onclick="dashPrevMonth()">&laquo;</button>
+        <span id="dash-month-label" style="font-size:13px;font-weight:600;min-width:90px;text-align:center">2026년 4월</span>
+        <button class="btn btn-s" id="dash-next-btn" onclick="dashNextMonth()">&raquo;</button>
+        <span style="width:1px;height:16px;background:var(--border);margin:0 4px"></span>
+        <button class="btn btn-s" id="dash-cumul-btn" onclick="toggleDashMode()">누적 보기</button>
+      </div>
+    </div>
+    <div class="acts">
+      <button class="btn" onclick="go('sync')">BRIS 동기화</button>
+      <button class="btn btn-p" onclick="go('s1')">+ 새 CS 회차</button>
+    </div>
+  </div>
+
+  <div class="g5" style="margin-bottom:16px">
+    <div class="st bl"><div class="n" id="kpi-total">0</div><div class="l">전체 후보</div></div>
+    <div class="st am"><div class="n" id="kpi-screening">0</div><div class="l">심사 중</div></div>
+    <div class="st gr"><div class="n" id="kpi-eligible">0</div><div class="l">적격 확정</div></div>
+    <div class="st rd"><div class="n" id="kpi-excluded">0</div><div class="l">제외</div></div>
+    <div class="st"><div class="n" id="kpi-response" style="color:var(--text)">0%</div><div class="l">응답율</div></div>
+  </div>
+
+  <!-- 파이프라인 -->
+  <div class="card">
+    <h3>선정 파이프라인</h3>
+    <div class="pipe">
+      <div class="pipe-s"><div class="pipe-d dn">✓</div><div class="pipe-t">교육 종료</div><div class="pipe-n" id="pipe-s1">0</div></div>
+      <div class="pipe-s"><div class="pipe-d dn">✓</div><div class="pipe-t">최종 과정</div><div class="pipe-n" id="pipe-s2">0</div></div>
+      <div class="pipe-s"><div class="pipe-d ac">3</div><div class="pipe-t">마감 확인</div><div class="pipe-n" id="pipe-s3">0</div></div>
+      <div class="pipe-s"><div class="pipe-d wt">4</div><div class="pipe-t">이력 확인</div><div class="pipe-n" id="pipe-s4">0</div></div>
+      <div class="pipe-s"><div class="pipe-d wt">5</div><div class="pipe-t">대상 확정</div><div class="pipe-n" id="pipe-s5">0</div></div>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;margin-top:8px">
+      <div class="prog" style="flex:1"><div class="prog-f" id="pipe-progress" style="width:0%;background:linear-gradient(90deg,var(--green),var(--blue))"></div></div>
+      <span style="font-size:11px;color:var(--text3)" id="pipe-pct">0%</span>
+    </div>
+  </div>
+
+  <div class="card" id="dash-trend-card">
+    <h3>월별 추이 (최근 6개월)</h3>
+    <div id="dash-trend" style="display:flex;align-items:flex-end;gap:8px;height:120px;padding-top:10px"></div>
+  </div>
+
+  <div class="g2">
+    <div class="card">
+      <h3 id="dash-batch-title">이번 달 CS 회차</h3>
+      <table>
+        <thead><tr><th>회차</th><th>기간</th><th>대상</th><th>적격</th><th>상태</th></tr></thead>
+        <tbody id="tbl-batches">
+        </tbody>
+      </table>
+    </div>
+    <!-- 제외 사유 -->
+    <div class="card">
+      <h3>제외 사유 분포</h3>
+      <div style="padding-top:4px" id="excl-reasons">
+      </div>
+    </div>
+  </div>
+
+  <!-- 팀별 -->
+  <div class="card">
+    <h3>수주팀별 현황</h3>
+    <table>
+      <thead><tr><th>팀</th><th>전체</th><th>적격</th><th>제외</th><th>발송</th><th>응답율</th></tr></thead>
+      <tbody id="tbl-teams">
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ========== Step 1 ========== -->
+<div id="p-s1" class="pg" style="display:none">
+  <div class="ph">
+    <div><h1>1. 교육 종료 확인</h1><p>종료일 지난 과정 자동 탐지</p></div>
+    <div class="acts"><button class="btn" onclick="exportStepAudit(1)">검수 CSV</button><button class="btn btn-p" onclick="scanStep1()">자동 스캔</button></div>
+  </div>
+  <div class="g4" style="margin-bottom:16px">
+    <div class="st bl"><div class="n" id="s1-scan">0</div><div class="l">스캔 대상</div></div>
+    <div class="st gr"><div class="n" id="s1-done">0</div><div class="l">종료 확인</div></div>
+    <div class="st am"><div class="n" id="s1-ongoing">0</div><div class="l">진행 중</div></div>
+    <div class="st rd"><div class="n" id="s1-none">0</div><div class="l">일정 없음</div></div></div>
+  <div class="card">
+    <div class="flt">
+      <input type="date" id="s1-from" value="2026-04-07"><span style="color:var(--text3)">–</span><input type="date" id="s1-to" value="2026-04-13">
+      <select id="s1-team"><option value="">전체 팀</option></select>
+      <input type="text" placeholder="검색..." style="width:160px" id="s1-search" onkeyup="loadS1()">
+    </div>
+    <table>
+      <thead><tr><th style="width:30px"><input type="checkbox" class="ck" onchange="ckAll(this)"></th><th>과정</th><th>회사</th><th>수주코드</th><th>종료일</th><th>유형</th><th>에코</th><th>과정</th><th></th></tr></thead>
+      <tbody id="tbl-s1">
+      </tbody>
+    </table>
+    <div style="margin-top:12px;display:flex;justify-content:space-between;align-items:center">
+      <span style="font-size:11px;color:var(--text3)" id="s1-selected">0건 선택</span>
+      <button class="btn btn-p" onclick="go('s2')">Step 2 →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ========== Step 2 ========== -->
+<div id="p-s2" class="pg" style="display:none">
+  <div class="ph"><div><h1>2. 최종 과정 확인</h1><p>프로젝트 내 마지막 교육과정 여부 확인</p></div><div class="acts"><button class="btn" onclick="exportStepAudit(2)">검수 CSV</button></div></div>
+  <div class="g3" style="margin-bottom:16px">
+    <div class="st gr"><div class="n" id="s2-final">0</div><div class="l">최종 과정</div></div>
+    <div class="st am"><div class="n" id="s2-wait">0</div><div class="l">후속 있음 (대기)</div></div>
+    <div class="st bl"><div class="n" id="s2-manual">0</div><div class="l">수동 확인</div></div>
+  </div>
+  <div class="card">
+    <table>
+      <thead><tr><th style="width:30px"><input type="checkbox" class="ck" onchange="ckAll(this)"></th><th>수주코드</th><th>프로젝트</th><th>과정</th><th>종료일</th><th>진행</th><th>최종?</th><th></th></tr></thead>
+      <tbody id="tbl-s2">
+      </tbody>
+    </table>
+    <div style="margin-top:12px;display:flex;justify-content:space-between">
+      <button class="btn" onclick="go('s1')">← Step 1</button>
+      <button class="btn btn-p" onclick="go('s3')">Step 3 →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ========== Step 3 ========== -->
+<div id="p-s3" class="pg" style="display:none">
+  <div class="ph"><div><h1>3. 프로젝트 마감 확인</h1><p>마감 상태 및 일시 확인</p></div><div class="acts"><button class="btn" onclick="exportStepAudit(3)">검수 CSV</button></div></div>
+  <div class="g3" style="margin-bottom:16px">
+    <div class="st gr"><div class="n" id="s3-closed">0</div><div class="l">마감 완료</div></div>
+    <div class="st am"><div class="n" id="s3-pending">0</div><div class="l">마감 예정</div></div>
+    <div class="st rd"><div class="n" id="s3-open">0</div><div class="l">미마감</div></div>
+  </div>
+  <div class="card">
+    <table>
+      <thead><tr><th style="width:30px"><input type="checkbox" class="ck" onchange="ckAll(this)"></th><th>수주코드</th><th>프로젝트</th><th>AM</th><th style="text-align:right">금액</th><th>마감일</th><th>상태</th><th></th></tr></thead>
+      <tbody id="tbl-s3">
+      </tbody>
+    </table>
+    <div style="margin-top:12px;display:flex;justify-content:space-between">
+      <button class="btn" onclick="go('s2')">← Step 2</button>
+      <button class="btn btn-p" onclick="go('s4')">Step 4 →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ========== Step 4 ========== -->
+<div id="p-s4" class="pg" style="display:none">
+  <div class="ph"><div><h1>4. 설문 이력 확인</h1><p>6개월 이내 설문 참여 여부 — 중복 방지</p></div><div class="acts"><button class="btn" onclick="exportStepAudit(4)">검수 CSV</button></div></div>
+  <div class="g3" style="margin-bottom:16px">
+    <div class="st gr"><div class="n" id="s4-ok">0</div><div class="l">발송 가능</div></div>
+    <div class="st rd"><div class="n" id="s4-excluded">0</div><div class="l">6개월 이내</div></div>
+    <div class="st am"><div class="n" id="s4-unknown">0</div><div class="l">이력 불명</div></div>
+  </div>
+  <div class="card">
+    <table>
+      <thead><tr><th style="width:30px"><input type="checkbox" class="ck" onchange="ckAll(this)"></th><th>담당자</th><th>회사</th><th>이메일</th><th>최근 설문</th><th>경과</th><th>판정</th></tr></thead>
+      <tbody id="tbl-s4">
+      </tbody>
+    </table>
+    <div style="margin-top:12px;display:flex;justify-content:space-between">
+      <button class="btn" onclick="go('s3')">← Step 3</button>
+      <button class="btn btn-p" onclick="go('s5')">Step 5 →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ========== Step 5 ========== -->
+<div id="p-s5" class="pg" style="display:none">
+  <div class="ph"><div><h1>5. 대상자 확정</h1><p>최종 검토 후 발송</p></div><div class="acts"><button class="btn" onclick="exportStepAudit(5)">검수 CSV</button></div></div>
+  <div class="g3" style="margin-bottom:16px">
+    <div class="st gr"><div class="n" id="s5-confirmed">0</div><div class="l">확정 대상</div></div>
+    <div class="st bl"><div class="n" id="s5-email">0</div><div class="l">이메일</div></div>
+    <div class="st"><div class="n" id="s5-sms">0</div><div class="l">SMS</div></div>
+  </div>
+  <div class="card">
+    <div style="background:var(--green-bg);padding:10px 14px;border-radius:6px;margin-bottom:12px;font-size:12px;color:var(--green)">
+      <strong>5단계 심사 완료</strong> — <span id="s5-count">0</span>명 최종 선정. 확정 후 발송하세요.
+    </div>
+    <table>
+      <thead><tr><th style="width:30px"><input type="checkbox" class="ck" checked onchange="ckAll(this)"></th><th>담당자</th><th>회사</th><th>프로젝트</th><th>AM</th><th>채널</th><th></th></tr></thead>
+      <tbody id="tbl-s5">
+      </tbody>
+    </table>
+    <div style="margin-top:12px;display:flex;justify-content:space-between">
+      <button class="btn" onclick="go('s4')">← Step 4</button>
+      <div class="acts">
+        <button class="btn" onclick="exportExcel()">엑셀 다운로드</button>
+        <button class="btn btn-g" onclick="dispatchSurvey()">설문 발송</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ========== 워크플로우 통합 보기 ========== -->
+<div id="p-wf" class="pg" style="display:none">
+  <div class="ph">
+    <div><h1>워크플로우 통합 보기</h1><p>전 단계 진행 현황 한눈에</p></div>
+    <div class="acts">
+      <button class="btn" onclick="exportStepAudit(5)">전체 감사 CSV</button>
+      <button class="btn" onclick="go('sync')">BRIS 동기화</button>
+    </div>
+  </div>
+
+  <!-- 배치 선택 + 파이프라인 (sticky) -->
+  <div class="card wf-sticky-bar">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px">
+      <span style="font-size:11px;font-weight:600;color:var(--text3)">CS 회차</span>
+      <div id="wf-batch-slot"></div>
+      <span style="font-size:11px;color:var(--text3);margin-left:auto" id="wf-pipe-pct">0%</span>
+    </div>
+    <div class="pipe" style="margin:0">
+      <div class="pipe-s"><div class="pipe-d wt" id="wf-pipe-d1">1</div><div class="pipe-t">교육 종료</div><div class="pipe-n" id="wf-pipe-s1">0</div></div>
+      <div class="pipe-s"><div class="pipe-d wt" id="wf-pipe-d2">2</div><div class="pipe-t">최종 과정</div><div class="pipe-n" id="wf-pipe-s2">0</div></div>
+      <div class="pipe-s"><div class="pipe-d wt" id="wf-pipe-d3">3</div><div class="pipe-t">마감 확인</div><div class="pipe-n" id="wf-pipe-s3">0</div></div>
+      <div class="pipe-s"><div class="pipe-d wt" id="wf-pipe-d4">4</div><div class="pipe-t">이력 확인</div><div class="pipe-n" id="wf-pipe-s4">0</div></div>
+      <div class="pipe-s"><div class="pipe-d wt" id="wf-pipe-d5">5</div><div class="pipe-t">대상 확정</div><div class="pipe-n" id="wf-pipe-s5">0</div></div>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;margin-top:8px">
+      <div class="prog" style="flex:1"><div class="prog-f" id="wf-pipe-progress" style="width:0%;background:linear-gradient(90deg,var(--green),var(--blue))"></div></div>
+    </div>
+  </div>
+
+  <!-- Step 1 -->
+  <details class="wf-section" open id="wf-sec-1">
+    <summary class="wf-section-h">
+      <span class="wf-num">1</span><span class="wf-title">교육 종료 확인</span>
+      <span class="wf-badge" id="wf-s1-badge">0/0</span>
+      <span class="wf-actions"><button class="btn btn-s" onclick="event.preventDefault();exportStepAudit(1)">검수 CSV</button></span>
+    </summary>
+    <div class="wf-body">
+      <div class="g4" style="margin-bottom:12px">
+        <div class="st bl"><div class="n" id="wf-s1-scan">0</div><div class="l">스캔 대상</div></div>
+        <div class="st gr"><div class="n" id="wf-s1-done">0</div><div class="l">종료 확인</div></div>
+        <div class="st am"><div class="n" id="wf-s1-ongoing">0</div><div class="l">진행 중</div></div>
+        <div class="st rd"><div class="n" id="wf-s1-none">0</div><div class="l">일정 없음</div></div>
+      </div>
+      <div class="tw"><table>
+        <thead><tr><th style="width:30px"></th><th>과정</th><th>회사</th><th>수주코드</th><th>종료일</th><th>유형</th><th>에코</th><th>상태</th><th></th></tr></thead>
+        <tbody id="wf-tbl-s1"></tbody>
+      </table></div>
+    </div>
+  </details>
+
+  <!-- Step 2 -->
+  <details class="wf-section" open id="wf-sec-2">
+    <summary class="wf-section-h">
+      <span class="wf-num">2</span><span class="wf-title">최종 과정 확인</span>
+      <span class="wf-badge" id="wf-s2-badge">0/0</span>
+      <span class="wf-actions"><button class="btn btn-s" onclick="event.preventDefault();exportStepAudit(2)">검수 CSV</button></span>
+    </summary>
+    <div class="wf-body">
+      <div class="g3" style="margin-bottom:12px">
+        <div class="st gr"><div class="n" id="wf-s2-final">0</div><div class="l">최종 과정</div></div>
+        <div class="st am"><div class="n" id="wf-s2-wait">0</div><div class="l">후속 있음 (대기)</div></div>
+        <div class="st bl"><div class="n" id="wf-s2-manual">0</div><div class="l">수동 확인</div></div>
+      </div>
+      <div class="tw"><table>
+        <thead><tr><th style="width:30px"></th><th>수주코드</th><th>프로젝트</th><th>과정</th><th>종료일</th><th>진행</th><th>최종?</th><th></th></tr></thead>
+        <tbody id="wf-tbl-s2"></tbody>
+      </table></div>
+    </div>
+  </details>
+
+  <!-- Step 3 -->
+  <details class="wf-section" open id="wf-sec-3">
+    <summary class="wf-section-h">
+      <span class="wf-num">3</span><span class="wf-title">프로젝트 마감 확인</span>
+      <span class="wf-badge" id="wf-s3-badge">0/0</span>
+      <span class="wf-actions"><button class="btn btn-s" onclick="event.preventDefault();exportStepAudit(3)">검수 CSV</button></span>
+    </summary>
+    <div class="wf-body">
+      <div class="g3" style="margin-bottom:12px">
+        <div class="st gr"><div class="n" id="wf-s3-closed">0</div><div class="l">마감 완료</div></div>
+        <div class="st am"><div class="n" id="wf-s3-pending">0</div><div class="l">마감 예정</div></div>
+        <div class="st rd"><div class="n" id="wf-s3-open">0</div><div class="l">미마감</div></div>
+      </div>
+      <div class="tw"><table>
+        <thead><tr><th style="width:30px"></th><th>수주코드</th><th>프로젝트</th><th>AM</th><th style="text-align:right">금액</th><th>마감일</th><th>상태</th><th></th></tr></thead>
+        <tbody id="wf-tbl-s3"></tbody>
+      </table></div>
+    </div>
+  </details>
+
+  <!-- Step 4 -->
+  <details class="wf-section" open id="wf-sec-4">
+    <summary class="wf-section-h">
+      <span class="wf-num">4</span><span class="wf-title">설문 이력 확인</span>
+      <span class="wf-badge" id="wf-s4-badge">0/0</span>
+      <span class="wf-actions"><button class="btn btn-s" onclick="event.preventDefault();exportStepAudit(4)">검수 CSV</button></span>
+    </summary>
+    <div class="wf-body">
+      <div class="g3" style="margin-bottom:12px">
+        <div class="st gr"><div class="n" id="wf-s4-ok">0</div><div class="l">발송 가능</div></div>
+        <div class="st rd"><div class="n" id="wf-s4-excluded">0</div><div class="l">6개월 이내</div></div>
+        <div class="st am"><div class="n" id="wf-s4-unknown">0</div><div class="l">이력 불명</div></div>
+      </div>
+      <div class="tw"><table>
+        <thead><tr><th style="width:30px"></th><th>담당자</th><th>회사</th><th>이메일</th><th>최근 설문</th><th>경과</th><th>판정</th></tr></thead>
+        <tbody id="wf-tbl-s4"></tbody>
+      </table></div>
+    </div>
+  </details>
+
+  <!-- Step 5 -->
+  <details class="wf-section" open id="wf-sec-5">
+    <summary class="wf-section-h">
+      <span class="wf-num">5</span><span class="wf-title">대상자 확정</span>
+      <span class="wf-badge" id="wf-s5-badge">0/0</span>
+      <span class="wf-actions"><button class="btn btn-s" onclick="event.preventDefault();exportStepAudit(5)">검수 CSV</button></span>
+    </summary>
+    <div class="wf-body">
+      <div class="g3" style="margin-bottom:12px">
+        <div class="st gr"><div class="n" id="wf-s5-confirmed">0</div><div class="l">확정 대상</div></div>
+        <div class="st bl"><div class="n" id="wf-s5-email">0</div><div class="l">이메일</div></div>
+        <div class="st"><div class="n" id="wf-s5-sms">0</div><div class="l">SMS</div></div>
+      </div>
+      <div class="tw"><table>
+        <thead><tr><th style="width:30px"></th><th>담당자</th><th>회사</th><th>프로젝트</th><th>AM</th><th>채널</th><th></th></tr></thead>
+        <tbody id="wf-tbl-s5"></tbody>
+      </table></div>
+    </div>
+  </details>
+</div>
+
+<!-- ========== 프로젝트 ========== -->
+<div id="p-proj" class="pg" style="display:none">
+  <div class="ph"><div><h1>프로젝트</h1><p>BRIS 연동 프로젝트 현황</p></div></div>
+  <div class="card">
+    <div class="flt">
+      <select id="proj-status"><option value="">전체 상태</option><option value="active">진행중</option><option value="closed">마감</option></select>
+      <input type="text" placeholder="수주코드·프로젝트명 검색" style="width:200px" id="proj-search" onkeyup="loadProjects()">
+    </div>
+    <table>
+      <thead><tr><th>수주코드</th><th>프로젝트</th><th>AM</th><th>수행</th><th>강사</th><th>유형</th><th>에코</th><th>과정</th><th style="text-align:right">금액</th><th>상태</th></tr></thead>
+      <tbody id="tbl-proj">
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ========== 담당자 DB ========== -->
+<div id="p-cont" class="pg" style="display:none">
+  <div class="ph"><div><h1>담당자 DB</h1><p>회사 → 사업장 → DM 계층</p></div></div>
+  <div class="card">
+    <div class="flt">
+      <input type="text" placeholder="이름·회사·이메일 검색" style="width:220px" id="cont-search" onkeyup="loadContacts()">
+      <select id="cont-filter" onchange="loadContacts()"><option value="">전체</option><option value="6m">6개월 내 참여</option><option value="none">미참여</option></select>
+    </div>
+    <table>
+      <thead><tr><th>이름</th><th>회사</th><th>사업장</th><th>부서·직책</th><th>이메일</th><th>최근 설문</th><th>6개월</th></tr></thead>
+      <tbody id="tbl-cont">
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ========== BRIS 동기화 ========== -->
+<div id="p-sync" class="pg" style="display:none">
+  <div class="ph"><div><h1>BRIS 동기화</h1><p>BRIS → bris_api.py → Supabase</p></div></div>
+  <div class="g2">
+    <div class="card">
+      <h3>설정</h3>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <div>
+          <div style="font-size:11px;font-weight:600;color:var(--text3);margin-bottom:3px">조회 기간</div>
+          <div style="display:flex;gap:6px;align-items:center">
+            <input type="date" id="sync-from" value="2026-04-01" style="padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;flex:1">
+            <span style="color:var(--text3)">–</span>
+            <input type="date" id="sync-to" value="2026-04-30" style="padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;flex:1">
+          </div>
+        </div>
+        <div>
+          <div style="font-size:11px;font-weight:600;color:var(--text3);margin-bottom:3px">인증</div>
+          <select style="padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;width:100%">
+            <option>쿠키 파일</option><option>ID/PW</option><option>환경변수</option>
+          </select>
+        </div>
+        <button class="btn btn-p" style="margin-top:4px" onclick="syncBRIS()">동기화 시작</button>
+      </div>
+    </div>
+    <div class="card">
+      <h3>최근 이력</h3>
+      <table>
+        <thead><tr><th>시각</th><th>기간</th><th>건수</th><th>상태</th></tr></thead>
+        <tbody id="tbl-sync">
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <div class="card">
+    <h3>시스템 상태</h3>
+    <div id="sync-health" style="font-size:12px;padding:8px 0;color:var(--text2)">로딩 중...</div>
+  </div>
+  <div class="card">
+    <h3>BRIS 원본 입고 (Layer 0 / Bronze)</h3>
+    <div id="layer0-health" style="font-size:12px;padding:8px 0;color:var(--text2)">로딩 중...</div>
+    <div style="font-size:11px;color:var(--text3);margin-top:6px">
+      cs_bris_raw_pages / cs_bris_raw_records — BRIS 응답 immutable 보존. orphan 0 으로 수렴해야 공장 정상.
+    </div>
+  </div>
+  <div class="card">
+    <h3>스케줄 (자동화)</h3>
+    <div id="cron-status" style="font-size:12px;padding:4px 0;color:var(--text2)">로딩 중...</div>
+    <div style="font-size:11px;color:var(--text3);margin-top:6px">
+      외부 cron(매주 월 09:00 KST): BRIS 수집/정제/Step1~4 심사 — Docker 호스트의 bris_cron_runner.sh<br>
+      Supabase pg_cron(아래): 분류 재심사 / lineage 진단 / 원본 보존정책
+    </div>
+  </div>
+  <div class="card">
+    <h3>발송 현황</h3>
+    <table>
+      <thead><tr><th>회차</th><th>발송</th><th>전송</th><th>응답</th><th>응답률</th><th>실패</th></tr></thead>
+      <tbody id="tbl-dispatch"></tbody>
+    </table>
+  </div>
+  <div class="card">
+    <h3>파이프라인 (Supabase = BRIS 데이터 공장)</h3>
+    <div style="display:flex;align-items:center;justify-content:center;gap:8px;padding:12px 0;flex-wrap:wrap">
+      <div style="background:var(--bg);padding:10px 12px;border-radius:8px;text-align:center;font-size:11px"><strong>BRIS</strong><span class="sub">HTML</span></div>
+      <span style="color:var(--text3)">→</span>
+      <div style="background:var(--blue-bg);padding:10px 12px;border-radius:8px;text-align:center;font-size:11px"><strong>bris_api.py</strong><span class="sub">fetch+parse</span></div>
+      <span style="color:var(--text3)">→</span>
+      <div style="background:#f5f0e6;padding:10px 12px;border-radius:8px;text-align:center;font-size:11px;border:1px solid #b8956a"><strong>Layer 0</strong><span class="sub">Bronze: raw_pages/records</span></div>
+      <span style="color:var(--text3)">→</span>
+      <div style="background:#eef3f7;padding:10px 12px;border-radius:8px;text-align:center;font-size:11px;border:1px solid #8aa9c5"><strong>Layer 1</strong><span class="sub">Silver: cs_courses/projects/contacts</span></div>
+      <span style="color:var(--text3)">→</span>
+      <div style="background:var(--amber-bg);padding:10px 12px;border-radius:8px;text-align:center;font-size:11px"><strong>Layer 2/3</strong><span class="sub">집계+5단계 심사</span></div>
+      <span style="color:var(--text3)">→</span>
+      <div style="background:var(--green-bg);padding:10px 12px;border-radius:8px;text-align:center;font-size:11px"><strong>BRIDGE</strong><span class="sub">survey_sd 발송</span></div>
+    </div>
+  </div>
+
+  <!-- 6개월 발송이력 CSV 업로드 -->
+  <div class="card">
+    <h3>6개월 발송이력 CSV</h3>
+    <div id="hist-dropzone" class="hist-drop"
+         ondragover="event.preventDefault();this.classList.add('dragging')"
+         ondragleave="this.classList.remove('dragging')"
+         ondrop="handleHistDrop(event)"
+         onclick="document.getElementById('hist-file').click()">
+      <p style="font-size:13px;margin-bottom:4px">CSV 파일을 여기에 끌어놓거나 클릭해서 선택</p>
+      <p style="font-size:11px;color:var(--text3)">기대 컬럼: 과정명, 고객사, 이름, 직급, 전화번호, 설문시기 (헤더 이름으로 매핑)</p>
+    </div>
+    <input type="file" id="hist-file" accept=".csv" style="display:none" onchange="handleHistFile(this.files[0])">
+    <div id="hist-stats" style="font-size:12px;color:var(--text2);margin-top:10px"></div>
+  </div>
+</div>
+
+</main>
+</div>
+
+<!-- Panel -->
+<div class="mask" id="mask" onclick="closePanel()"></div>
+<div class="panel" id="panel">
+  <button class="panel-close" onclick="closePanel()">×</button>
+  <h2 id="panel-name"></h2>
+  <div class="sub-h" id="panel-company"></div>
+
+  <div class="sect">
+    <div class="sect-t">선정 프로세스</div>
+    <div id="panel-steps"></div>
+  </div>
+
+  <div class="sect">
+    <div class="sect-t">담당자</div>
+    <div id="panel-contact"></div>
+  </div>
+
+  <div class="sect">
+    <div class="sect-t">프로젝트</div>
+    <div id="panel-project"></div>
+  </div>
+
+  <div class="sect">
+    <div class="sect-t">과정</div>
+    <div id="panel-course"></div>
+  </div>
+
+  <div class="sect">
+    <div class="sect-t">거래 이력</div>
+    <table style="font-size:11px" id="panel-history"><tbody></tbody></table>
+  </div>
+
+  <div class="sect">
+    <div class="sect-t">설문 이력</div>
+    <table style="font-size:11px" id="panel-surveys"><tbody></tbody></table>
+  </div>
+</div>
+
+<script>
+const sb = window.supabase.createClient(
+  'https://gdwhbacuzhynvegkfoga.supabase.co',
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imdkd2hiYWN1emh5bnZlZ2tmb2dhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQyNTM1OTAsImV4cCI6MjA4OTgyOTU5MH0.nk0mPohYXnNTb5lTXoxXEbr3bX6UKfGYGW20FsO1bXk',
+  { auth: { storageKey: 'cs-survey-auth', storage: window.sessionStorage, flowType: 'implicit', detectSessionInUrl: false, persistSession: false } }
+);
+
+// survey_sd (exc-survey.vercel.app) 브릿지 엔드포인트.
+// BRIDGE_KEY 는 의도적으로 publishable — 실제 방어는 서버측 cs_survey_targets 재검증.
+const BRIDGE_URL = 'https://exc-survey.vercel.app/api/distributions/cs-bridge';
+const BRIDGE_KEY = '__SET_CS_BRIDGE_API_KEY__';  // Vercel 환경변수와 동일 값을 여기에 박제
+
+let currentPage = 'dash';
+let currentBatchId = null;
+let allTargets = [];
+let allBatches = [];
+let dashboardMode = 'monthly';
+let dashboardMonth = null;
+let dashTargets = [];
+let dashBatches = [];
+
+// ===== NAVIGATION =====
+async function go(id){
+  currentPage = id;
+  document.querySelectorAll('.pg').forEach(p=>p.style.display='none');
+  const el=document.getElementById('p-'+id);
+  if(el)el.style.display='block';
+  document.querySelectorAll('.nv').forEach(n=>n.classList.remove('on'));
+  // 통합 보기(wf) 가 워크플로우 구분 아래 첫 번째로 추가됨에 따라 s1~sync 인덱스 +1 시프트
+  const map={dash:0,wf:1,s1:2,s2:3,s3:4,s4:5,s5:6,proj:7,cont:8,sync:9};
+  const nvs=document.querySelectorAll('.nv');
+  if(map[id]!==undefined&&nvs[map[id]])nvs[map[id]].classList.add('on');
+
+  const loaders={dash:loadDashboard,wf:loadWorkflow,s1:loadS1,s2:loadS2,s3:loadS3,s4:loadS4,s5:loadS5,proj:loadProjects,cont:loadContacts,sync:loadSync};
+  if(loaders[id]){
+    try{ await loaders[id](); }catch(e){ console.warn('[load:'+id+']',e); }
+  }
+}
+
+function ckAll(el){el.closest('table').querySelectorAll('tbody .ck').forEach(c=>c.checked=el.checked)}
+function openPanel(targetId){
+  document.getElementById('panel').classList.add('on');
+  document.getElementById('mask').classList.add('on');
+  const t = allTargets.find(x=>x.id===targetId);
+  if(t) loadPanel(t);
+}
+function closePanel(){
+  document.getElementById('panel').classList.remove('on');
+  document.getElementById('mask').classList.remove('on');
+}
+
+// ===== SHARED: 배치 선택 + 사이드바 카운트 갱신 =====
+async function loadBatchData(){
+  await loadMemberMap();
+  const {data:batches}=await sb.from('cs_target_batches').select('*').order('created_at',{ascending:false});
+  allBatches = batches || [];
+
+  if(allBatches.length>0 && !currentBatchId) currentBatchId = allBatches[0].id;
+
+  // 선택된 배치의 대상자 전체 로드 (JOIN)
+  if(currentBatchId){
+    const {data:targets}=await sb.from('cs_survey_targets')
+      .select('*,cs_contacts(*,cs_business_places(place_name,cs_companies(company_name))),cs_courses(*),cs_projects(*)')
+      .eq('batch_id', currentBatchId);
+    allTargets = targets || [];
+  } else {
+    allTargets = [];
+  }
+
+  // 중복 체크용 인덱스 갱신 (2026-04-17 추가)
+  computeIntraBatchDupes();
+  try { await loadExternalHistoryIndex(); } catch(e){ console.warn('[ext hist]', e); }
+
+  updateSidebarCounts();
+}
+
+// ===== DASHBOARD: 월간/누적 지원 =====
+function formatMonthLabel(ym){
+  const [y,m]=ym.split('-').map(Number);
+  return `${y}년 ${m}월`;
+}
+
+async function loadDashTargets(){
+  if(dashboardMode==='cumulative'){
+    dashBatches=allBatches.slice();
+  } else {
+    dashBatches=allBatches.filter(b=>{
+      const ds=b.target_period_start||b.created_at;
+      return ds && ds.slice(0,7)===dashboardMonth;
+    });
+  }
+  if(dashBatches.length===0){ dashTargets=[]; return; }
+  const batchIds=dashBatches.map(b=>b.id);
+  const {data:targets}=await sb.from('cs_survey_targets')
+    .select('*,cs_contacts(*,cs_business_places(place_name,cs_companies(company_name))),cs_courses(*),cs_projects(*)')
+    .in('batch_id',batchIds);
+  dashTargets=targets||[];
+}
+
+function dashPrevMonth(){
+  const [y,m]=dashboardMonth.split('-').map(Number);
+  const d=new Date(y,m-2,1);
+  dashboardMonth=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
+  loadDashboard();
+}
+function dashNextMonth(){
+  const [y,m]=dashboardMonth.split('-').map(Number);
+  const d=new Date(y,m,1);
+  dashboardMonth=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
+  loadDashboard();
+}
+function toggleDashMode(){
+  dashboardMode=dashboardMode==='monthly'?'cumulative':'monthly';
+  loadDashboard();
+}
+
+async function drillDownBatch(batchId){
+  currentBatchId=batchId;
+  await loadBatchData();
+  go('wf');
+}
+
+function renderDashTrend(){
+  const months=[];
+  const now=new Date();
+  for(let i=5;i>=0;i--){
+    const d=new Date(now.getFullYear(),now.getMonth()-i,1);
+    months.push(d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'));
+  }
+  const monthData=months.map(ym=>{
+    const batches=allBatches.filter(b=>{
+      const ds=b.target_period_start||b.created_at;
+      return ds && ds.slice(0,7)===ym;
+    });
+    const total=batches.reduce((s,b)=>s+(b.total_candidates||0),0);
+    return {month:ym,total};
+  });
+  const maxTotal=Math.max(...monthData.map(d=>d.total),1);
+  let htm='';
+  monthData.forEach(d=>{
+    const h=Math.max(4,(d.total/maxTotal)*100);
+    const m=parseInt(d.month.split('-')[1]);
+    const isCur=d.month===dashboardMonth && dashboardMode==='monthly';
+    const bg=isCur?'var(--blue)':'var(--border)';
+    htm+=`<div class="trend-bar"><div class="trend-bar-val">${d.total}</div><div class="trend-bar-fill" style="height:${h}%;background:${bg}"></div><div class="trend-bar-label">${m}월</div></div>`;
+  });
+  document.getElementById('dash-trend').innerHTML=htm;
+}
+
+function updateSidebarCounts(){
+  const byStep = {1:0,2:0,3:0,4:0,5:0};
+  allTargets.forEach(t=>{
+    const step = t.current_step || 1;
+    if(step>=1) byStep[1]++;
+    if(step>=2) byStep[2]++;
+    if(step>=3) byStep[3]++;
+    if(step>=4) byStep[4]++;
+    if(step>=5 || t.status==='screening' && step===4) byStep[5]++;
+  });
+  // 각 단계에 머물러 있는 수 (통과 아닌 해당 단계 대상 수)
+  const atStep = {1:0,2:0,3:0,4:0,5:0};
+  allTargets.forEach(t=>{
+    const step = t.current_step || 1;
+    if(t.status==='excluded'){
+      atStep[step]++;
+    } else if(t.status==='screening'){
+      atStep[step]++;
+    } else {
+      atStep[step]++;
+    }
+  });
+
+  for(let i=1;i<=5;i++){
+    const el=document.getElementById('cnt-s'+i);
+    if(el) el.textContent = atStep[i];
+  }
+}
+
+function getBatchSelector(){
+  let htm='<select id="batch-select" onchange="onBatchChange(this.value)" style="padding:5px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px">';
+  allBatches.forEach(b=>{
+    const sel = b.id===currentBatchId?'selected':'';
+    htm+=`<option value="${b.id}" ${sel}>${b.batch_name} (${b.total_candidates||0}명)</option>`;
+  });
+  if(allBatches.length===0) htm+='<option value="">CS 회차 없음</option>';
+  htm+='</select>';
+  return htm;
+}
+
+async function onBatchChange(batchId){
+  currentBatchId = batchId;
+  await loadBatchData();
+  const loaders={dash:loadDashboard,wf:loadWorkflow,s1:loadS1,s2:loadS2,s3:loadS3,s4:loadS4,s5:loadS5};
+  if(loaders[currentPage]){
+    try{ await loaders[currentPage](); }catch(e){ console.warn(e); }
+  }
+}
+
+function targetsAtStep(step){
+  return allTargets.filter(t=>t.current_step===step);
+}
+function targetsPastStep(step){
+  return allTargets.filter(t=>t.current_step>=step);
+}
+
+// ===== 팀명 정리 (코드 제거) =====
+function cleanTeam(raw){
+  if(!raw) return '';
+  const m = raw.match(/^\d[\w]* - (.+)$/);
+  return m ? m[1] : raw;
+}
+
+// 프로젝트 멤버 맵 (project_id(uuid) → {am, consultant, instructors})
+// ⚠ Supabase JS client 기본 row limit 이 1000 이라 테이블 이 커지면(cs_project_members ≥1000)
+//   후반 project 의 멤버가 조용히 잘려나감. page loop 로 전수 수집.
+let memberMap = {};
+async function loadMemberMap(){
+  memberMap = {};
+  const PAGE = 1000;
+  let offset = 0;
+  while(true){
+    const {data, error} = await sb.from('cs_project_members')
+      .select('project_id,role,member_name,team')
+      .range(offset, offset + PAGE - 1);
+    if(error){ console.error('[loadMemberMap]', error); break; }
+    (data||[]).forEach(m=>{
+      if(!memberMap[m.project_id]) memberMap[m.project_id]={am:[],consultant:[],internal_instructor:[],external_instructor:[]};
+      const role = m.role || 'am';
+      if(!memberMap[m.project_id][role]) memberMap[m.project_id][role]=[];
+      memberMap[m.project_id][role].push({name:m.member_name, team:cleanTeam(m.team)});
+    });
+    if(!data || data.length < PAGE) break;
+    offset += PAGE;
+  }
+}
+
+// 관계자 요약 텍스트 생성
+function memberSummary(projUuid, roles){
+  const m=memberMap[projUuid];
+  if(!m) return '—';
+  const parts=[];
+  if(roles.includes('consultant')){
+    m.consultant?.forEach(c=> parts.push(`<span style="color:var(--blue)">${c.name}</span> <span class="sub">${c.team}</span>`));
+  }
+  if(roles.includes('instructor')){
+    const inst=[...(m.internal_instructor||[]),...(m.external_instructor||[])];
+    inst.forEach(c=> parts.push(`<span style="color:var(--amber)">${c.name}</span>`));
+  }
+  return parts.length ? parts.join(', ') : '—';
+}
+
+// AM 표기: "이름 - 팀"
+function fmtAM(p){
+  if(!p) return '—';
+  return `${p.am_name||'—'} - ${cleanTeam(p.am_team)||'—'}`;
+}
+
+// 수행담당자 표기: 멤버맵 consultant → 없으면 cs_projects.execution_team 폴백
+function fmtConsultant(projUuid, project){
+  const m=memberMap[projUuid];
+  if(m && m.consultant?.length){
+    return m.consultant.map(c=>`${c.name} - ${c.team||'—'}`).join(', ');
+  }
+  // 담당자 없이 팀만 있는 경우
+  const execTeam = project?.execution_team;
+  if(execTeam) return cleanTeam(execTeam);
+  return '—';
+}
+
+// 강사 표기
+function fmtInstructors(projUuid){
+  const m=memberMap[projUuid];
+  if(!m) return '—';
+  const inst=[...(m.internal_instructor||[]).map(i=>({...i,type:'내부'})),...(m.external_instructor||[]).map(i=>({...i,type:'외부'}))];
+  if(!inst.length) return '—';
+  return inst.map(i=>`${i.name} <span class="sub">(${i.type})</span>`).join(', ');
+}
+
+// ===== BRIS 링크 헬퍼 =====
+const BRIS='https://bris.exc.co.kr';
+function brisProjectLink(projectId, label){
+  if(!projectId) return label||'—';
+  return `<a href="${BRIS}/business/success/project_view.asp?PROJECT_ID=${projectId}" target="_blank" style="color:var(--blue);text-decoration:none;border-bottom:1px dashed var(--blue)" title="BRIS 프로젝트">${label||projectId}</a>`;
+}
+function brisDmLink(customerId, label){
+  if(!customerId) return label||'—';
+  return `<a href="${BRIS}/dm/dm_view.asp?CUSTOMER_ID=${customerId}" target="_blank" style="color:var(--blue);text-decoration:none;border-bottom:1px dashed var(--blue)" title="BRIS DM">${label||customerId}</a>`;
+}
+function brisCourseLink(course, project, label){
+  // 하위호환: 과거 시그니처(brisCourseLink(businessId, label)) 호출도 수용
+  if(typeof course === 'string' || typeof course === 'number'){
+    const bid = course; label = project;
+    if(!bid) return label||'—';
+    return `<a href="${BRIS}/business/program_mng.asp?DIVISION=1&BUSINESS_ID=${bid}" target="_blank" style="color:var(--blue);text-decoration:none;border-bottom:1px dashed var(--blue)" title="BRIS 과정관리">${label||bid}</a>`;
+  }
+  const bid = course?.business_id;
+  if(!bid) return label||'—';
+  const type = (course?.education_type || project?.project_type || '').toString();
+  const isRemote = /원격|비대면|elearn/i.test(type);
+  const pid = project?.project_id || '';
+  const url = isRemote
+    ? `${BRIS}/business/elearning_detail.asp?BUSINESS_ID=${bid}&r_PROJECT_ID=${pid}&r_page=&r_NICKNAME=&r_PROJECT=&r_PM=&r_SD=&r_ED=&r_p=&r_mecheck=&r_barcode=`
+    : `${BRIS}/business/program_mng.asp?DIVISION=1&BUSINESS_ID=${bid}`;
+  const title = isRemote ? 'BRIS 원격 과정' : 'BRIS 과정관리';
+  return `<a href="${url}" target="_blank" style="color:var(--blue);text-decoration:none;border-bottom:1px dashed var(--blue)" title="${title}">${label||bid}</a>`;
+}
+function brisEchoLink(echoId, label){
+  if(!echoId) return label||'—';
+  return `<a href="${BRIS}/business/echo/project_echoview.asp?e_id=${echoId}" target="_blank" style="color:var(--green);text-decoration:none;border-bottom:1px dashed var(--green)" title="BRIS 에코">${label||'등록'}</a>`;
+}
+
+// ===== DASHBOARD (월간/누적) =====
+async function loadDashboard(){
+  await loadBatchData();
+  await loadDashTargets();
+
+  // --- 헤더 UI ---
+  const label=dashboardMode==='cumulative'?'전체 누적':formatMonthLabel(dashboardMonth);
+  document.getElementById('dash-month-label').textContent=label;
+  const cBtn=document.getElementById('dash-cumul-btn');
+  cBtn.textContent=dashboardMode==='cumulative'?'월별 보기':'누적 보기';
+  if(dashboardMode==='cumulative') cBtn.classList.add('active'); else cBtn.classList.remove('active');
+  document.getElementById('dash-prev-btn').style.display=dashboardMode==='cumulative'?'none':'';
+  document.getElementById('dash-next-btn').style.display=dashboardMode==='cumulative'?'none':'';
+
+  // --- KPI (dashTargets 기반) ---
+  const total=dashTargets.length;
+  const screening=dashTargets.filter(t=>t.status==='screening').length;
+  const eligible=dashTargets.filter(t=>t.is_eligible===true).length;
+  const excluded=dashTargets.filter(t=>t.status==='excluded').length;
+  const confirmed=dashTargets.filter(t=>t.step5_confirmed===true).length;
+
+  document.getElementById('kpi-total').textContent=total;
+  document.getElementById('kpi-screening').textContent=screening;
+  document.getElementById('kpi-eligible').textContent=eligible+confirmed;
+  document.getElementById('kpi-excluded').textContent=excluded;
+
+  // 응답률: dispatched 대비 참여
+  let respRate=0;
+  const dispatched=dashTargets.filter(t=>t.dispatched_at).length;
+  if(dispatched>0){
+    const contactIds=[...new Set(dashTargets.filter(t=>t.dispatched_at).map(t=>t.contact_id))];
+    const {count}=await sb.from('cs_survey_participation').select('id',{count:'exact',head:true}).in('contact_id',contactIds);
+    respRate=Math.round(((count||0)/dispatched)*100);
+  }
+  document.getElementById('kpi-response').textContent=respRate+'%';
+
+  // --- 파이프라인 (dashTargets 기반) ---
+  const s1=dashTargets.filter(t=>t.step1_course_completed===true).length;
+  const s2=dashTargets.filter(t=>t.step2_last_course_confirmed===true).length;
+  const s3=dashTargets.filter(t=>t.step3_project_closed===true).length;
+  const s4=dashTargets.filter(t=>t.step4_history_checked===true && t.step4_within_6months===false).length;
+  const s5=dashTargets.filter(t=>t.step5_confirmed===true).length;
+
+  document.getElementById('pipe-s1').textContent=s1;
+  document.getElementById('pipe-s2').textContent=s2;
+  document.getElementById('pipe-s3').textContent=s3;
+  document.getElementById('pipe-s4').textContent=s4;
+  document.getElementById('pipe-s5').textContent=s5;
+
+  const pct=total?Math.round(((eligible+confirmed)/total)*100):0;
+  document.getElementById('pipe-progress').style.width=pct+'%';
+  document.getElementById('pipe-pct').textContent=pct+'%';
+
+  const pipeSteps=document.querySelectorAll('#p-dash .pipe-s .pipe-d');
+  [s1,s2,s3,s4,s5].forEach((cnt,i)=>{
+    if(pipeSteps[i]){
+      pipeSteps[i].className='pipe-d '+(cnt>0?'dn':'wt');
+      pipeSteps[i].textContent=cnt>0?'✓':(i+1);
+    }
+  });
+
+  // --- 트렌드 차트 ---
+  renderDashTrend();
+
+  // --- 회차 목록 (월 내 전체 또는 누적 전체) ---
+  document.getElementById('dash-batch-title').textContent=
+    dashboardMode==='cumulative'?'전체 CS 회차':formatMonthLabel(dashboardMonth)+' CS 회차';
+  let htm='';
+  const statusMap={'screening':'심사중','confirmed':'확정','dispatching':'발송중','completed':'완료','draft':'준비'};
+  const statusCls={'screening':'tag-a','confirmed':'tag-g','dispatching':'tag-b','completed':'tag-g','draft':'tag-n'};
+  dashBatches.forEach(b=>{
+    const st=statusMap[b.status]||b.status;
+    const cls=statusCls[b.status]||'tag-n';
+    const period=b.target_period_start?b.target_period_start.slice(5)+'~'+b.target_period_end.slice(5):'—';
+    const batchElig=dashTargets.filter(t=>t.batch_id===b.id&&(t.is_eligible||t.step5_confirmed)).length;
+    htm+=`<tr style="cursor:pointer" onclick="drillDownBatch('${b.id}')"><td><strong>${b.batch_name}</strong></td><td>${period}</td><td>${b.total_candidates||0}</td><td>${batchElig}</td><td><span class="tag ${cls}">${st}</span></td></tr>`;
+  });
+  if(dashBatches.length===0){
+    const emptyMsg=dashboardMode==='cumulative'?'CS 회차 없음':formatMonthLabel(dashboardMonth)+' CS 회차 없음';
+    htm=`<tr><td colspan="5" style="text-align:center;color:#999">${emptyMsg}</td></tr>`;
+  }
+  document.getElementById('tbl-batches').innerHTML=htm;
+
+  // --- 제외 사유 분포 ---
+  htm='';
+  const exclReasons={};
+  dashTargets.forEach(t=>{if(t.exclusion_reason)exclReasons[t.exclusion_reason]=(exclReasons[t.exclusion_reason]||0)+1});
+  const reasons=Object.entries(exclReasons).sort((a,b)=>b[1]-a[1]);
+  const maxReason=reasons[0]?.[1]||1;
+  reasons.forEach(([r,c])=>{
+    const pctR=(c/maxReason)*100;
+    const color=r.includes('6개월')?'var(--red)':r.includes('후속')?'var(--amber)':r.includes('미마감')?'var(--text3)':'#aaa';
+    htm+=`<div class="bar-row"><span class="bar-label">${r}</span><div class="bar-track"><div class="bar-fill" style="width:${pctR}%;background:${color}">${c}</div></div></div>`;
+  });
+  if(reasons.length===0) htm='<div style="text-align:center;color:#999;padding:20px;font-size:12px">제외 사유 없음</div>';
+  document.getElementById('excl-reasons').innerHTML=htm;
+
+  // --- 팀별 현황 ---
+  htm='';
+  const teamMap={};
+  dashTargets.forEach(t=>{
+    const team=cleanTeam(t.cs_projects?.am_team)||'미지정';
+    if(!teamMap[team]) teamMap[team]={total:0,eligible:0,excluded:0,dispatched:0};
+    teamMap[team].total++;
+    if(t.is_eligible) teamMap[team].eligible++;
+    if(t.status==='excluded') teamMap[team].excluded++;
+    if(t.dispatched_at) teamMap[team].dispatched++;
+  });
+  Object.entries(teamMap).forEach(([team,d])=>{
+    const rate=d.total>0?Math.round((d.eligible/d.total)*100):0;
+    htm+=`<tr><td>${team}</td><td>${d.total}</td><td>${d.eligible}</td><td>${d.excluded}</td><td>${d.dispatched}</td><td>${rate}%</td></tr>`;
+  });
+  if(Object.keys(teamMap).length===0) htm='<tr><td colspan="6" style="text-align:center;color:#999">데이터 없음</td></tr>';
+  document.getElementById('tbl-teams').innerHTML=htm;
+}
+
+// 고객사/사업장 표시 — BRIS 과정 페이지와 동일 granularity(사업장명)을 우선 노출.
+// company_name(코스모그룹 등 그룹 상위)은 place_name 과 다를 때만 보조 sub-line 으로.
+function fmtCustomer(ct){
+  const bp=ct?.cs_business_places||{};
+  const place=bp.place_name||'';
+  const company=bp.cs_companies?.company_name||'';
+  const primary=place||company||'—';
+  const sub=(place && company && place!==company) ? `<span class="sub">${company}</span>` : '';
+  return primary+sub;
+}
+
+// ===== STEP ROW BUILDERS (loadSn 과 loadWorkflow 가 공통 사용) =====
+function buildS1Row(t){
+  const c=t.cs_courses||{};
+  const p=t.cs_projects||{};
+  const ct=t.cs_contacts||{};
+  const compName=fmtCustomer(ct);
+  const endDate=c.end_date?new Date(c.end_date).toLocaleDateString('ko-KR').slice(5,10):'—';
+  const echoExReason=p.echo_exclude_reason||'';
+  const echoTag=c.echo_id?brisEchoLink(c.echo_id,'등록'):`<span class="tag tag-r" title="${echoExReason}">제외</span>${echoExReason?'<span class="sub" style="color:var(--red)">'+echoExReason+'</span>':''}`;
+  const courseStatus=c.is_completed?'<span class="tag tag-g">종료</span>':'<span class="tag tag-a">진행중</span>';
+  return `<tr>
+    <td><input type="checkbox" class="ck" ${t.step1_course_completed?'checked':''}></td>
+    <td><strong>${brisCourseLink(c, p, c.course_name||'—')}</strong><span class="sub">${c.program_name||''}</span></td>
+    <td>${compName}</td>
+    <td>${brisProjectLink(p.project_id, p.bris_code||'—')}</td>
+    <td>${endDate}</td>
+    <td><span class="tag tag-b">${c.education_type||'대면'}</span></td>
+    <td>${echoTag}</td>
+    <td>${courseStatus}</td>
+    <td><button class="btn btn-s" onclick="openPanel('${t.id}')">상세</button></td>
+  </tr>`;
+}
+
+function buildS2Row(t){
+  const c=t.cs_courses||{};
+  const p=t.cs_projects||{};
+  const endDate=c.end_date?new Date(c.end_date).toLocaleDateString('ko-KR').slice(5,10):'—';
+  const isLast=t.step2_last_course_confirmed;
+  const tag=isLast?'<span class="tag tag-g">최종</span>':'<span class="tag tag-a">아님</span>';
+  const reason=(!isLast && t.status==='excluded')?`<span class="sub" style="color:var(--red)">${t.exclusion_reason||''}</span>`:'';
+  const drift = p.id && c.project_id && p.id !== c.project_id;
+  const driftBadge = drift ? ' <span class="tag tag-r" title="target project_id ≠ course project_id — 과정이 다른 프로젝트로 이동됐을 가능성. 20260417 realign 마이그레이션 재적용 권장.">⚠ drift</span>' : '';
+  return `<tr>
+    <td><input type="checkbox" class="ck" ${isLast?'checked':''}></td>
+    <td>${brisProjectLink(p.project_id, p.bris_code||'—')}${driftBadge}</td>
+    <td>${p.project_name||'—'}</td>
+    <td><strong>${brisCourseLink(c, p, c.course_name||'—')}</strong>${reason}</td>
+    <td>${endDate}</td>
+    <td>${c.is_last_in_project?'최종':'1/N'}</td>
+    <td>${tag}</td>
+    <td><button class="btn btn-s" onclick="openPanel('${t.id}')">상세</button></td>
+  </tr>`;
+}
+
+function buildS3Row(t){
+  const p=t.cs_projects||{};
+  const st=p.status;
+  const statusTag=st==='closed'?'<span class="tag tag-g">마감</span>':st==='closing'?'<span class="tag tag-a">예정</span>':'<span class="tag tag-r">미마감</span>';
+  const deadline=p.deadline_date?new Date(p.deadline_date).toLocaleDateString('ko-KR').slice(5,10):'—';
+  const closedDate=t.step3_closed_date?new Date(t.step3_closed_date).toLocaleDateString('ko-KR').slice(5,10):'—';
+  const amt=p.total_amount?p.total_amount.toLocaleString():'0';
+  return `<tr>
+    <td><input type="checkbox" class="ck" ${t.step3_project_closed?'checked':''}></td>
+    <td>${brisProjectLink(p.project_id, p.bris_code||'—')}</td>
+    <td><strong>${p.project_name||'—'}</strong></td>
+    <td>${fmtAM(p)}</td>
+    <td style="text-align:right">${amt}</td>
+    <td>${t.step3_project_closed?closedDate:deadline}</td>
+    <td>${statusTag}</td>
+    <td><button class="btn btn-s" onclick="openPanel('${t.id}')">상세</button></td>
+  </tr>`;
+}
+
+function buildS4Row(t){
+  const ct=t.cs_contacts||{};
+  const compName=fmtCustomer(ct);
+  const lastDate=t.step4_last_survey_date?new Date(t.step4_last_survey_date).toLocaleDateString('ko-KR').slice(0,10):'—';
+  const within=t.step4_within_6months;
+  const canSurvey=within===false;
+  const tag=canSurvey?'<span class="tag tag-g">가능</span>':'<span class="tag tag-r">제외</span>';
+  let daysStr='—';
+  if(t.step4_last_survey_date){
+    const days=Math.floor((new Date()-new Date(t.step4_last_survey_date))/86400000);
+    daysStr=days+'일';
+  }
+  // 외부 CSV 이력 매칭 + 배치내 중복 배지 (2026-04-17 추가)
+  const extBadge = externalHistoryBadge(t);
+  const dupBadge = intraDuplicateBadge(t);
+  return `<tr>
+    <td><input type="checkbox" class="ck" ${canSurvey?'checked':''}></td>
+    <td><strong>${brisDmLink(ct.customer_id, ct.contact_name||'—')}</strong>${dupBadge}</td>
+    <td>${compName}</td>
+    <td>${ct.email||'—'}</td>
+    <td>${lastDate}</td>
+    <td>${daysStr}</td>
+    <td>${tag}${extBadge}</td>
+  </tr>`;
+}
+
+function buildS5Row(t){
+  const ct=t.cs_contacts||{};
+  const p=t.cs_projects||{};
+  const compName=fmtCustomer(ct);
+  const channel=ct.email?'이메일':'SMS';
+  const channelCls=ct.email?'tag-b':'tag-a';
+  const isConfirmed=t.step5_confirmed===true;
+  // 외부 CSV 이력 + 배치내 중복 배지 (2026-04-17 추가)
+  const extBadge = externalHistoryBadge(t);
+  const dupBadge = intraDuplicateBadge(t);
+  return `<tr>
+    <td><input type="checkbox" class="ck" ${isConfirmed?'checked':''} data-target-id="${t.id}"></td>
+    <td><strong>${brisDmLink(ct.customer_id, ct.contact_name||'—')}</strong>${dupBadge}${extBadge}<span class="sub">${ct.department||''} ${ct.position||''}</span></td>
+    <td>${compName}</td>
+    <td>${brisProjectLink(p.project_id, p.project_name||'—')}</td>
+    <td>${fmtAM(p)}</td>
+    <td><span class="tag ${channelCls}">${channel}</span></td>
+    <td><button class="btn btn-s" onclick="openPanel('${t.id}')">맥락</button></td>
+  </tr>`;
+}
+
+// ===== STEP 1: 교육 종료 확인 =====
+async function loadS1(){
+  if(!allTargets.length) await loadBatchData();
+
+  // Step 1: excluded(legacy/자동배제) 는 대시보드에서 숨김 — 운영자가 심사할 필요 없음.
+  // 필요 시 별도 필터/아카이브 뷰에서 확인.
+  const all = allTargets.filter(t=>t.status!=='excluded');
+  const done = all.filter(t=>t.step1_course_completed===true);
+  const ongoing = all.filter(t=>t.step1_course_completed===false || t.step1_course_completed===null);
+
+  document.getElementById('s1-scan').textContent = all.length;
+  document.getElementById('s1-done').textContent = done.length;
+  document.getElementById('s1-ongoing').textContent = ongoing.length;
+  document.getElementById('s1-none').textContent = '0';
+
+  const htm = all.map(buildS1Row).join('');
+  document.getElementById('tbl-s1').innerHTML=htm||'<tr><td colspan="9" style="text-align:center;color:#999">대상 없음</td></tr>';
+}
+
+// ===== STEP 2: 최종 과정 확인 =====
+async function loadS2(){
+  if(!allTargets.length) await loadBatchData();
+
+  const passed = allTargets.filter(t=>t.step1_course_completed===true);
+  const final = passed.filter(t=>t.step2_last_course_confirmed===true);
+  const wait = passed.filter(t=>t.step2_last_course_confirmed===false);
+
+  document.getElementById('s2-final').textContent = final.length;
+  document.getElementById('s2-wait').textContent = wait.length;
+  document.getElementById('s2-manual').textContent = 0;
+
+  const htm = passed.map(buildS2Row).join('');
+  document.getElementById('tbl-s2').innerHTML=htm||'<tr><td colspan="8" style="text-align:center;color:#999">Step 1 통과 대상 없음</td></tr>';
+}
+
+// ===== STEP 3: 프로젝트 마감 확인 =====
+async function loadS3(){
+  if(!allTargets.length) await loadBatchData();
+
+  const passed = allTargets.filter(t=>t.step2_last_course_confirmed===true);
+  const closed = passed.filter(t=>t.step3_project_closed===true);
+  const pending = passed.filter(t=>t.cs_projects?.status==='closing');
+  const open = passed.filter(t=>t.step3_project_closed===false && t.cs_projects?.status!=='closing');
+
+  document.getElementById('s3-closed').textContent = closed.length;
+  document.getElementById('s3-pending').textContent = pending.length;
+  document.getElementById('s3-open').textContent = open.length;
+
+  const htm = passed.map(buildS3Row).join('');
+  document.getElementById('tbl-s3').innerHTML=htm||'<tr><td colspan="8" style="text-align:center;color:#999">Step 2 통과 대상 없음</td></tr>';
+}
+
+// ===== STEP 4: 설문 이력 확인 =====
+async function loadS4(){
+  if(!allTargets.length) await loadBatchData();
+
+  const passed = allTargets.filter(t=>t.step3_project_closed===true);
+  const ok = passed.filter(t=>t.step4_within_6months===false);
+  const excl = passed.filter(t=>t.step4_within_6months===true);
+  const unknown = passed.filter(t=>t.step4_history_checked!==true && t.step4_within_6months===null);
+
+  document.getElementById('s4-ok').textContent = ok.length;
+  document.getElementById('s4-excluded').textContent = excl.length;
+  document.getElementById('s4-unknown').textContent = unknown.length;
+
+  const htm = passed.map(buildS4Row).join('');
+  document.getElementById('tbl-s4').innerHTML=htm||'<tr><td colspan="7" style="text-align:center;color:#999">Step 3 통과 대상 없음</td></tr>';
+}
+
+// ===== STEP 5: 대상자 확정 =====
+async function loadS5(){
+  if(!allTargets.length) await loadBatchData();
+
+  // Step 4 통과 = step4_within_6months===false && step3_project_closed===true
+  const eligible = allTargets.filter(t=>
+    t.step4_history_checked===true && t.step4_within_6months===false && t.status==='screening'
+  );
+  const confirmed = allTargets.filter(t=>t.step5_confirmed===true);
+  const all = [...eligible,...confirmed];
+
+  const emailCount = all.filter(t=>t.cs_contacts?.email).length;
+  const smsOnly = all.length - emailCount;
+
+  document.getElementById('s5-confirmed').textContent = all.length;
+  document.getElementById('s5-email').textContent = emailCount;
+  document.getElementById('s5-sms').textContent = smsOnly;
+  document.getElementById('s5-count').textContent = all.length;
+
+  const htm = all.map(buildS5Row).join('');
+  document.getElementById('tbl-s5').innerHTML=htm||'<tr><td colspan="7" style="text-align:center;color:#999">Step 4 통과 대상 없음 — 심사 중 또는 모두 제외됨</td></tr>';
+}
+
+// ===== WORKFLOW 통합 뷰 =====
+// 배치 1건의 5단계 현황을 섹션 5개로 나열. 기존 loadSn 과 동일한 필터/헬퍼 재사용.
+function updateWfPipeline(){
+  const total = allTargets.length;
+  const s1 = allTargets.filter(t=>t.step1_course_completed===true).length;
+  const s2 = allTargets.filter(t=>t.step2_last_course_confirmed===true).length;
+  const s3 = allTargets.filter(t=>t.step3_project_closed===true).length;
+  const s4 = allTargets.filter(t=>t.step4_history_checked===true && t.step4_within_6months===false).length;
+  const s5 = allTargets.filter(t=>t.step5_confirmed===true).length;
+
+  document.getElementById('wf-pipe-s1').textContent = s1;
+  document.getElementById('wf-pipe-s2').textContent = s2;
+  document.getElementById('wf-pipe-s3').textContent = s3;
+  document.getElementById('wf-pipe-s4').textContent = s4;
+  document.getElementById('wf-pipe-s5').textContent = s5;
+
+  // 단계별 아이콘 상태
+  [s1,s2,s3,s4,s5].forEach((cnt,i)=>{
+    const el = document.getElementById('wf-pipe-d'+(i+1));
+    if(el){
+      el.className = 'pipe-d ' + (cnt>0 ? 'dn' : 'wt');
+      el.textContent = cnt>0 ? '✓' : (i+1);
+    }
+  });
+
+  const pct = total ? Math.round((s5/total)*100) : 0;
+  document.getElementById('wf-pipe-progress').style.width = pct + '%';
+  document.getElementById('wf-pipe-pct').textContent = pct + '%';
+}
+
+async function loadWorkflow(){
+  if(!allTargets.length) await loadBatchData();
+  if(!Object.keys(memberMap).length) await loadMemberMap();
+
+  // 배치 선택 UI — 기존 getBatchSelector 재사용
+  document.getElementById('wf-batch-slot').innerHTML = getBatchSelector();
+
+  // Step 1 — 전체 배치 대상자
+  const s1 = allTargets;
+  const s1done = s1.filter(t=>t.step1_course_completed===true);
+  const s1ongoing = s1.filter(t=>t.step1_course_completed===false || t.step1_course_completed===null);
+  document.getElementById('wf-s1-scan').textContent    = s1.length;
+  document.getElementById('wf-s1-done').textContent    = s1done.length;
+  document.getElementById('wf-s1-ongoing').textContent = s1ongoing.length;
+  document.getElementById('wf-s1-none').textContent    = '0';
+  document.getElementById('wf-s1-badge').textContent   = `${s1done.length}/${s1.length}`;
+  document.getElementById('wf-tbl-s1').innerHTML = s1.map(buildS1Row).join('')
+    || '<tr><td colspan="9" style="text-align:center;color:#999">대상 없음</td></tr>';
+
+  // Step 2 — step1 통과자
+  const s2passed = allTargets.filter(t=>t.step1_course_completed===true);
+  const s2final  = s2passed.filter(t=>t.step2_last_course_confirmed===true);
+  const s2wait   = s2passed.filter(t=>t.step2_last_course_confirmed===false);
+  document.getElementById('wf-s2-final').textContent  = s2final.length;
+  document.getElementById('wf-s2-wait').textContent   = s2wait.length;
+  document.getElementById('wf-s2-manual').textContent = 0;
+  document.getElementById('wf-s2-badge').textContent  = `${s2final.length}/${s2passed.length}`;
+  document.getElementById('wf-tbl-s2').innerHTML = s2passed.map(buildS2Row).join('')
+    || '<tr><td colspan="8" style="text-align:center;color:#999">Step 1 통과 대상 없음</td></tr>';
+
+  // Step 3 — step2 통과자
+  const s3passed = allTargets.filter(t=>t.step2_last_course_confirmed===true);
+  const s3closed  = s3passed.filter(t=>t.step3_project_closed===true);
+  const s3pending = s3passed.filter(t=>t.cs_projects?.status==='closing');
+  const s3open    = s3passed.filter(t=>t.step3_project_closed===false && t.cs_projects?.status!=='closing');
+  document.getElementById('wf-s3-closed').textContent  = s3closed.length;
+  document.getElementById('wf-s3-pending').textContent = s3pending.length;
+  document.getElementById('wf-s3-open').textContent    = s3open.length;
+  document.getElementById('wf-s3-badge').textContent   = `${s3closed.length}/${s3passed.length}`;
+  document.getElementById('wf-tbl-s3').innerHTML = s3passed.map(buildS3Row).join('')
+    || '<tr><td colspan="8" style="text-align:center;color:#999">Step 2 통과 대상 없음</td></tr>';
+
+  // Step 4 — step3 통과자
+  const s4passed  = allTargets.filter(t=>t.step3_project_closed===true);
+  const s4ok      = s4passed.filter(t=>t.step4_within_6months===false);
+  const s4excl    = s4passed.filter(t=>t.step4_within_6months===true);
+  const s4unknown = s4passed.filter(t=>t.step4_history_checked!==true && t.step4_within_6months===null);
+  document.getElementById('wf-s4-ok').textContent       = s4ok.length;
+  document.getElementById('wf-s4-excluded').textContent = s4excl.length;
+  document.getElementById('wf-s4-unknown').textContent  = s4unknown.length;
+  document.getElementById('wf-s4-badge').textContent    = `${s4ok.length}/${s4passed.length}`;
+  document.getElementById('wf-tbl-s4').innerHTML = s4passed.map(buildS4Row).join('')
+    || '<tr><td colspan="7" style="text-align:center;color:#999">Step 3 통과 대상 없음</td></tr>';
+
+  // Step 5 — step4 통과자 (loadS5 와 동일 조건)
+  const s5eligible = allTargets.filter(t=>
+    t.step4_history_checked===true && t.step4_within_6months===false && t.status==='screening'
+  );
+  const s5confirmed = allTargets.filter(t=>t.step5_confirmed===true);
+  const s5all = [...s5eligible, ...s5confirmed];
+  const emailCount = s5all.filter(t=>t.cs_contacts?.email).length;
+  const smsOnly = s5all.length - emailCount;
+  document.getElementById('wf-s5-confirmed').textContent = s5all.length;
+  document.getElementById('wf-s5-email').textContent     = emailCount;
+  document.getElementById('wf-s5-sms').textContent       = smsOnly;
+  // 배치내 중복 (같은 contact_id 다중 target) 수 집계
+  const s5uniqueContacts = new Set(s5all.map(t=>t.contact_id).filter(Boolean)).size;
+  const s5dupeCount = Math.max(0, s5all.length - s5uniqueContacts);
+  document.getElementById('wf-s5-badge').textContent =
+    `${s5confirmed.length}/${s5all.length}` + (s5dupeCount>0 ? ` · 중복 ${s5dupeCount}` : '');
+  document.getElementById('wf-tbl-s5').innerHTML = s5all.map(buildS5Row).join('')
+    || '<tr><td colspan="7" style="text-align:center;color:#999">Step 4 통과 대상 없음 — 심사 중 또는 모두 제외됨</td></tr>';
+
+  updateWfPipeline();
+}
+
+// ===== PROJECTS =====
+async function loadProjects(){
+  if(!Object.keys(memberMap).length) await loadMemberMap();
+  const status = document.getElementById('proj-status')?.value || '';
+  const search = (document.getElementById('proj-search')?.value || '').toLowerCase();
+
+  const {data:projects}=await sb.from('cs_projects').select('*').order('created_at',{ascending:false});
+  const {data:courses}=await sb.from('cs_courses').select('project_id,echo_id');
+
+  // 과정 수 집계 + echo_id 매핑
+  const courseCount={};
+  const projEchoId={};
+  courses?.forEach(c=>{
+    courseCount[c.project_id]=(courseCount[c.project_id]||0)+1;
+    if(c.echo_id && !projEchoId[c.project_id]) projEchoId[c.project_id]=c.echo_id;
+  });
+
+  let filtered = projects || [];
+  if(status) filtered = filtered.filter(p=>p.status===status);
+  if(search) filtered = filtered.filter(p=>
+    (p.bris_code||'').toLowerCase().includes(search)||
+    (p.project_name||'').toLowerCase().includes(search)
+  );
+
+  let htm='';
+  filtered.forEach(p=>{
+    const statusTag = p.status==='active'?'<span class="tag tag-b">진행</span>':p.status==='closed'?'<span class="tag tag-g">마감</span>':p.status==='closing'?'<span class="tag tag-a">마감예정</span>':'<span class="tag tag-n">'+p.status+'</span>';
+    const eId = projEchoId[p.id];
+    const echoTag = eId?brisEchoLink(eId,'등록'):(p.echo_enabled?'<span class="tag tag-g">등록</span>':'<span class="tag tag-r">제외</span>');
+    const amt = p.total_amount ? p.total_amount.toLocaleString() : '0';
+    const cnt = courseCount[p.id]||p.course_count||0;
+    htm+=`<tr><td>${brisProjectLink(p.project_id, p.bris_code)}</td><td><strong>${p.project_name}</strong></td><td>${fmtAM(p)}</td><td>${fmtConsultant(p.id, p)}</td><td>${fmtInstructors(p.id)}</td><td>${p.project_type||'—'}</td><td>${echoTag}</td><td>${cnt}</td><td style="text-align:right">${amt}</td><td>${statusTag}</td></tr>`;
+  });
+  document.getElementById('tbl-proj').innerHTML=htm||'<tr><td colspan="10" style="text-align:center;color:#999">프로젝트 없음</td></tr>';
+}
+
+// ===== CONTACTS =====
+async function loadContacts(){
+  const search = (document.getElementById('cont-search')?.value || '').toLowerCase();
+  const filter = document.getElementById('cont-filter')?.value || '';
+
+  const {data:contacts}=await sb.from('cs_contacts').select('*,cs_business_places(place_name,cs_companies(company_name))');
+
+  let filtered = contacts || [];
+  if(search) filtered = filtered.filter(c=>
+    (c.contact_name||'').toLowerCase().includes(search)||
+    (c.email||'').toLowerCase().includes(search)||
+    (c.cs_business_places?.cs_companies?.company_name||'').toLowerCase().includes(search)
+  );
+  if(filter==='6m') filtered = filtered.filter(c=>c.survey_count_6m>0);
+  else if(filter==='none') filtered = filtered.filter(c=>!c.last_survey_date);
+
+  let htm='';
+  filtered.forEach(c=>{
+    const comp = c.cs_business_places?.cs_companies?.company_name || '—';
+    const place = c.cs_business_places?.place_name || comp;
+    const lastDate = c.last_survey_date ? new Date(c.last_survey_date).toLocaleDateString('ko-KR').slice(0,10) : '—';
+    const in6m = c.survey_count_6m > 0;
+    const tag = in6m ? '<span class="tag tag-r">YES</span>' : '<span class="tag tag-g">NO</span>';
+    htm+=`<tr><td><strong>${brisDmLink(c.customer_id, c.contact_name)}</strong></td><td>${comp}</td><td>${place}</td><td>${c.department||'—'} ${c.position||'—'}</td><td>${c.email||'—'}</td><td>${lastDate}</td><td>${tag}</td></tr>`;
+  });
+  document.getElementById('tbl-cont').innerHTML=htm||'<tr><td colspan="7" style="text-align:center;color:#999">담당자 없음</td></tr>';
+}
+
+// ===== SYNC PAGE =====
+async function loadSync(){
+  const {data:logs} = await sb.from('cs_sync_logs')
+    .select('*').order('started_at',{ascending:false}).limit(20);
+
+  let htm='';
+  if(logs && logs.length>0){
+    logs.forEach(l=>{
+      const dt = l.started_at ? new Date(l.started_at).toLocaleString('ko-KR',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}) : '—';
+      const period = (l.period_start||'').slice(5) + '~' + (l.period_end||'').slice(5);
+      const fetched = l.rows_fetched || 0;
+      const newInfo = [
+        l.new_contacts?`연락처+${l.new_contacts}`:'',
+        l.new_projects?`프로젝트+${l.new_projects}`:'',
+        l.new_courses?`과정+${l.new_courses}`:''
+      ].filter(Boolean).join(', ');
+      const statusTag = l.status==='success' ? '<span class="tag tag-g">성공</span>'
+        : l.status==='running' ? '<span class="tag tag-a">진행중</span>'
+        : '<span class="tag tag-r">실패</span>';
+      const batchTag = l.triggered_batch_id ? ' <span class="tag tag-b" style="font-size:10px">회차 생성</span>' : '';
+      htm+=`<tr><td>${dt}</td><td>${period}</td><td>${fetched}건${newInfo?' <span class="sub">'+newInfo+'</span>':''}</td><td>${statusTag}${batchTag}</td></tr>`;
+    });
+  } else {
+    htm='<tr><td colspan="4" style="text-align:center;color:#999">동기화 이력 없음</td></tr>';
+  }
+  document.getElementById('tbl-sync').innerHTML=htm;
+
+  // 시스템 상태
+  const syncEl = document.getElementById('sync-health');
+  if(syncEl){
+    try{
+      const {data:sh} = await sb.from('v_cs_system_health').select('*').single();
+      if(sh){
+        syncEl.innerHTML = `
+          <span style="margin-right:15px">이메일큐 대기: <strong>${sh.email_queue_pending||0}</strong></span>
+          <span style="margin-right:15px">SMS큐 대기: <strong>${sh.sms_queue_pending||0}</strong></span>
+          <span style="margin-right:15px">7일 실패: <strong>${sh.sync_errors_7d||0}</strong></span>
+          <span>진행중 회차: <strong>${sh.batches_in_progress||0}</strong></span>`;
+      } else {
+        syncEl.innerHTML='<span style="color:#999">시스템 상태 정보 없음</span>';
+      }
+    }catch(e){
+      syncEl.innerHTML='<span style="color:#999">시스템 상태 로드 실패</span>';
+    }
+  }
+
+  // Layer 0 Bronze 입고 현황 + Layer 1 lineage 채움률
+  const l0El = document.getElementById('layer0-health');
+  if(l0El){
+    try{
+      const {data:lh} = await sb.from('v_cs_bris_lineage_health').select('*').single();
+      if(lh){
+        const totalCourses = (lh.courses_with_lineage||0) + (lh.courses_orphan||0);
+        const totalProjects = (lh.projects_with_lineage||0) + (lh.projects_orphan||0);
+        const totalContacts = (lh.contacts_with_lineage||0) + (lh.contacts_orphan||0);
+        const pct = (n,d)=> d>0 ? Math.round(100*n/d) : 0;
+        const cPct = pct(lh.courses_with_lineage, totalCourses);
+        const pPct = pct(lh.projects_with_lineage, totalProjects);
+        const ctPct = pct(lh.contacts_with_lineage, totalContacts);
+        const colorOf = p => p===100 ? 'var(--green)' : p>=50 ? 'var(--amber)' : 'var(--red)';
+        l0El.innerHTML = `
+          <div style="display:flex;gap:18px;flex-wrap:wrap;margin-bottom:8px">
+            <span>raw_pages: <strong>${lh.raw_pages_total||0}</strong></span>
+            <span>raw_records: <strong>${lh.raw_records_total||0}</strong></span>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px">
+            <div>
+              <div style="font-size:10px;color:var(--text3)">cs_courses lineage</div>
+              <div><strong style="color:${colorOf(cPct)}">${lh.courses_with_lineage||0}</strong>
+                / ${totalCourses} <span class="sub">(${cPct}%)</span></div>
+              <div class="sub">orphan ${lh.courses_orphan||0}</div>
+            </div>
+            <div>
+              <div style="font-size:10px;color:var(--text3)">cs_projects lineage</div>
+              <div><strong style="color:${colorOf(pPct)}">${lh.projects_with_lineage||0}</strong>
+                / ${totalProjects} <span class="sub">(${pPct}%)</span></div>
+              <div class="sub">orphan ${lh.projects_orphan||0}</div>
+            </div>
+            <div>
+              <div style="font-size:10px;color:var(--text3)">cs_contacts lineage</div>
+              <div><strong style="color:${colorOf(ctPct)}">${lh.contacts_with_lineage||0}</strong>
+                / ${totalContacts} <span class="sub">(${ctPct}%)</span></div>
+              <div class="sub">orphan ${lh.contacts_orphan||0}</div>
+            </div>
+          </div>`;
+      } else {
+        l0El.innerHTML='<span style="color:#999">Layer 0 정보 없음</span>';
+      }
+    }catch(e){
+      console.warn('layer0 health load error',e);
+      l0El.innerHTML='<span style="color:#999">Layer 0 미설치 또는 권한 부족</span>';
+    }
+  }
+
+  // pg_cron 스케줄 상태
+  const cronEl = document.getElementById('cron-status');
+  if(cronEl){
+    try{
+      const {data:jobs} = await sb.from('v_cs_cron_status').select('*');
+      if(jobs && jobs.length>0){
+        const cronLabel = (sched)=>{
+          const m={'0 22 * * *':'매일 KST 07:00','0 23 * * *':'매일 KST 08:00','0 14 * * 0':'매주 일 KST 23:00'};
+          return m[sched]||sched;
+        };
+        const jobLabel = (n)=>{
+          if(n==='cs_step4_recheck_daily') return 'Step 4 재심사 (외부 CSV 반영)';
+          if(n==='cs_lineage_audit_daily') return 'Layer 0/1 lineage 진단';
+          if(n==='cs_raw_retention_weekly') return '원본 HTML 90일 압축';
+          return n;
+        };
+        let h='<table style="width:100%;font-size:11px"><thead><tr>'
+            +'<th style="text-align:left">작업</th><th style="text-align:left">주기</th>'
+            +'<th style="text-align:left">상태</th><th style="text-align:left">마지막 실행</th></tr></thead><tbody>';
+        jobs.forEach(j=>{
+          const active = j.active ? '<span class="tag tag-g">ON</span>' : '<span class="tag tag-r">OFF</span>';
+          const last = j.last_run_at ? new Date(j.last_run_at).toLocaleString('ko-KR',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}) : '대기 중';
+          const statusTag = j.last_status==='succeeded' ? '<span class="tag tag-g">성공</span>'
+            : j.last_status==='failed' ? '<span class="tag tag-r">실패</span>'
+            : j.last_status ? `<span class="tag tag-n">${j.last_status}</span>` : '';
+          h+=`<tr><td>${jobLabel(j.jobname)}</td><td>${cronLabel(j.schedule)}</td><td>${active}</td><td>${last} ${statusTag}</td></tr>`;
+        });
+        h+='</tbody></table>';
+        cronEl.innerHTML = h;
+      } else {
+        cronEl.innerHTML='<span style="color:#999">등록된 pg_cron 작업 없음</span>';
+      }
+    }catch(e){
+      console.warn('cron status load error',e);
+      cronEl.innerHTML='<span style="color:#999">스케줄 정보 로드 실패</span>';
+    }
+  }
+
+  // 발송 현황
+  try{
+    const {data:dispatches} = await sb.from('v_cs_dispatch_summary').select('*');
+    const dispEl = document.getElementById('tbl-dispatch');
+    if(dispEl){
+      htm='';
+      if(dispatches && dispatches.length>0){
+        dispatches.forEach(d=>{
+          htm+=`<tr><td>${d.batch_name||'—'}</td><td>${d.total_dispatched}</td><td>${d.sent_count}</td><td>${d.responded_count}</td><td>${d.response_rate}%</td><td>${d.failed_count}</td></tr>`;
+        });
+      } else {
+        htm='<tr><td colspan="6" style="text-align:center;color:#999">발송 이력 없음</td></tr>';
+      }
+      dispEl.innerHTML = htm;
+    }
+  }catch(e){ console.warn('dispatch load error',e); }
+}
+
+// ===== 6개월 발송이력 CSV 교차 체크 =====
+// 2026-04-17: 외부 CSV 이력 주입 + intra-batch 중복 시각화.
+// 플랜: C:\Users\EXC\.claude\plans\agile-rolling-meteor.md
+// 테이블: cs_external_send_history (plan A-1 migration)
+
+// 전역 인덱스 — loadBatchData 에서 갱신
+let externalHistoryIndex = null;  // Map<phone_e164, [{sent_at, course_name, company_name}]>
+let intraBatchDupeCount  = null;  // Map<contact_id, count>
+
+function normalizePhone(raw){
+  if(!raw) return '';
+  return String(raw).replace(/\D/g,'');
+}
+
+// 간이 RFC 4180 CSV 파서 (따옴표 이스케이프 처리, 헤더 기반 매핑)
+function parseHistoryCSV(text){
+  // BOM 제거
+  if(text.charCodeAt(0)===0xFEFF) text = text.slice(1);
+  const rows = [];
+  let row = [], field = '', inQ = false;
+  for(let i=0; i<text.length; i++){
+    const ch = text[i];
+    if(inQ){
+      if(ch === '"'){
+        if(text[i+1] === '"'){ field += '"'; i++; }
+        else inQ = false;
+      } else { field += ch; }
+    } else {
+      if(ch === '"') inQ = true;
+      else if(ch === ','){ row.push(field); field = ''; }
+      else if(ch === '\n'){ row.push(field); rows.push(row); row = []; field = ''; }
+      else if(ch === '\r'){ /* skip */ }
+      else field += ch;
+    }
+  }
+  if(field.length || row.length){ row.push(field); rows.push(row); }
+
+  if(!rows.length) return [];
+  const header = rows[0].map(h=>h.trim());
+  // 헤더명 → 인덱스
+  const idx = {};
+  header.forEach((h,i)=>{ idx[h] = i; });
+  const iCourse  = idx['과정명'];
+  const iCompany = idx['고객사'];
+  const iName    = idx['이름'];
+  const iPos     = idx['직급'];
+  const iPhone   = idx['전화번호'];
+  const iSent    = idx['설문시기'];
+
+  const out = [];
+  for(let r=1; r<rows.length; r++){
+    const row = rows[r];
+    if(!row || row.every(c=>!c || !c.trim())) continue;  // 빈 행 skip
+    out.push({
+      course_name: iCourse!==undefined ? (row[iCourse]||'').trim() : '',
+      company:     iCompany!==undefined ? (row[iCompany]||'').trim() : '',
+      name:        iName!==undefined ? (row[iName]||'').trim() : '',
+      position:    iPos!==undefined ? (row[iPos]||'').trim() : '',
+      phone:       iPhone!==undefined ? (row[iPhone]||'').trim() : '',
+      sent_at:     iSent!==undefined ? (row[iSent]||'').trim() : ''
+    });
+  }
+  return out;
+}
+
+async function handleHistFile(file){
+  if(!file){ return; }
+  const statsEl = document.getElementById('hist-stats');
+  statsEl.textContent = `파싱 중... (${file.name})`;
+
+  let rows;
+  try {
+    const text = await file.text();
+    rows = parseHistoryCSV(text);
+  } catch(e){
+    statsEl.textContent = `파싱 실패: ${e.message}`;
+    return;
+  }
+
+  const records = rows.map(r=>({
+    phone_e164:   normalizePhone(r.phone),
+    contact_name: r.name || null,
+    company_name: r.company || null,
+    course_name:  r.course_name || null,
+    sent_at:      r.sent_at,
+    source:       'csv_manual',
+    file_name:    file.name
+  })).filter(r=> r.phone_e164 && r.sent_at);
+
+  if(!records.length){
+    statsEl.textContent = `업로드 대상 0건 — CSV 헤더(과정명/고객사/이름/전화번호/설문시기) 확인 필요`;
+    return;
+  }
+
+  // Supabase 는 5000~10000 row 이상을 한 번에 보내면 timeout 가능. 청크 분할.
+  const chunkSize = 500;
+  let ok = 0, fail = 0;
+  for(let i=0; i<records.length; i+=chunkSize){
+    const chunk = records.slice(i, i+chunkSize);
+    const {error} = await sb
+      .from('cs_external_send_history')
+      .upsert(chunk, {onConflict:'phone_e164,sent_at,course_name', ignoreDuplicates:true});
+    if(error){ fail += chunk.length; console.warn('[hist upload]', error); }
+    else { ok += chunk.length; }
+  }
+
+  statsEl.textContent = fail===0
+    ? `업로드 완료 — ${ok}건 시도 (기존 중복은 자동 skip)`
+    : `업로드 부분 실패 — 성공 ${ok} / 실패 ${fail}`;
+
+  // 인덱스 재구축 + 열려 있는 화면 즉시 갱신
+  await loadExternalHistoryIndex();
+  if(currentPage==='wf') await loadWorkflow();
+  else if(currentPage==='s4') await loadS4();
+  else if(currentPage==='s5') await loadS5();
+}
+
+function handleHistDrop(ev){
+  ev.preventDefault();
+  document.getElementById('hist-dropzone').classList.remove('dragging');
+  const f = ev.dataTransfer?.files?.[0];
+  if(f) handleHistFile(f);
+}
+
+async function loadExternalHistoryIndex(){
+  if(!allTargets || !allTargets.length){ externalHistoryIndex = new Map(); return; }
+  const phones = [...new Set(allTargets.flatMap(t=>[
+    normalizePhone(t.cs_contacts?.mobile),
+    normalizePhone(t.cs_contacts?.phone)
+  ]).filter(Boolean))];
+  if(!phones.length){ externalHistoryIndex = new Map(); return; }
+
+  const cutoff = new Date(); cutoff.setDate(cutoff.getDate()-180);
+  const {data, error} = await sb.from('cs_external_send_history')
+    .select('phone_e164, sent_at, course_name, company_name')
+    .in('phone_e164', phones)
+    .gte('sent_at', cutoff.toISOString().slice(0,10));
+
+  if(error){ console.warn('[hist index]', error); externalHistoryIndex = new Map(); return; }
+
+  const idx = new Map();
+  (data||[]).forEach(r=>{
+    if(!idx.has(r.phone_e164)) idx.set(r.phone_e164, []);
+    idx.get(r.phone_e164).push(r);
+  });
+  externalHistoryIndex = idx;
+}
+
+function computeIntraBatchDupes(){
+  const cnt = new Map();
+  (allTargets||[]).forEach(t=>{
+    if(t.contact_id) cnt.set(t.contact_id, (cnt.get(t.contact_id)||0)+1);
+  });
+  intraBatchDupeCount = cnt;
+}
+
+function externalHistoryMatch(t){
+  if(!externalHistoryIndex) return null;
+  const keys = [t.cs_contacts?.mobile, t.cs_contacts?.phone].map(normalizePhone).filter(Boolean);
+  for(const k of keys){
+    const hits = externalHistoryIndex.get(k);
+    if(hits && hits.length){
+      return hits.reduce((a,b)=> a.sent_at>b.sent_at ? a : b);
+    }
+  }
+  return null;
+}
+
+function externalHistoryBadge(t){
+  const m = externalHistoryMatch(t);
+  if(!m) return '';
+  const days = Math.floor((new Date() - new Date(m.sent_at))/86400000);
+  const tip = `${m.course_name||''}${m.company_name? ' ('+m.company_name+')' : ''}`.replace(/"/g,'&quot;');
+  return ` <span class="tag tag-r" title="${tip}">⚠ ${m.sent_at} (${days}일전)</span>`;
+}
+
+function intraDuplicateBadge(t){
+  const n = intraBatchDupeCount?.get(t.contact_id) || 0;
+  if(n<=1) return '';
+  return ` <span class="tag tag-a" title="같은 담당자가 이 회차에 ${n}건">회차내 ×${n}</span>`;
+}
+
+// ===== ACTIONS =====
+async function scanStep1(){
+  alert('현재 CS 회차의 대상자를 기준으로 Step 1 결과를 표시합니다.\n자동 심사는 회차 생성 시 수행됩니다.');
+  await loadS1();
+}
+
+async function dispatchSurvey(){
+  if(!currentBatchId){alert('CS 회차를 먼저 선택하세요');return}
+
+  const checked = document.querySelectorAll('#tbl-s5 .ck:checked');
+  if(checked.length<1){alert('발송 대상을 선택하세요');return}
+
+  if(!confirm(`${checked.length}명에게 설문을 발송합니다.\n채널: 이메일 우선 (없으면 SMS)\n\n진행하시겠습니까?`)) return;
+
+  // 1. 선택된 대상자를 로컬/Supabase 양쪽에 eligible 로 확정 (bridge 가 재검증함)
+  const selectedIds = [];
+  for(const cb of checked){
+    const targetId = cb.dataset.targetId;
+    if(!targetId) continue;
+    selectedIds.push(targetId);
+    await sb.from('cs_survey_targets')
+      .update({is_eligible:true, status:'eligible', step5_confirmed:true, step5_confirmed_at:new Date().toISOString()})
+      .eq('id', targetId);
+  }
+
+  // 2. bridge payload 구성 — cs_contacts 조인된 allTargets 사용
+  const targets = selectedIds.map(id=>{
+    const t = allTargets.find(x=>x.id===id);
+    if(!t) return null;
+    const ct = t.cs_contacts || {};
+    const bp = ct.cs_business_places || {};
+    const company = bp.cs_companies?.company_name || bp.place_name || null;
+    return {
+      targetId: t.id,
+      contactId: ct.id || t.contact_id,
+      name: ct.contact_name || null,
+      email: ct.email || null,
+      phone: ct.phone || ct.mobile || null,
+      company,
+      department: ct.department || null,
+      position: ct.position || null,
+      courseId: t.course_id || null,
+      projectId: t.project_id || null
+    };
+  }).filter(Boolean);
+
+  if(!targets.length){alert('선택된 대상자의 연락처 정보를 찾을 수 없습니다');return}
+
+  // 3. survey_sd bridge API 호출
+  let out;
+  try {
+    const res = await fetch(BRIDGE_URL, {
+      method: 'POST',
+      headers: {'content-type':'application/json', 'x-cs-bridge-key': BRIDGE_KEY},
+      body: JSON.stringify({batchId: currentBatchId, channel:'auto', targets})
+    });
+    if(!res.ok){
+      const errTxt = await res.text().catch(()=>res.statusText);
+      alert('발송 실패 (HTTP ' + res.status + '): ' + errTxt);
+      return;
+    }
+    out = await res.json();
+  } catch(e) {
+    alert('발송 실패 (네트워크): ' + e.message);
+    return;
+  }
+
+  // 4. 결과를 cs_survey_targets 에 writeback
+  const results = Array.isArray(out?.results) ? out.results : [];
+  for(const r of results){
+    if(r.status === 'dispatched' || r.status === 'skipped'){
+      await sb.from('cs_survey_targets').update({
+        distribution_id: r.distributionId,
+        survey_token: r.token,
+        survey_url: r.surveyUrl,
+        dispatched_at: new Date().toISOString(),
+        dispatch_channel: r.channel || null,
+        dispatch_error: null,
+        status: 'dispatched'
+      }).eq('id', r.targetId);
+    } else {
+      await sb.from('cs_survey_targets').update({
+        dispatch_error: r.reason || 'unknown',
+        status: 'error'
+      }).eq('id', r.targetId);
+    }
+  }
+
+  alert(
+    `발송 처리 완료!\n` +
+    `- 발송: ${out.dispatched||0}명\n` +
+    `- 건너뜀(이미 발송): ${out.skipped||0}명\n` +
+    `- 오류: ${out.errors||0}명`
+  );
+  await loadBatchData();
+  loadS5();
+}
+
+// ===== STEP AUDIT CSV =====
+// 각 Step 페이지의 검수용 CSV 내보내기. currentBatchId 의 대상자를 기준으로
+// 해당 Step 범위(진입한 모든 후보)와 판정/사유 컬럼을 함께 내보낸다.
+// 설계 문서: C:\Users\EXC\.claude\plans\step-audit-csv.md
+
+function toDateStr(v){
+  if(!v) return '';
+  try {
+    const d = (v instanceof Date) ? v : new Date(v);
+    if(isNaN(d.getTime())) return '';
+    return d.toISOString().slice(0,10);
+  } catch(e){ return ''; }
+}
+
+function daysSince(v){
+  if(!v) return '';
+  const d = new Date(v);
+  if(isNaN(d.getTime())) return '';
+  return Math.floor((new Date() - d) / 86400000);
+}
+
+function sanitizeFilename(s){
+  return (s||'batch').toString()
+    .replace(/[\/\\:*?"<>|]/g,'_')
+    .replace(/\s+/g,'_')
+    .replace(/[()]/g,'')
+    .slice(0,60);
+}
+
+function pickFirstNote(t){
+  return t.step1_note || t.step2_note || t.step3_note || t.step4_note || t.step5_note || '';
+}
+
+// 전화번호 앞자리 0 이 Excel 에서 잘리는 문제 방지.
+// 선두 아포스트로피(') 를 붙이면 Excel 이 해당 셀을 텍스트로 인식하고 아포스트로피는 화면에서 숨김.
+// Google Sheets, LibreOffice 도 동일하게 처리. 텍스트 에디터에서는 아포스트로피가 그대로 보임.
+function csvPhone(v){
+  if(v===null || v===undefined) return '';
+  const s = String(v).trim();
+  if(!s) return '';
+  return "'" + s;
+}
+
+function plainAM(p){
+  if(!p) return '';
+  return p.am_name || '';
+}
+function plainConsultant(pid, p){
+  const m = memberMap[pid];
+  if(m && m.consultant && m.consultant.length){
+    return m.consultant.map(c=>`${c.name||''}${c.team?' '+cleanTeam(c.team):''}`.trim()).filter(Boolean).join(', ');
+  }
+  return cleanTeam(p?.execution_team) || '';
+}
+// 수행담당자 이름 / 팀을 별도 반환 — CSV 컬럼을 수행담당자·수행팀 2개로 나눌 때 사용.
+// 담당자 부재 시 execution_team 은 name 없이 team 쪽에만 들어감.
+function plainConsultantSplit(pid, p){
+  const m = memberMap[pid];
+  if(m && m.consultant && m.consultant.length){
+    return {
+      name: m.consultant.map(c=>c.name||'').filter(Boolean).join(', '),
+      team: m.consultant.map(c=>cleanTeam(c.team)||'').filter(Boolean).join(', ')
+    };
+  }
+  return { name: '', team: cleanTeam(p?.execution_team) || '' };
+}
+function plainInstructors(pid){
+  const m = memberMap[pid];
+  if(!m) return '';
+  const ins = [...(m.internal_instructor||[]), ...(m.external_instructor||[])];
+  return ins.map(i=>i.name).filter(Boolean).join(',');
+}
+function plainIM(pid){
+  const m = memberMap[pid];
+  // cs_project_members 에 role='im' 레코드가 있을 때만 채워짐. 없으면 공란.
+  if(m && m.im && m.im.length){
+    return m.im.map(i=>`${i.name||''}${i.team?' '+cleanTeam(i.team):''}`.trim()).filter(Boolean).join(', ');
+  }
+  return '';
+}
+
+// 각 Step 의 행 필터링. loadSn 과 동일한 기준.
+function filterByStep(step){
+  if(step===1) return allTargets.slice();
+  if(step===2) return allTargets.filter(t=>t.step1_course_completed===true);
+  if(step===3) return allTargets.filter(t=>t.step2_last_course_confirmed===true);
+  if(step===4) return allTargets.filter(t=>t.step3_project_closed===true);
+  if(step===5) return allTargets.slice();  // 최종 감사: 전체 (제외 포함)
+  return [];
+}
+
+// Step 판정 라벨
+function verdictS1(t){
+  if(t.step1_course_completed===true) return '통과';
+  if(t.step1_course_completed===false) return '진행중';
+  return '미확인';
+}
+function verdictS2(t){
+  if(t.step2_last_course_confirmed===true) return '통과';
+  if(t.step2_last_course_confirmed===false) return '후속있음';
+  return '미확인';
+}
+function verdictS3(t){
+  if(t.step3_project_closed===true) return '마감';
+  const st = t.cs_projects?.status;
+  if(st==='closing') return '예정';
+  return '미마감';
+}
+function verdictS4(t){
+  if(t.step4_within_6months===true) return '제외';
+  if(t.step4_within_6months===false) return '가능';
+  return '이력불명';
+}
+
+// STEP_COLUMNS[n] = [{header, get(t)}, ...]
+// get() 는 plain 문자열 반환. memberMap 은 전역 사용.
+const STEP_COLUMNS = {
+  1: [
+    {h:'수주코드',      g:t=> t.cs_projects?.bris_code || ''},
+    {h:'프로젝트명',    g:t=> t.cs_projects?.project_name || ''},
+    {h:'과정명',        g:t=> t.cs_courses?.course_name || ''},
+    {h:'프로그램',      g:t=> t.cs_courses?.program_name || ''},
+    {h:'교육유형',      g:t=> t.cs_courses?.education_type || ''},
+    {h:'고객사명',      g:t=> t.cs_contacts?.cs_business_places?.cs_companies?.company_name || ''},
+    {h:'사업장명',      g:t=> t.cs_contacts?.cs_business_places?.place_name || ''},
+    {h:'종료일',        g:t=> toDateStr(t.cs_courses?.end_date)},
+    {h:'에코여부',      g:t=> t.cs_courses?.echo_id ? '등록' : '제외'},
+    {h:'에코제외사유',  g:t=> t.cs_courses?.echo_exclude_reason || t.cs_projects?.echo_exclude_reason || ''},
+    {h:'Step1 판정',    g:t=> verdictS1(t)},
+    {h:'Step1 비고',    g:t=> t.step1_note || (t.step1_course_completed===false ? '종료일 미경과' : '') },
+    {h:'확인시각',      g:t=> toDateStr(t.step1_checked_at)},
+    {h:'AM',            g:t=> plainAM(t.cs_projects)},
+    {h:'수주팀',        g:t=> cleanTeam(t.cs_projects?.am_team)},
+    {h:'담당자',        g:t=> t.cs_contacts?.contact_name || ''},
+    {h:'이메일',        g:t=> t.cs_contacts?.email || ''},
+    {h:'전화',          g:t=> csvPhone(t.cs_contacts?.phone || t.cs_contacts?.mobile)},
+  ],
+  2: [
+    {h:'수주코드',      g:t=> t.cs_projects?.bris_code || ''},
+    {h:'프로젝트명',    g:t=> t.cs_projects?.project_name || ''},
+    {h:'과정명',        g:t=> t.cs_courses?.course_name || ''},
+    {h:'교육유형',      g:t=> t.cs_courses?.education_type || ''},
+    {h:'고객사명',      g:t=> t.cs_contacts?.cs_business_places?.cs_companies?.company_name || ''},
+    {h:'사업장명',      g:t=> t.cs_contacts?.cs_business_places?.place_name || ''},
+    {h:'종료일',        g:t=> toDateStr(t.cs_courses?.end_date)},
+    {h:'에코여부',      g:t=> t.cs_courses?.echo_id ? '등록' : '제외'},
+    {h:'최종과정여부',  g:t=> t.cs_courses?.is_last_in_project ? '최종' : '후속있음'},
+    {h:'Step2 판정',    g:t=> verdictS2(t)},
+    {h:'Step2 비고',    g:t=> t.step2_note || (t.step2_last_course_confirmed===false ? (t.exclusion_reason||'후속 과정 존재') : '')},
+    // 프로젝트 드리프트(cs_projects.id ≠ cs_courses.project_id) 감사용. 정상이면 N, 발생 시 Y.
+    {h:'프로젝트드리프트', g:t=> (t.cs_projects?.id && t.cs_courses?.project_id && t.cs_projects.id !== t.cs_courses.project_id) ? 'Y' : 'N'},
+    {h:'AM',            g:t=> plainAM(t.cs_projects)},
+    {h:'수주팀',        g:t=> cleanTeam(t.cs_projects?.am_team)},
+    {h:'담당자',        g:t=> t.cs_contacts?.contact_name || ''},
+    {h:'이메일',        g:t=> t.cs_contacts?.email || ''},
+    {h:'전화',          g:t=> csvPhone(t.cs_contacts?.phone || t.cs_contacts?.mobile)},
+  ],
+  3: [
+    {h:'수주코드',      g:t=> t.cs_projects?.bris_code || ''},
+    {h:'프로젝트명',    g:t=> t.cs_projects?.project_name || ''},
+    {h:'과정명',        g:t=> t.cs_courses?.course_name || ''},
+    {h:'고객사명',      g:t=> t.cs_contacts?.cs_business_places?.cs_companies?.company_name || ''},
+    {h:'사업장명',      g:t=> t.cs_contacts?.cs_business_places?.place_name || ''},
+    {h:'프로젝트상태',  g:t=> t.cs_projects?.status || ''},
+    {h:'마감일/예정일', g:t=> toDateStr(t.step3_closed_date || t.cs_projects?.deadline_date)},
+    {h:'금액',          g:t=> t.cs_projects?.total_amount || 0},
+    {h:'Step3 판정',    g:t=> verdictS3(t)},
+    {h:'Step3 비고',    g:t=> t.step3_note || (t.step3_project_closed===false ? (t.exclusion_reason||'마감 전') : '')},
+    {h:'AM',            g:t=> plainAM(t.cs_projects)},
+    {h:'수주팀',        g:t=> cleanTeam(t.cs_projects?.am_team)},
+    {h:'수행담당자',    g:t=> plainConsultantSplit(t.cs_projects?.id, t.cs_projects).name},
+    {h:'수행팀',        g:t=> plainConsultantSplit(t.cs_projects?.id, t.cs_projects).team},
+    {h:'담당자',        g:t=> t.cs_contacts?.contact_name || ''},
+  ],
+  4: [
+    // 6개월 발송이력.csv 스타일 + 판정 2컬럼. 순서도 참조 파일과 유사하게 맞춤.
+    {h:'과정명',          g:t=> t.cs_courses?.course_name || ''},
+    {h:'고객사',          g:t=> t.cs_contacts?.cs_business_places?.cs_companies?.company_name || ''},
+    {h:'담당자',          g:t=> t.cs_contacts?.contact_name || ''},
+    {h:'직급',            g:t=> t.cs_contacts?.position || ''},
+    {h:'부서',            g:t=> t.cs_contacts?.department || ''},
+    {h:'전화번호',        g:t=> csvPhone(t.cs_contacts?.phone || t.cs_contacts?.mobile)},
+    {h:'이메일',          g:t=> t.cs_contacts?.email || ''},
+    // step4_last_survey_name 컬럼은 스키마에 없을 수 있음 → 공란 폴백
+    {h:'최근 설문과정',   g:t=> t.step4_last_survey_name || t.cs_contacts?.last_survey_name || ''},
+    {h:'최근 설문일',     g:t=> toDateStr(t.step4_last_survey_date || t.cs_contacts?.last_survey_date)},
+    {h:'경과일',          g:t=> daysSince(t.step4_last_survey_date || t.cs_contacts?.last_survey_date)},
+    {h:'6개월내여부',     g:t=> t.step4_within_6months===true ? 'Y' : (t.step4_within_6months===false ? 'N' : '')},
+    {h:'Step4 판정',      g:t=> verdictS4(t)},
+    {h:'Step4 비고',      g:t=> t.step4_note || (t.step4_within_6months===true ? (t.exclusion_reason||'6개월 이내 이력') : '')},
+  ],
+  5: [
+    // 최종결과물.csv 재현. 배치 전체(제외 포함) 감사.
+    {h:'설문참여',            g:t=> t.step5_confirmed===true ? 'V' : ''},
+    {h:'구분',                g:t=> t.cs_projects?.project_type || ''},
+    {h:'프로젝트코드(bar코드)', g:t=> t.cs_projects?.bris_code || ''},
+    {h:'프로젝트명',          g:t=> t.cs_projects?.project_name || ''},
+    {h:'과정명',              g:t=> t.cs_courses?.course_name || ''},
+    {h:'고객사명',            g:t=> t.cs_contacts?.cs_business_places?.cs_companies?.company_name || ''},
+    {h:'사업장명',            g:t=> t.cs_contacts?.cs_business_places?.place_name || ''},
+    {h:'에코여부',            g:t=> t.cs_courses?.echo_id ? '운영' : '미운영(제외)'},
+    // 에코 제외사유 — 에코여부=운영 이어도 코스/프로젝트의 echo_exclude_reason 이 있으면 보존해서 보여줌
+    {h:'에코제외사유',        g:t=> t.cs_courses?.echo_exclude_reason || t.cs_projects?.echo_exclude_reason || ''},
+    // 6개월설문이력 — step4 이력 요약. within_6months=true 인 경우에만 채워짐 (날짜 + 과정명)
+    {h:'6개월설문이력',       g:t=>{
+      if(t.step4_within_6months !== true) return '';
+      const n = t.step4_last_survey_name || t.cs_contacts?.last_survey_name || '';
+      const d = toDateStr(t.step4_last_survey_date || t.cs_contacts?.last_survey_date);
+      if(n && d) return `${d} ${n}`;
+      return d || n || 'Y';
+    }},
+    // 외부 CSV 이력 매칭 — phone_e164 정규화 후 cs_external_send_history 조회
+    {h:'외부발송이력',        g:t=>{
+      const m = externalHistoryMatch(t);
+      if(!m) return '';
+      return `${m.sent_at} ${m.course_name||''}`.trim();
+    }},
+    // 배치내 중복 — 같은 contact_id 가 현 배치에 N개 target 으로 있을 때 ×N 표기
+    {h:'회차내중복',          g:t=>{
+      const n = intraBatchDupeCount?.get(t.contact_id) || 0;
+      return n>1 ? `×${n}` : '';
+    }},
+    {h:'제외사유',            g:t=> t.exclusion_reason || ''},
+    {h:'비고',                g:t=> pickFirstNote(t)},
+    {h:'AM',                  g:t=> plainAM(t.cs_projects)},
+    {h:'수주팀',              g:t=> cleanTeam(t.cs_projects?.am_team)},
+    // 수행담당자 / 수행팀 분리 — CSV에서 인원과 팀 각각 필터·정렬 가능하도록 2컬럼
+    {h:'수행담당자',          g:t=> plainConsultantSplit(t.cs_projects?.id, t.cs_projects).name},
+    {h:'수행팀',              g:t=> plainConsultantSplit(t.cs_projects?.id, t.cs_projects).team},
+    {h:'참여 강사명',         g:t=> plainInstructors(t.cs_projects?.id)},
+    {h:'IM명',                g:t=> plainIM(t.cs_projects?.id)},
+    {h:'고객사 담당자명',     g:t=>{
+      const n = t.cs_contacts?.contact_name || '';
+      const p = t.cs_contacts?.position || '';
+      return (n + (p?' '+p:'')).trim();
+    }},
+    // 연락처 / 휴대전화 2컬럼 분리 — 휴대전화가 발송 기준이므로 별도 컬럼 유지
+    {h:'연락처',              g:t=> csvPhone(t.cs_contacts?.phone)},
+    {h:'휴대전화',            g:t=> csvPhone(t.cs_contacts?.mobile)},
+    {h:'이메일',              g:t=> t.cs_contacts?.email || ''},
+    // 발송 이후 채워짐 (없으면 공란)
+    {h:'발송채널',            g:t=> t.dispatch_channel || ''},
+    {h:'발송시각',            g:t=> toDateStr(t.dispatched_at)},
+    {h:'응답URL',             g:t=> t.survey_url || ''},
+  ],
+};
+
+function buildStepRows(step){
+  const cols = STEP_COLUMNS[step] || [];
+  const rows = filterByStep(step).map(t => cols.map(c => {
+    try { return c.g(t); } catch(e){ return ''; }
+  }));
+  return {headers: cols.map(c=>c.h), rows};
+}
+
+function csvEscape(v){
+  if(v===null || v===undefined) return '';
+  const s = String(v);
+  if(s.indexOf(',')<0 && s.indexOf('"')<0 && s.indexOf('\n')<0 && s.indexOf('\r')<0) return s;
+  return '"' + s.replace(/"/g,'""') + '"';
+}
+
+function downloadCSV(filename, headers, rows){
+  const lines = [];
+  lines.push(headers.map(csvEscape).join(','));
+  rows.forEach(r => lines.push(r.map(csvEscape).join(',')));
+  const csv = '\uFEFF' + lines.join('\r\n') + '\r\n';
+  const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+async function exportStepAudit(step){
+  if(!currentBatchId){ alert('CS 회차를 먼저 선택하세요'); return; }
+  if(!allTargets.length) await loadBatchData();
+  if(!Object.keys(memberMap).length) await loadMemberMap();
+
+  const {headers, rows} = buildStepRows(step);
+  if(!rows.length){
+    alert(`Step ${step} 범위에 해당하는 대상자가 없습니다.`);
+    return;
+  }
+
+  const batch = allBatches.find(b=>b.id===currentBatchId);
+  const batchName = sanitizeFilename(batch?.batch_name);
+  const ts = new Date();
+  const dateStr = ts.toISOString().slice(0,10) + '_' + ts.toTimeString().slice(0,5).replace(':','');
+  const filename = `cs_step${step}_${batchName}_${dateStr}.csv`;
+
+  downloadCSV(filename, headers, rows);
+}
+
+function exportExcel(){
+  const table = document.querySelector('#p-'+currentPage+' table');
+  if(!table){alert('내보낼 데이터가 없습니다');return}
+  let csv = '';
+  table.querySelectorAll('tr').forEach(tr=>{
+    const cells = [];
+    tr.querySelectorAll('th,td').forEach(td=>cells.push('"'+td.textContent.trim().replace(/"/g,'""')+'"'));
+    csv += cells.join(',') + '\n';
+  });
+  const blob = new Blob(['\uFEFF'+csv], {type:'text/csv;charset=utf-8;'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'cs_export_' + new Date().toISOString().slice(0,10) + '.csv';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function syncBRIS(){
+  alert('BRIS 동기화는 서버에서 실행됩니다.\n\n· cron: 매주 월요일 09:00 자동 실행\n· 수동: python bris_to_supabase.py cron\n\n동기화 완료 후 이 페이지를 새로고침하면 결과가 반영됩니다.');
+}
+
+// ===== PANEL DETAIL =====
+async function loadPanel(target){
+  if(!target) return;
+
+  const contact = target.cs_contacts;
+  const project = target.cs_projects;
+  const course = target.cs_courses;
+
+  const comp = contact?.cs_business_places?.cs_companies?.company_name || contact?.cs_business_places?.place_name || '—';
+  document.getElementById('panel-name').textContent = contact?.contact_name || '—';
+  document.getElementById('panel-company').textContent = `${comp} · ${contact?.department||'—'} · ${contact?.position||'—'}`;
+
+  // 5단계 프로세스 (실제 심사 결과 기반)
+  const steps = [
+    {label:'교육 종료', done:target.step1_course_completed, note:target.step1_note},
+    {label:'최종 과정', done:target.step2_last_course_confirmed, note:target.step2_note},
+    {label:'프로젝트 마감', done:target.step3_project_closed, note:target.step3_note},
+    {label:'설문 이력', done:target.step4_history_checked && !target.step4_within_6months, note:target.step4_within_6months?'6개월 이내 참여':target.step4_note},
+    {label:'대상 확정', done:target.step5_confirmed, note:target.step5_confirmed_by}
+  ];
+
+  let htm='';
+  let currentReached=false;
+  steps.forEach((s,i)=>{
+    let cls='wt';
+    if(s.done===true) cls='dn';
+    else if(!currentReached && target.current_step===(i+1)){cls='ac';currentReached=true;}
+    const icon=s.done?'✓':(i+1);
+    const failNote=(target.status==='excluded'&&target.current_step===(i+1))?` <span style="color:var(--red);font-size:11px">(${target.exclusion_reason||'제외'})</span>`:'';
+    htm+=`<div class="stp ${cls}"><div class="stp-n">${icon}</div><div><strong>Step ${i+1}</strong> ${s.label}${failNote}</div></div>`;
+  });
+  document.getElementById('panel-steps').innerHTML=htm;
+
+  // 담당자 정보
+  htm='';
+  htm+=`<div class="drow"><span class="dl">이름</span><span class="dv">${brisDmLink(contact?.customer_id, contact?.contact_name||'—')}</span></div>`;
+  htm+=`<div class="drow"><span class="dl">이메일</span><span class="dv">${contact?.email||'—'}</span></div>`;
+  htm+=`<div class="drow"><span class="dl">전화</span><span class="dv">${contact?.phone||'—'}</span></div>`;
+  htm+=`<div class="drow"><span class="dl">휴대폰</span><span class="dv">${contact?.mobile||'—'}</span></div>`;
+  htm+=`<div class="drow"><span class="dl">부서</span><span class="dv">${contact?.department||'—'}</span></div>`;
+  htm+=`<div class="drow"><span class="dl">직책</span><span class="dv">${contact?.position||'—'}</span></div>`;
+  htm+=`<div class="drow"><span class="dl">최근설문</span><span class="dv">${contact?.last_survey_date||'없음'}</span></div>`;
+  document.getElementById('panel-contact').innerHTML=htm;
+
+  // 프로젝트 정보
+  htm='';
+  htm+=`<div class="drow"><span class="dl">수주코드</span><span class="dv">${brisProjectLink(project?.project_id, project?.bris_code||'—')}</span></div>`;
+  htm+=`<div class="drow"><span class="dl">프로젝트</span><span class="dv">${project?.project_name||'—'}</span></div>`;
+  htm+=`<div class="drow"><span class="dl">AM</span><span class="dv">${fmtAM(project)}</span></div>`;
+  htm+=`<div class="drow"><span class="dl">수행</span><span class="dv">${fmtConsultant(target.project_id, project)}</span></div>`;
+  htm+=`<div class="drow"><span class="dl">강사</span><span class="dv">${fmtInstructors(target.project_id)}</span></div>`;
+  const echoExReason=project?.echo_exclude_reason||'';
+  const echoTag = course?.echo_id?brisEchoLink(course.echo_id,'등록'):(project?.echo_enabled?'<span class="tag tag-g">등록</span>':`<span class="tag tag-r">제외</span>${echoExReason?' <span style="color:var(--red);font-size:11px">('+echoExReason+')</span>':''}`);
+  htm+=`<div class="drow"><span class="dl">에코</span><span class="dv">${echoTag}</span></div>`;
+  htm+=`<div class="drow"><span class="dl">수주금액</span><span class="dv">${project?.total_amount?project.total_amount.toLocaleString()+'원':'—'}</span></div>`;
+  htm+=`<div class="drow"><span class="dl">상태</span><span class="dv">${project?.status||'—'}</span></div>`;
+  document.getElementById('panel-project').innerHTML=htm;
+
+  // 과정 정보
+  htm='';
+  htm+=`<div class="drow"><span class="dl">과정명</span><span class="dv">${brisCourseLink(course, project, course?.course_name||'—')}</span></div>`;
+  htm+=`<div class="drow"><span class="dl">프로그램</span><span class="dv">${course?.program_name||'—'}</span></div>`;
+  htm+=`<div class="drow"><span class="dl">유형</span><span class="dv">${course?.education_type||'—'}</span></div>`;
+  htm+=`<div class="drow"><span class="dl">시작일</span><span class="dv">${course?.start_date||'—'}</span></div>`;
+  htm+=`<div class="drow"><span class="dl">종료일</span><span class="dv">${course?.end_date||'—'}</span></div>`;
+  htm+=`<div class="drow"><span class="dl">인원</span><span class="dv">${course?.headcount||'—'}명</span></div>`;
+  htm+=`<div class="drow"><span class="dl">최종과정</span><span class="dv">${course?.is_last_in_project?'예':'아니오'}</span></div>`;
+  document.getElementById('panel-course').innerHTML=htm;
+
+  // 거래 이력: 같은 회사의 프로젝트들
+  if(contact?.place_id){
+    const {data:history}=await sb.from('cs_projects')
+      .select('project_name,total_amount,order_date,status')
+      .order('order_date',{ascending:false}).limit(5);
+    htm='<tbody>';
+    (history||[]).forEach(h=>{
+      htm+=`<tr><td>${h.project_name||'—'}</td><td style="text-align:right">${h.total_amount?h.total_amount.toLocaleString()+'원':'—'}</td></tr>`;
+    });
+    if(!history||history.length===0) htm+='<tr><td colspan="2" style="color:#999;text-align:center">이력 없음</td></tr>';
+    htm+='</tbody>';
+  } else {
+    htm='<tbody><tr><td colspan="2" style="color:#999;text-align:center">이력 없음</td></tr></tbody>';
+  }
+  document.getElementById('panel-history').innerHTML=htm;
+
+  // 설문 이력
+  const {data:surveys}=await sb.from('cs_survey_participation').select('*').eq('contact_id',target.contact_id).order('survey_date',{ascending:false}).limit(5);
+  htm='<tbody>';
+  if(surveys && surveys.length>0){
+    surveys.forEach(s=>{
+      const date = new Date(s.survey_date).toLocaleDateString('ko-KR').slice(0,10);
+      const scoreTxt = s.overall_score ? s.overall_score+'점' : '—';
+      htm+=`<tr><td>${date}</td><td style="text-align:right">${scoreTxt} <span class="tag tag-g">완료</span></td></tr>`;
+    });
+  } else {
+    htm+='<tr><td colspan="2" style="color:#999;text-align:center">설문 이력 없음</td></tr>';
+  }
+  htm+='</tbody>';
+  document.getElementById('panel-surveys').innerHTML=htm;
+}
+
+// Initialize
+window.addEventListener('DOMContentLoaded',()=>{
+  dashboardMonth=new Date().toISOString().slice(0,7);
+  loadDashboard();
+});
+</script>
+</body>
+</html>

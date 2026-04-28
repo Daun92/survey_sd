@@ -1,0 +1,240 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<title>BRIS complain_reference_list.asp (2026-04 샘플)</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<!--
+  BRIS 컴플레인참조 페이지 회귀 fixture.
+  기존 integrated_* fixture 가 다루지 않는 필드를 테스트하기 위해 2026-04-01~15 기간 실 샘플에서 3건 추출:
+    R1: place_id 존재 + 에코 현황 (에코 제외 아님)
+    R2: place_id 존재 + 에코 제외 + 제외 사유 '고객사 외부망 차단'
+    R3: place_id 존재 + 에코 제외 + 제외 사유 '집체(2시간이내 특강)' + echo_id 없음
+  담당자 이메일/휴대 등은 샘플 자리표시자로 대체.
+-->
+<table class="ntbl_list_c">
+    <tr class="tfirst" align="center">
+        <td>
+            과정 아이디 <br>
+            수주 프로젝트 아이디 <br>
+            에코 아이디 <br>
+            플레이스 아이디 <br>
+            커스터머 아이디
+        </td>
+        <td>과정명</td><td>프로그램명</td><td>과정 총매출</td>
+        <td>시작일</td><td>종료일</td><td>대면/비대면</td>
+        <td>수주코드</td><td>수주 프로젝트명</td><td>수주 프로젝트 등록일</td>
+        <td>수주일</td><td>수주 프로젝트 마감일</td>
+    </tr>
+
+    <!-- R1: 에코 현황 (정상) -->
+    <tr>
+        <td style="width: 140px;">
+            <span>business_id : 72909</span><br>
+            <span>project_id : 34832</span><br>
+            <span>echo_id : 4437</span><br>
+            <span>place_id : 15548</span><br>
+            <span>customer_id : 133660</span><br>
+        </td>
+        <td>승진자 교육</td>
+        <td>승진자 교육</td>
+        <td class="mr">0</td>
+        <td>20260415</td>
+        <td>20260424</td>
+        <td>대면</td>
+        <td>2604-073</td>
+        <td>샘플고객사A_승진자 교육_26</td>
+        <td>2026-03-30 13:32</td>
+        <td>2026-04-01</td>
+        <td><span style="color:red"></span></td>
+    </tr>
+    <tr>
+        <td colspan="12" class="info-row">
+            <span><b>에코 아이디 : </b>4437</span>
+            <span><b>에코 상태 : </b>에코 현황 (에코 등록 됨)</span>
+        </td>
+    </tr>
+    <tr>
+        <td colspan="6" class="info-row">
+            <span><b>수주 : </b>담당자1 </span>
+            <span><b>수주팀 : </b>(201201001 - 서울1팀)</span>
+        </td>
+        <td colspan="6" class="info-row">
+            <span><b>수행 : </b> </span>
+            <span><b>수행팀 : </b>(2301 - 계층교육팀)</span>
+        </td>
+    </tr>
+    <tr>
+        <td colspan="12" class="info-row">
+            <span><b>사내강사 : </b>강사A</span>
+        </td>
+    </tr>
+    <tr>
+        <td colspan="12" class="info-row">
+            <span><b>외부강사 : </b></span>
+        </td>
+    </tr>
+    <tr>
+        <td colspan="12" class="info-row">
+            <span><b>플레이스 아이디 : </b>15548</span>
+            <span><b>회사명 : </b>샘플고객사A(주)</span>
+            <span><b>사업자번호 : </b>1208154231</span>
+            <span><b>사업장명 : </b>샘플고객사A</span>
+        </td>
+    </tr>
+    <tr>
+        <td colspan="12" class="info-row">
+            <span><b>커스터머 아이디 : </b>133660</span>
+            <span><b>담당자 : </b>홍길동</span>
+            <span><b>부서 : </b>인사팀책임</span>
+            <span><b>이메일 : </b>sample_r1@example.com</span>
+            <span><b>전화 : </b>0200000000</span>
+            <span><b>휴대 : </b>01000000001</span>
+        </td>
+    </tr>
+
+    <!-- R2: 에코 제외 + 사유 '고객사 외부망 차단' -->
+    <tr>
+        <td style="width: 140px;">
+            <span>business_id : 72863</span><br>
+            <span>project_id : 34766</span><br>
+            <span>echo_id : 4419</span><br>
+            <span>place_id : 33168</span><br>
+            <span>customer_id : 149982</span><br>
+        </td>
+        <td>면접관 교육</td>
+        <td>면접관 교육</td>
+        <td class="mr">1500000</td>
+        <td>20260415</td>
+        <td>20260415</td>
+        <td>대면</td>
+        <td>2604-046</td>
+        <td>샘플고객사B_면접관교육_2026</td>
+        <td>2026-03-19 11:20</td>
+        <td>2026-04-01</td>
+        <td><span style="color:red"></span></td>
+    </tr>
+    <tr>
+        <td colspan="12" class="info-row">
+            <span><b>에코 아이디 : </b>4419</span>
+            <span>
+                <b>에코 상태 : </b>
+                <span style="color: red;">에코 제외</span>
+                <b> 에코 제외 사유 : </b>
+                고객사 외부망 차단
+            </span>
+        </td>
+    </tr>
+    <tr>
+        <td colspan="6" class="info-row">
+            <span><b>수주 : </b>담당자2 </span>
+            <span><b>수주팀 : </b>(201202001 - 서울3팀)</span>
+        </td>
+        <td colspan="6" class="info-row">
+            <span><b>수행 : </b>담당자3 </span>
+            <span><b>수행팀 : </b>(2002 - HR컨설팅팀)</span>
+        </td>
+    </tr>
+    <tr>
+        <td colspan="12" class="info-row">
+            <span><b>사내강사 : </b>강사B</span>
+        </td>
+    </tr>
+    <tr>
+        <td colspan="12" class="info-row">
+            <span><b>외부강사 : </b></span>
+        </td>
+    </tr>
+    <tr>
+        <td colspan="12" class="info-row">
+            <span><b>플레이스 아이디 : </b>33168</span>
+            <span><b>회사명 : </b>샘플고객사B</span>
+            <span><b>사업자번호 : </b>N</span>
+            <span><b>사업장명 : </b>샘플고객사B</span>
+        </td>
+    </tr>
+    <tr>
+        <td colspan="12" class="info-row">
+            <span><b>커스터머 아이디 : </b>149982</span>
+            <span><b>담당자 : </b>이몽룡</span>
+            <span><b>부서 : </b>인사팀과장</span>
+            <span><b>이메일 : </b>sample_r2@example.com</span>
+            <span><b>전화 : </b>0200000000</span>
+            <span><b>휴대 : </b>01000000002</span>
+        </td>
+    </tr>
+
+    <!-- R3: echo_id 없음 + 에코 제외 + 사유 '집체(2시간이내 특강)' -->
+    <tr>
+        <td style="width: 140px;">
+            <span>business_id : 72880</span><br>
+            <span>project_id : 34607</span><br>
+            <span>echo_id : 없음</span><br>
+            <span>place_id : 8187</span><br>
+            <span>customer_id : 132317</span><br>
+        </td>
+        <td>워크스킬 교육(직무)</td>
+        <td></td>
+        <td class="mr">0</td>
+        <td>20260415</td>
+        <td>20260415</td>
+        <td>대면</td>
+        <td>2604-017</td>
+        <td>샘플고객사C_실무역량강화과정</td>
+        <td>2026-02-24 13:51</td>
+        <td>2026-04-15</td>
+        <td><span style="color:red"></span></td>
+    </tr>
+    <tr>
+        <td colspan="12" class="info-row">
+            <span><b>에코 아이디 : </b>없음</span>
+            <span>
+                <b>에코 상태 : </b>
+                <span style="color: red;">에코 제외</span>
+                <b> 에코 제외 사유 : </b>
+                집체(2시간이내 특강)
+            </span>
+        </td>
+    </tr>
+    <tr>
+        <td colspan="6" class="info-row">
+            <span><b>수주 : </b>담당자4 </span>
+            <span><b>수주팀 : </b>(2003 - 경인팀)</span>
+        </td>
+        <td colspan="6" class="info-row">
+            <span><b>수행 : </b> </span>
+            <span><b>수행팀 : </b>(2201 - 공공2역량교육파트)</span>
+        </td>
+    </tr>
+    <tr>
+        <td colspan="12" class="info-row">
+            <span><b>사내강사 : </b>강사C</span>
+        </td>
+    </tr>
+    <tr>
+        <td colspan="12" class="info-row">
+            <span><b>외부강사 : </b></span>
+        </td>
+    </tr>
+    <tr>
+        <td colspan="12" class="info-row">
+            <span><b>플레이스 아이디 : </b>8187</span>
+            <span><b>회사명 : </b>샘플고객사C교육원</span>
+            <span><b>사업자번호 : </b>1248232333</span>
+            <span><b>사업장명 : </b>샘플고객사C교육원</span>
+        </td>
+    </tr>
+    <tr>
+        <td colspan="12" class="info-row">
+            <span><b>커스터머 아이디 : </b>132317</span>
+            <span><b>담당자 : </b>성춘향</span>
+            <span><b>부서 : </b>연수팀과장</span>
+            <span><b>이메일 : </b>sample_r3@example.com</span>
+            <span><b>전화 : </b>0200000000</span>
+            <span><b>휴대 : </b>01000000003</span>
+        </td>
+    </tr>
+</table>
+</body>
+</html>

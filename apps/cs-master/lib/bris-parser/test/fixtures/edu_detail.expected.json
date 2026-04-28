@@ -1,0 +1,14 @@
+{
+  "businessId": "EDU001",
+  "orderCode": "2026-ABC",
+  "projectId": "30001",
+  "company": "샘플회사",
+  "internalManager": "김담당",
+  "courseName": "리더십 기본",
+  "programName": "리더십 PRO",
+  "customerId": "9001",
+  "customerName": "김담당",
+  "instructors": ["강사일", "강사이"],
+  "facilitators": ["진행자일", "진행자이"],
+  "eduDelivery": "비대면"
+}

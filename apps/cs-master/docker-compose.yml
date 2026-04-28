@@ -1,0 +1,35 @@
+services:
+  bris-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: bris-api-server:0.1.0
+    container_name: bris-api
+    restart: unless-stopped
+    env_file:
+      - .env
+    ports:
+      - "${HOST_PORT:-8000}:8000"
+    volumes:
+      # BRIS 쿠키 파일 (read-only)
+      - ./secrets:/secrets:ro
+      # cron 실행 로그 영속화
+      - ./logs:/app/logs
+      # xlsx 임시 다운로드 (디버깅용)
+      - ./downloads:/app/downloads
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/v1/health',timeout=3).status==200 else 1)"
+      interval: 30s
+      timeout: 5s
+      start_period: 10s
+      retries: 3
+    # 리소스 제한 (사내 배포 기본값)
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '1.0'

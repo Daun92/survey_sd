@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "bris-api-server"
+version = "0.1.0"
+description = "BRIS HTML 파서 + Supabase 동기화 REST API 게이트웨이"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "fastapi>=0.110",
+    "uvicorn[standard]>=0.27",
+    "pydantic>=2.6",
+    "bris-parser",
+    "requests>=2.31",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=7", "httpx>=0.27"]
+sync = ["supabase>=2.0"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

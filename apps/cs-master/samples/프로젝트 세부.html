@@ -1,0 +1,1075 @@
+
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<title>::: BRIS ver.2019 (Expert Business Resources Imformation System) :::</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<link rel="StyleSheet" href="/share/common.css" type="text/css">
+<link rel="StyleSheet" href="/bris.css" type="text/css">
+<script src="/share/js/jquery.min.js"></script>
+<!-- <script language=javascript src="/share/js/expertHelper.js"></script> -->
+<script type="text/javascript" src="/share/common.js"></script>
+<script type="text/javascript" src="/common/js/common_init.js"></script>
+
+
+</head>
+ 
+<body topmargin=0 >
+
+
+<table border="0" width="640" cellspacing="0" cellpadding="0" id="headMenuTitle">
+  <tr>
+    <td width="100%" height=28 style="font-weight:bold;"><img src="/images/ico_path.gif" align="absmiddle"> HOME &gt; 
+	사업관리 &gt;
+	
+		<span style="color:#4594b5">
+	수주프로젝트 &gt;
+	
+	</td></tr>
+</table>
+
+	<script>
+ var remainInstEval="2"
+	 
+		//운영요청서 등록
+			function Manage_Request_Reg_sol(){
+				f= document.expenseForm;
+				f.action="/partmenu/onexpert/manage/Request_Reg.asp";
+				f.submit();
+			}
+
+				//운영요청서 수정
+			function Manage_Request_Edit_sol(){
+				f= document.expenseForm;
+				f.action="/partmenu/onexpert/manage/Request_info.asp";
+				f.submit();
+			}
+
+		//운영요청서 등록
+			function Manage_Request_Reg(){
+				f= document.expenseForm;
+				f.action="Manage_Request_Reg.asp";
+				f.submit();
+			}
+
+				//운영요청서 수정
+			function Manage_Request_Edit(){
+				f= document.expenseForm;
+				f.action="Manage_Request_Edit.asp";
+				f.submit();
+			}
+	 
+ function refreshFrame(id){
+	 var agent = navigator.userAgent.toLowerCase();
+	 //크롬일때만 새로고침
+	if (agent.indexOf("chrome") != -1) {
+		var url = $('#'+id).attr('src');
+		$('#'+id).attr('src', url);
+	}
+
+
+
+ }
+ </script>
+		
+	<meta http-equiv="Content-Type" content="text/html; charset=euc-kr">
+	<script language="JavaScript" src="/new_js/jquery-1.3.2.js"></script>
+<script type="text/javascript" src="/new_js/jquery-ui-1.7.2.custom.min.js"></script>
+<script language="JavaScript" src="/new_js/ui/jquery.clockpick.1.2.7.js"></script>
+<script type="text/javascript" src="/new_js/ui/ui.core.js"></script>
+<script type="text/javascript" src="/new_js/ui/ui.datepicker.js"></script>
+<script type="text/javascript" src="/new_js/ui/jquery.watermarkinput.js"></script>
+<script type="text/javascript" src="/new_js/ui/jquery.form.js"></script>
+<script type="text/javascript" src="/new_js/ui/thickbox.js"></script>
+<script type="text/javascript" src="/new_js/ui/jtip.js"></script>
+<script type="text/javascript" src="/new_js/ui/jquery.curvycorners.source.js"></script>
+<script type="text/javascript" src="/new_js/ui/jquery.hotkeys-0.7.9.js"></script>
+<script type="text/javascript" src="/new_js/ui/jquery.ui.widget.js"></script>
+<script type="text/javascript" src="/new_js/ui/jquery.ui.button.js"></script>
+<script type="text/javascript" src="/new_js/ui/jquery.selectbox-0.3.js"></script>
+<script type="text/javascript" src="/new_js/ui/opensocial-jquery.autoHeight.js"></script>
+<script src='/new_js/ui/jquery.MetaData.js' type="text/javascript" language="javascript"></script>
+<script src='/new_js/ui/jquery.MultiFile.js' type="text/javascript" language="javascript"></script>
+<link type="text/css" href="/new_css/ui.all.css" rel="stylesheet" />
+<link type="text/css" href="/new_css/demos.css" rel="stylesheet" />
+<link rel="stylesheet" href="/new_css/thickbox.css" type="text/css" media="screen">
+<link type="text/css" href="/new_css/jtip.css" rel="stylesheet" />
+<link type="text/css" href="/new_css/jquery.clockpick.1.2.7.css" rel="stylesheet" />
+<link type="text/css" href="/new_css/selectbox.css" rel="stylesheet" />
+<link type="text/css" href="/new_css/cupertino/jquery-ui-1.7.2.custom.css" rel="stylesheet">
+
+<style type="text/css">
+	#dialog_link {padding: .4em 1em .4em 20px;text-decoration: none;position: relative;}
+	#dialog_link span.ui-icon {margin: 0 5px 0 0;position: absolute;left: .2em;top: 50%;margin-top: -30px;}
+	ul#icons {margin: 0; padding: 0;}
+	ul#icons li {margin: 2px; position: relative; padding: 4px 0; cursor: pointer; float: left;  list-style: none;}
+	ul#icons span.ui-icon {float: left; margin: 0 4px;}
+</style>
+
+<link rel='stylesheet' href="/new_css/bris_style.css">
+<style type="text/css">
+<!--
+	body {
+		margin-top: 0px;
+		margin-left: 10px;
+		margin-right: 3px;
+		margin-bottom: 3px;
+	}
+
+	.footer_txt {font-size: 10px; font-family: verdana; letter-spacing: -1px;color:#FFFFFF;}
+
+	.nowpage_txt {font-size: 10px; font-family: verdana; letter-spacing: -1px;color:#098ca0;}
+
+	.tbl_page {font-family: verdana; letter-spacing: -1px; font-size:10px; color:#098ca0; text-decoration:none;}
+	a.tbl_page:link 	{font-family: verdana; letter-spacing: -1px; font-size:10px; color:#444444; text-decoration:none;}
+	a.tbl_page:active 	{font-family: verdana; letter-spacing: -1px; font-size:10px; color:#444444; text-decoration:none;}
+	a.tbl_page:visited {font-family: verdana; letter-spacing: -1px;  font-size:10px; color:#444444; text-decoration:none;}
+	a.tbl_page:hover 	{font-family: verdana; letter-spacing: -1px;;  font-size:10px; color:#444444; text-decoration:none;}
+
+	.single_text_box {
+		BORDER-RIGHT: #c2c2c2 1px solid; 
+		BORDER-TOP: #c2c2c2 1px solid; 
+		FONT-SIZE: 11px; 
+		BORDER-LEFT: #c2c2c2 1px solid; 
+		COLOR: #737573; LINE-HEIGHT: 11pt; 
+		BORDER-BOTTOM: #c2c2c2 1px solid; 
+		FONT-FAMILY: verdana,돋움; 
+		BACKGROUND-COLOR: #ffffff
+	}
+
+	.week_now {font-size: 12px; font-family: verdana; letter-spacing: -1px;color:#767676;}
+
+	.week_num {font-size: 20px; font-weight:bold; font-family: verdana; letter-spacing: -1px;color:#767676;}
+
+	.week_txt {font-size: 12px; font-weight:bold; font-family: verdana; letter-spacing: -1px;color:#FFFFFF;}
+-->
+</style>
+
+<script type="text/javascript">
+	$.datepicker.setDefaults({
+		monthNames: ['년 1월','년 2월','년 3월','년 4월','년 5월','년 6월','년 7월','년 8월','년 9월','년 10월','년 11월','년 12월'],
+		dayNamesMin: ['일', '월', '화', '수', '목', '금', '토'],
+		showMonthAfterYear:true,
+		dateFormat: 'yy-mm-dd',
+		buttonImageOnly: true,
+		buttonText: "달력",
+		closeText: '닫기', // Display text for close link
+		currentText: '오늘', // Display text for current month link
+		buttonImage: "/new_css/btn_img/btn_calendar2.gif"
+	});
+
+	$(document).ready(function(){
+
+		$(".datepicker").datepicker({showOn: 'button', buttonImage: '/new_css/btn_img/btn_calendar2.gif', dateFormat:'yy-mm-dd', buttonImageOnly: true, showButtonPanel: true});
+		$(".datepicker1").datepicker({showOn: 'button', buttonImage: '/new_css/btn_img/btn_calendar2.gif', dateFormat:'yymmdd', buttonImageOnly: true, showButtonPanel: true});
+		$('.datepicker2').datepicker({showOn: 'button', buttonImage: '/new_css/btn_img/btn_calendar2.gif', dateFormat:'yymmdd', buttonImageOnly: true, numberOfMonths: 3, showButtonPanel: true});	
+		$('.datepicker3').datepicker({showOn: 'button', buttonImage: '/new_css/btn_img/btn_calendar2.gif', dateFormat:'yy-mm-dd', buttonImageOnly: true, numberOfMonths: 3, showButtonPanel: true});
+
+		$("#datepicker2").val($.datepicker.formatDate($.datepicker.ATOM, new Date(2009, 1 - 1, 18)));
+		$("#datepicker1").datepicker({
+			inline: true,
+			defaultDate: new Date(2009, 1 - 1, 18),
+			onSelect: function(date) { $("#datepicker2").val(date); }
+		}) 
+		$("#datepicker2").datepicker({
+			defaultDate: new Date(2009, 1 - 1, 27),
+			showOn: "both", // focus, button, both
+			showAnim: "blind", // blind, clip, drop, explode, fold, puff, slide, scale, size, pulsate, bounce, highlight, shake, transfer
+			showOptions: {direction: 'horizontal'},
+			duration: 200
+		}) 
+		$("#datepicker3").datepicker({
+			defaultDate: new Date(2009, 1 - 1, 28),
+			showOn: "both", // focus, button, both
+			showAnim: "drop", // blind, clip, drop, explode, fold, puff, slide, scale, size, pulsate, bounce, highlight, shake, transfer
+			showOptions: {direction: 'horizontal'},
+			duration: 200
+		}) 
+		$("#datepicker4").datepicker({
+			defaultDate: new Date(2009, 1 - 1, 29),
+			showOn: "button", // focus, button, both
+			showAnim: "explode", 
+			showOptions: {pieces: 4},
+			duration: 500
+		}) 
+		$(".datepicker_input2").datepicker({
+			defaultDate: new Date(2009, 1 - 1, 30),
+			showOn: "both", // focus, button, both
+			showAnim: "show", // show, fadeIn, slideDown
+			duration: 200
+		}) 
+
+		$(".wkname").Watermark("성명");
+		$(".wkid").Watermark("아이디");
+		$(".wkpwd").Watermark("비밀번호");
+
+		$('#tabs').tabs();
+		$('#tab').tabs();
+
+		$(".clockpick").clockpick({
+		starthour : 0,
+		endhour : 23,
+		showminutes : true,
+		minutedivisions : 6,
+		military : true
+		})
+
+		$('.realBox').corner({
+			  tl: { radius: 5 },
+			  tr: { radius: 5 },
+			  bl: { radius: 5 },
+			  br: { radius: 5 },
+			  antiAlias: true,
+			  autoPad: true,
+			  validTags: ["div"]
+		})
+
+		$("button, input:submit").button();
+
+		$('.jselectbox').selectbox();
+
+	});
+
+	function ajaxdata(pdt, turl){
+	
+		$postData = pdt;
+		$url = turl;
+
+		//alert($url);
+		//alert($postData);
+
+			$.ajax({
+				type :'POST' // Post로 데이터 전달
+						, asyn : true // 비동기식으로 ajax 요청
+						, url: $url  // 비동기식으로 ajax 요청
+						, data : $postData  // 폼 데이터를 ajax로 전달
+						, dataType: "html"  // HTML 데이터로 넘오올경우
+						, success:function( htmlData ){
+
+			 //탭갱신이나 화면 수정 소스를 여기에 넣으시면 됩니다.
+						$("#aj_result").html(htmlData);
+						//alert(htmlData);
+									   }
+						, error:function(xhr,textStatus){
+								 }
+						, complete:function(xhr,textStatus){
+										}
+					});
+
+	}
+</script>
+<style type="text/css">
+	/*demo page css*/
+	#dialog_link {padding: .4em 1em .4em 20px;text-decoration: none;position: relative;}
+	#dialog_link span.ui-icon {margin: 0 5px 0 0;position: absolute;left: .2em;top: 50%;margin-top: -8px;}
+	ul#icons {margin: 0; padding: 0;}
+	ul#icons li {margin: 2px; position: relative; padding: 4px 0; cursor: pointer; float: left;  list-style: none;}
+	ul#icons span.ui-icon {float: left; margin: 0 4px;}
+</style>
+
+	<script>
+	function edit_go(){
+		f= document.viewForm;
+		f.action="project_edit.asp";
+		f.submit();
+	}
+
+	function list_go(){
+		f= document.viewForm;
+		f.action="project_list.asp?page=&NICKNAME=&PROJECT=&PM=&SD=&ED=&mecheck=&barcode=";
+		f.submit();
+	}
+
+	function exp_reg(){
+		f= document.expenseForm;
+		f.action="expense_write.asp";
+		f.submit();
+	}
+
+	function bill_reg(){
+		f= document.expenseForm;
+
+		f.action="/business/success/account_edit.asp";
+
+		f.submit();
+	}
+
+	function bill_NoTax_reg(){
+		f= document.expenseForm;
+
+		f.action="/business/success/account_NoTax_edit.asp";
+
+		f.submit();
+	}
+
+
+	function exp_view(){
+		f= document.expenseForm;
+		f.action="expense_view.asp";
+		f.submit();
+	}
+
+	function exp_view(){
+		f= document.expenseForm;
+		f.action="expense_view.asp";
+		f.submit();
+	}
+
+	function PLC_View(){
+		f= document.expenseForm;
+		f.action="Profit_and_Loss_Condition.asp";
+		f.submit();
+	}
+
+	function card_in(){
+		//location.href= "/sales/new_card_code_reg.asp?successcode=2603-116";
+
+		if ("" == "Y")
+		{
+			alert("마감된 프로젝트입니다.");
+		}
+		else
+		{
+			location.href= "/sales/accounts/Company_card/new_card_code_Pre_reg.asp"
+			// 2013-05-09 경영지원팀 요청으로 인하여 경로 변경
+		}		
+	}
+
+	function internal_trading() {
+		f = document.expenseForm;
+		f.action="internal_trading_Reg.asp";
+		f.submit();
+	}
+
+
+	//진행요청서 등록
+	function Progress_Request_Reg(){
+		f= document.expenseForm;
+		f.action="/partmenu/pcr/guide/Progress_Request_Reg.asp";
+		f.submit();
+	}
+
+	//진행요청서 수정
+	function Progress_Request_Edit(){
+		f= document.expenseForm;
+		f.action="/partmenu/pcr/guide/Progress_Request_Edit.asp";
+		f.submit();
+	}
+
+	function hide_all_part(){
+		obj_edu= document.all["divEduPart"]
+
+		obj_edu.style.display="none"
+
+	}
+
+	
+	function modifyChargeRatio()
+	{
+		var charge_ratio = $("#charge_ratio").val();
+		var project_id = "34690";
+
+		if (""  == "Y")
+		{
+			alert("마감된 프로젝트입니다.");
+			return;
+		}
+
+		if (charge_ratio == "")
+		{
+			alert("수주 수수료율을 입력 바랍니다.");
+			$("#charge_ratio").focus();
+			return;
+		}
+	
+		$.ajax({
+			type: "POST",
+			url: "modify_charge_ratio.asp",
+			dataType: "json",
+			data: "charge_ratio=" + charge_ratio + "&project_id=" + project_id,
+			success: function(info) {
+				alert(info.result_msg);
+			},
+			error: function(info,a,b){
+				alert("오류가 발생하였습니다.\n\n 시스템지원팀에 문의 바랍니다.");
+			}
+		});
+	}
+
+	function process_project_deadline(p_kind)
+	{
+		var barCode = "2603-116";
+		var memo = $("#deadLineMemo").val();
+		var project_id = "34690";
+		var strDeadlineCDate="";
+
+		if(p_kind=="Y" && parseInt(remainInstEval)>0){
+			alert("마감은  강사 평가가 모두 기록되어야 가능합니다.(확인불능제외)")
+			return;
+		}
+
+
+		if($("#DeadlineCDate").val()){
+			strDeadlineCDate=$("#DeadlineCDate").val()
+			 
+		}
+		$.ajax({
+			type: "POST",
+			url: "process_project_deadline.asp",
+			dataType: "json",
+			data: "barCode=" + barCode + "&project_id=" + project_id + "&p_kind=" + p_kind + "&strDeadlineCDate=" + strDeadlineCDate + "&memo=" + escape(memo),
+			success: function(info) {
+				alert(info.result_msg);
+				document.location.href="project_view.asp?PROJECT_ID="+ project_id;
+			},
+			error: function(info,a,b){
+				alert("오류가 발생하였습니다.\n\n 시스템지원팀에 문의 바랍니다.");
+			}
+		});
+	}
+
+//	function resizeHeight(fr_obj,ifr_nm) {
+//	var obj = document.getElementById(ifr_nm);
+//	var ch = obj.contentWindow.document.body.scrollHeight;
+//	obj.style.height = ch;
+//
+//	//var ifrm_name = eval(ifr_nm+".document.body")
+//	//fr_obj = typeof fr_obj == 'string' ? document.getElementById(fr_obj) : fr_obj;
+//	//fr_obj.setExpression('height',ifrm_name.scrollHeight);
+//	}
+
+	function resizeIF(obj){
+	 
+		var Body;
+		var H, Min;
+
+		// 최소 높이 설정 (너무 작아지는 것을 방지)
+		Min = 200;
+
+		Body = (obj.contentWindow.document.getElementsByTagName('BODY'))[0];
+		H = parseInt(Body.scrollHeight) + 5;
+		obj.style.height =  (H<Min?Min:H) + 'px';
+
+		window.scrollTo(1, 1);
+	}
+
+	function cl_favorite(evt, st){
+
+		code="2603-116"
+		
+	 
+	 
+		if(st=="Y"){
+			msg ="관심프로젝트로 등록을 합니다."
+			
+		}else{
+			msg ="관심프로젝트 등록을 해제합니다."
+
+		}
+		 
+		if(confirm(msg)){
+			processFrame.location.href="successProject_favorite_process.asp?successCode="+code
+		}
+		
+
+	}
+	function saveChkSuju(){
+		f= document.chk_sujuForm;
+		f.action="project_chkSuju_update_process.asp"
+		f.submit();
+	}
+
+	// 산출물 등록/수정
+	function go_product(S_code){
+		f= document.viewForm;
+		f.action="Product_CMD.asp?S_code="+S_code;
+		f.submit();
+	}
+
+	// 매출분할 금액 등록/보기
+
+	function go_division(type)
+	{
+		f = document.expenseForm;
+
+		if (type == "create")
+		{
+			strURL = "sales_division_reg.asp";
+		}
+		else if (type=="view")
+		{
+			strURL = "sales_division_view.asp";
+		}
+
+		f.action = strURL;
+		f.submit();
+	}
+	</script>
+	<style>
+.TBL_title				{ font-family: "돋음"; font-size: 12px; Color:#616161; font-weight: bold; text-align: center; background-color:#f4f4f4; line-height: 150%; padding:5px;}
+
+.menu{
+	text-align:center;
+	background-color:#eeeeee;
+	width:80
+}
+
+</style>
+	<table border="0" width="700" cellspacing="1" cellpadding="0" bgcolor="9bc0d8">
+			<tr height="25">
+				<td bgcolor="#dee8ef" class="bris_tb_title" width=130 align="center"><span style="color:red;font-weight:700">*</span>&nbsp;<b>수주코드
+				
+				<td bgcolor="#FFFFFF" style="padding-left:10px;" ><b><font color=blue>2603-116
+				 
+				<td bgcolor="#FFFFFF" style="padding-left:10px;" colspan=2 >
+				<table width=100% >
+					<tr>
+						<td>
+						
+						<td align=right>
+						
+						<button type="button" onclick="cl_favorite(window.event,'Y')"  >관심프로젝트로 등록</button>
+						<button type="button" style="background-color:teal;background-image:none;color:black;color:#2779aa;color:white;font-weight:900;padding:2px 6px;" class="btnEcho" onclick="location.href='/business/echo/project_echoview.asp?e_id=4356&project_id=34690'">에코 현황</button>
+						
+				</table>
+
+
+			<tr height="25">
+				<td bgcolor="#dee8ef" class="bris_tb_title" width=130 align="center"><span style="color:red;font-weight:700">*</span>&nbsp;<b>프로젝트명</td>
+				<td bgcolor="#FFFFFF" style="padding-left:10px;" colspan=3 ><b>대한제당_현장 사원 교육_2026</b>
+				<div style="float:right">
+				 
+					
+					
+					<button class="s" style="padding:2px 6px;" type="button" onclick="location.href='/business/echo/project_echo_registcommon.asp?project_id=34690'"  >과정개요 
+					</button>
+			 
+				</div>
+				
+				</td>
+			</tr>
+			<tr height="25">
+				<td  bgcolor="#dee8ef" class="bris_tb_title" width="130" align="center"><span style="color:red;font-weight:700">*</span>&nbsp;<b>고객사</b></td>
+				<td  bgcolor="#FFFFFF" style="padding-left:10px;"><b>대한제당 </b></td>
+				<td bgcolor="#dee8ef" class="bris_tb_title" width="130" align="center"><span style="color:red;font-weight:700">*</span>&nbsp;<b>수행팀</b></td>
+				<td bgcolor="#FFFFFF" style="padding-left:10px;" width="230"><b>계층교육팀</b></td>
+				<!--
+				<td bgcolor="#dee8ef" class="bris_tb_title" width=130 align="center"><span style="color:red;font-weight:700">*</span>&nbsp;<b>매출분류
+				<td bgcolor="#FFFFFF" style="padding-left:10px;"  ><b>미분류
+				-->
+			<!-- <tr height="25">
+				<td bgcolor="#dee8ef" class="bris_tb_title" width=130 align="center"><span style="color:red;font-weight:700">*</span>&nbsp;<b>AM(AccountManager)
+				<td bgcolor="#FFFFFF" style="padding-left:10px;"  ><b>황태균 <span style="color:silver">서울2팀</span>
+				<td bgcolor="#dee8ef" class="bris_tb_title" width=130 align="center"><span style="color:red;font-weight:700">*</span>&nbsp;<b>BM
+				<td bgcolor="#FFFFFF" style="padding-left:10px;"  ><b> -->
+			</tr>
+
+			<tr height="25">
+				<td bgcolor="#dee8ef" class="bris_tb_title" width=130 align="center"><span style="color:red;font-weight:700">*</span>&nbsp;<b>AM(AccountManager)</b></td>
+				<td bgcolor="#FFFFFF" style="padding-left:10px;"  colspan=3><b>황태균 <span style="color:silver">서울2팀</span></td>
+			</tr>
+
+			<tr height="25">
+				<td bgcolor="#dee8ef" class="bris_tb_title" width=130 align="center"><span style="color:red;font-weight:700">*</span>&nbsp;<b>수주 및계약금액</b><br>
+				(추정치)</td>
+				<td bgcolor="#FFFFFF" style="padding-left:10px;"><b>5,500,000원 <Br><font color=red>※부가세제외</font></td>
+
+			 	<td bgcolor="#dee8ef" class="bris_tb_title" width="130" align="center"><span style="color:red;font-weight:700">*</span>&nbsp;<b>수주일</b></td>
+				<td bgcolor="#FFFFFF" style="padding-left:10px;" ><b>2026-03-01</td></b></td>
+			</tr>
+			<tr height="25">
+				<td bgcolor="#dee8ef" class="bris_tb_title" width="130" align="center"><span style="color:red;font-weight:700;">*</span>&nbsp;<b>수주 수수료율</b></td>
+				<td bgcolor="#FFFFFF" style="padding-left:10px;">
+				
+						<b>50%</b>
+				수익배분
+					
+				</td>
+				<td bgcolor="#dee8ef" class="bris_tb_title" width="130" align="center"><b>매출분할</b></td>
+				<td bgcolor="#FFFFFF" style="padding-left:10px;">
+					<b></b>&nbsp;
+				
+				</td>
+			</tr>
+			<tr>
+				<td bgcolor="#dee8ef" class="bris_tb_title" width=130 height=60 align="center"><span style="color:red;font-weight:700;"></span><b>비고 및 특이사항</td>
+				<td bgcolor="#FFFFFF" style="padding-left:10px;" colspan=3 >
+				
+				
+				<b>&nbsp;</td>
+			</tr>
+			 
+			<tr height="25">
+			<td bgcolor="#dee8ef" class="bris_tb_title" width=130 align="center"><span style="color:red;font-weight:700"></span><b>예/결산표</td>
+				<td bgcolor="#FFFFFF" style="padding-left:10px;"  >
+				
+				
+				<button type="button" onclick="location.href='./budgetAccount/budgetAccount_view.asp?successCode=2603-116'">내역확인</button>
+				
+				
+
+				
+				</td>
+				<td bgcolor="#dee8ef" class="bris_tb_title" width=130 align="center"><span style="color:red;font-weight:700"></span><b>매출발행 구분</td>
+				<td bgcolor="#FFFFFF" style="padding-left:10px;"  >
+				계산서
+			</tr>
+			 
+		 
+			<tr height="25">
+				<td bgcolor="#dee8ef" class="bris_tb_title" width=130 align="center"><span style="color:red;font-weight:700"></span><b>등록인</b>
+				<td bgcolor="#FFFFFF" style="padding-left:10px;"   ><b>황태균</b>
+				<td bgcolor="#dee8ef"   align="center" width="130"><span style="color:red;font-weight:700"></span><b>등록일</b>
+				<td bgcolor="#FFFFFF" style="padding-left:10px;"  ><b>2026-03-06 오전 10:00:36</b>
+			
+			<tr height="25">
+				<td bgcolor="#dee8ef" class="bris_tb_title" width=130 align="center"><span style="color:red;font-weight:700"></span><b>강사평가</b>
+				<td bgcolor="#FFFFFF" style="padding-left:10px;"  colspan=3  >
+				
+				<span onclick="showEvalInst(1, window.event)"  style="cursor:pointer">김효정 (-)</span>
+				
+				<span onclick="showEvalInst(1, window.event)"  style="cursor:pointer">이영철 (-)</span>
+				
+			</tr>
+			
+			
+			<tr height="25">
+				<td bgcolor="#dee8ef" class="bris_tb_title" width=130 align="center"><span style="color:red;font-weight:700"></span><b>산출물 내역
+				<td bgcolor="#FFFFFF" colspan=3 style="padding-left:10px;"><b><br>
+			</tr>
+			<tr height="25">
+				<td bgcolor="#dee8ef" class="bris_tb_title" width="130" align="center"><b>프로젝트 마감</b></td>
+				<td bgcolor="#FFFFFF" style="padding-left:10px;font-weight:bold;" title="">
+				미적용
+				</td>
+				<td bgcolor="#FFFFFF" style="padding-left:10px;" colspan="2">
+			
+				</td>
+			</tr>
+			
+			<tr height="25">
+				<Td colspan=4 align=center  bgcolor="#FFFFFF">
+				
+				<button type="button" onclick="edit_go();">수정</button>
+				
+				&nbsp;<button type="button" onclick="list_go();">목록으로</button>
+					&nbsp;<button type="button" onclick="history.back()">돌아가기</button>
+	</table>
+	<Br>
+	<table width=700  border="0">
+		<tr>
+			<td align="Left"  rowspan=3> </td>
+			<td align="right" >
+			
+				<button type="button"  class="btnRequestDoc"onclick="javascript:requestDoc('operation');">운영요청서</button>&nbsp;&nbsp;&nbsp;
+				
+				
+				
+
+				<button type="button" class="btnRequestDoc" onclick="javascript:requestDoc('lecture');">강의요청서</button>&nbsp;&nbsp;&nbsp;
+
+				
+
+				
+				<button type="button" class="btnRequestDoc" onclick="javascript:requestDoc('dev');">개발요청서<br>등&nbsp;록</button>&nbsp;&nbsp;&nbsp;
+				<button type="button"  class="btnRequestDoc"onclick="javascript:requestDoc('operationIM');">진행요청서</button>&nbsp;&nbsp;&nbsp;
+				
+				 <!--
+				
+				<button onclick="javascript:Progress_Request_Reg();">진행요청서<br>등&nbsp;록</button>
+				
+				-->
+				
+
+			<button type="button" onclick="javascript:go_product('2603-116');">산출물내역 등록</button>&nbsp;
+
+
+
+			
+							<button type="button" onclick="location.href='/business/program_mng_edit.asp?successCode=2603-116&Biz_Cate_Code=0';">교육내역추가</button>
+						
+			</td>
+		</tr>
+		<tr>
+			<td height=5></td>
+		</tr>
+		<tr>
+
+			<td colspan=3 align=right>
+
+			
+				<button type="button" onclick="javascript:internal_trading();">내부거래<br>등&nbsp;록</button>&nbsp;&nbsp;&nbsp;
+				
+				<button type="button" onclick="javascript:card_in();">법인카드사용<br>등&nbsp;록</button>&nbsp;&nbsp;&nbsp;
+
+				<button type="button" onclick="exp_reg();">지출결의서<br>등&nbsp;록</button>&nbsp;&nbsp;&nbsp;
+
+				<button type="button" onclick="bill_reg();">세금계산서<br>요&nbsp;청</button>&nbsp;&nbsp;&nbsp;
+
+					<button type="button" onclick="bill_NoTax_reg();">계산서<br>요&nbsp;청</button>&nbsp;&nbsp;&nbsp;
+				
+			</td>
+		</tr>
+		<tr>
+			<td height=5></td>
+		</tr>
+	</table>
+
+	
+			<form name="viewForm" method="post" >
+			<input type="hidden" name="PROJECT_ID" value="34690" >
+			<input type="hidden" name="page" value="" >
+			<input type="hidden" name="NICKNAME" value="" >
+			<input type="hidden" name="PROJECT" value="" >
+			<input type="hidden" name="PM" value="" >
+			<input type="hidden" name="SD" value="" >
+			<input type="hidden" name="ED" value="" >
+			<input type="hidden" name="forTeam" value="" >
+			<input type="hidden" name="mecheck" value="" >
+			
+			</form>
+			<form name="expenseForm" method="post">
+			<input type="hidden" name="successCode" value="2603-116">
+			<input type="hidden" name="expense_id" value="">
+			<input type="hidden" name="PROJECT_ID" value="34690" >
+			<input type="hidden" name="page" value="" >
+			<input type="hidden" name="NICKNAME" value="" >
+			<input type="hidden" name="PROJECT" value="" >
+			<input type="hidden" name="PM" value="" >
+			<input type="hidden" name="SD" value="" >
+			<input type="hidden" name="ED" value="" >
+			<input type="hidden" name="mecheck" value="" >
+			<input type="hidden" name="Re_URL" value="PROJECT_ID=34690" >
+			<input type="hidden" name="place_id" value="15978" >
+			<!-- <input type="hidden" name="Re_URL" value="PROJECT%5FID%3D34690" > -->
+			</form>
+		<!-- 교육 내역 -->
+		<div  id="divEduPart">
+
+ </div>
+
+<table border="0" width="450" cellspacing="1" cellpadding="0" bgcolor="9bc0d8" class="areaEvalInst">
+	<Tr height=25>
+		<td colspan=2 align=center ><b>강사 만족도
+	<tr height=26>
+		<td colspan=2   bgcolor="#FFFFFF" style="padding:4px 4px;"> 
+		&nbsp;이 강사를 다음에 또 초청하고 싶은가요? 에 대한 담당자 의견
+		<br>&nbsp;(반드시 담당자에게 문의 후, 점수를 입력합니다!)
+	
+	<tr height="25">
+		<td bgcolor="#dee8ef" class="bris_tb_title" width=130 align="center">김효정
+		<td bgcolor="#FFFFFF" style="padding-left:10px;" >
+		<select onchange="eval_instGrade(window.event)" inst_no ="909">
+			<option value="">-선택-</option>
+		
+			<option value="5"  >
+			5&nbsp;&nbsp;&nbsp;&nbsp;- 매우 그렇다 (꼭 이 분으로 배정해달라)</option>
+			
+			<option value="4.5"  >
+			4.5</option>
+			
+			<option value="4"  >
+			4&nbsp;&nbsp;&nbsp;&nbsp;- 그렇다 (가급적 이 분으로 배정해주면 좋겠다)</option>
+			
+			<option value="3.5"  >
+			3.5</option>
+			
+			<option value="3"  >
+			3&nbsp;&nbsp;&nbsp;&nbsp;- 보통이다 (이 강사가 아니어도 된다)</option>
+			
+			<option value="2.5"  >
+			2.5</option>
+			
+			<option value="2"  >
+			2&nbsp;&nbsp;&nbsp;&nbsp;- 그렇지 않다 (초청 안하고 싶다)</option>
+			
+			<option value="1.5"  >
+			1.5</option>
+			
+			<option value="1"  >
+			1&nbsp;&nbsp;&nbsp;&nbsp;- 매우 그렇지 않다 (다시 배정하면 엑스퍼트와 거래 끝이다)</option>
+			
+			<option value="-1"  >
+			-확인불능-
+		<select>
+		
+		
+	
+	<tr height="25">
+		<td bgcolor="#dee8ef" class="bris_tb_title" width=130 align="center">이영철
+		<td bgcolor="#FFFFFF" style="padding-left:10px;" >
+		<select onchange="eval_instGrade(window.event)" inst_no ="5913">
+			<option value="">-선택-</option>
+		
+			<option value="5"  >
+			5&nbsp;&nbsp;&nbsp;&nbsp;- 매우 그렇다 (꼭 이 분으로 배정해달라)</option>
+			
+			<option value="4.5"  >
+			4.5</option>
+			
+			<option value="4"  >
+			4&nbsp;&nbsp;&nbsp;&nbsp;- 그렇다 (가급적 이 분으로 배정해주면 좋겠다)</option>
+			
+			<option value="3.5"  >
+			3.5</option>
+			
+			<option value="3"  >
+			3&nbsp;&nbsp;&nbsp;&nbsp;- 보통이다 (이 강사가 아니어도 된다)</option>
+			
+			<option value="2.5"  >
+			2.5</option>
+			
+			<option value="2"  >
+			2&nbsp;&nbsp;&nbsp;&nbsp;- 그렇지 않다 (초청 안하고 싶다)</option>
+			
+			<option value="1.5"  >
+			1.5</option>
+			
+			<option value="1"  >
+			1&nbsp;&nbsp;&nbsp;&nbsp;- 매우 그렇지 않다 (다시 배정하면 엑스퍼트와 거래 끝이다)</option>
+			
+			<option value="-1"  >
+			-확인불능-
+		<select>
+		
+		
+	
+	<tr>
+		<td colspan=2 align=right>
+		<button type="button" onclick="showEvalInst(0, window.event)" style="margin:4px 4px;padding:1px 4px;" >닫기</button>
+</table>
+
+<table>
+	<tr><td height=5></td></tr>
+	<tr><td id="id_title"><b>각종 내역현황</b></font></td></tr>
+</table>
+<div id="tabs" style="width:700px;">
+	<ul>
+		<li><a href="#tabs-0"   onclick="refreshFrame('biz_frame')">교육및컨설팅</a></li>
+		<li><a href="#tabs-5"  onclick="refreshFrame('staff_status')">인력지원</a></li>
+		<li><a href="#tabs-3"  onclick="refreshFrame('tex_frame')">세금계산서</a></li>
+		<li><a href="#tabs-4"  onclick="refreshFrame('Notex_frame')">계산서</a></li>
+		<li><a href="#tabs-1" onclick="refreshFrame('expense_frame')">지출결의서</a></li>
+		<li><a href="#tabs-2"  onclick="refreshFrame('ncard_frame')">법인카드</a></li>
+		<li><a href="#tabs-6"  onclick="refreshFrame('deposit_frame')">입금내역</a></li>
+		<li><a href="#tabs-7"  onclick="refreshFrame('internal_frame')">내부거래내역</a></li>
+
+	</ul>
+	<div id="tabs-0" style="padding-left:2px;padding-right:2px;">
+		<table border=0 width="100%" cellpadding=0 cellspacing=0 valign="top">
+			<tr>
+				<td bgcolor="#FFFFFF" align="center">
+				<iframe name="biz_frame" id="biz_frame" src="project_biz_list.asp?successCode=2603-116&PROJECT_ID=34690&page=&NICKNAME=&PROJECT=&PM=&SD=&ED=&mecheck=&barcode=" frameborder=0 border=0 scrolling="yes" onload="resizeIF(this)" width="100%"></iframe><!-- onload="resizeHeight(this , this.name)" -->
+				</td>
+			</tr>
+		</table>
+	</div>
+	<div id="tabs-1" style="padding-left:2px;padding-right:2px;">
+		<table border=0 width="100%" cellpadding=0 cellspacing=0 valign="top">
+			<tr>
+				<td bgcolor="#FFFFFF" align="center">
+				<iframe name="expense_frame" id="expense_frame" src="ifrm_expense_list.asp?successCode=2603-116&PROJECT_ID=34690&page=&NICKNAME=&PROJECT=&PM=&SD=&ED=&mecheck=&barcode=" frameborder=0 border=0 scrolling="yes" onload="resizeIF(this)" width="100%"></iframe>
+				</td>
+			</tr>
+		</table>
+	</div>
+	<div id="tabs-2" style="padding-left:2px;padding-right:2px;">
+		<table border=0 width="100%" cellpadding=0 cellspacing=0 valign="top">
+			<tr>
+				<td bgcolor="#FFFFFF" align="center">
+				<iframe name="ncard_frame" id="ncard_frame" src="ifrm_card_list.asp?successCode=2603-116" frameborder=0 border=0 scrolling="yes" onload="resizeIF(this)" width="100%"></iframe>
+				</td>
+			</tr>
+		</table>
+	</div>
+	<div id="tabs-3" style="padding-left:2px;padding-right:2px;">
+		<table border=0 width="100%" cellpadding=0 cellspacing=0 valign="top">
+			<tr>
+				<td bgcolor="#FFFFFF" align="center">
+				<iframe name="tex_frame" id="tex_frame" src="/business/success/accounts.asp?successCode=2603-116&charge_ratio=50" frameborder=0 border=0 scrolling="yes" onload="resizeIF(this)" width="100%"></iframe>
+				</td>
+			</tr>
+		</table>
+	</div>
+	<div id="tabs-4" style="padding-left:2px;padding-right:2px;">
+		<table border=0 width="100%" cellpadding=0 cellspacing=0 valign="top">
+			<tr>
+				<td bgcolor="#FFFFFF" align="center">
+				<iframe name="Notex_frame" id="Notex_frame" src="/business/success/accounts_NoTax.asp?successCode=2603-116&charge_ratio=50" frameborder=0 border=0 scrolling="yes" onload="resizeIF(this)" width="100%"></iframe>
+				</td>
+			</tr>
+		</table>
+	</div>
+	<div id="tabs-5" style="padding-left:2px;padding-right:2px;">
+		<table border=0 width="100%" cellpadding=0 cellspacing=0 valign="top">
+			<tr>
+				<td bgcolor="#FFFFFF" align="center">
+				<iframe name="staff_status" id="staff_status" src="/business/success/staff_status.asp?successCode=2603-116" frameborder=0 border=0 scrolling="yes" onload="resizeIF(this)" width="100%"></iframe>
+				</td>
+			</tr>
+		</table>
+	</div>
+	<div id="tabs-6" style="padding-left:2px;padding-right:2px;">
+		<table border=0 width="100%" cellpadding=0 cellspacing=0 valign="top">
+			<tr>
+				<td bgcolor="#FFFFFF" align="center">
+				<iframe name="deposit_frame" id="deposit_frame" src="deposit_list.asp?successCode=2603-116" frameborder=0 border=0 scrolling="yes" onload="resizeIF(this)" width="100%"></iframe>
+				</td>
+			</tr>
+		</table>
+	</div>
+	<div id="tabs-7" style="padding-left:2px;padding-right:2px;">
+		<table border=0 width="100%" cellpadding=0 cellspacing=0 valign="top">
+			<tr>
+				<td bgcolor="#FFFFFF" align="center">
+					<iframe name="internal_frame" id="internal_frame" src="internal_trading_iframe_list.asp?successCode=2603-116&PROJECT_ID=34690&page=&NICKNAME=&PROJECT=&PM=&SD=&ED=&mecheck=&barcode=" frameborder=0 border=0 scrolling="yes"onload="resizeIF(this)" width="100%"></iframe>
+				</td>
+			</tr>
+		</table>
+	</div>
+
+</div>
+
+
+<script>
+var project_id="34690"
+var instEval_changed=false;
+var barCode =""
+$(document).ready(function(){
+	
+	$(".btnFav").hover(function(){
+		console.log($(this).attr("favState"))
+
+	});
+}); 
+
+function modifyEchoExcept(projectNo) {
+    var selectReason = $("select[name=echoExceptReason]").val();
+    var reasonEtc = "";
+    var echoNo = $("#echoNo").val();
+
+    if ((selectReason == "" || selectReason == null) && echoNo == 0) {
+        alert("에코 프로젝트 제외 사유를 선택 해 주세요.");
+        $("#echoExceptReason").focus();
+        return;
+    }
+
+    if (projectNo == "" || projectNo == null) {
+        alert("필수값이 없습니다. 새로고침 또는 912로 문의 주세요.");
+        return;
+    }
+
+    $.ajax({
+        type: "POST",
+        url: "project_echo_detail_proc.asp",
+        dataType: "json",
+        data: "echoNo=" + echoNo + "&projectNo=" + projectNo + "&echoExceptCode=" + selectReason + "&echoExceptEtc=" + reasonEtc,
+        success: function(info) {
+            alert(info.result_msg);
+            document.location.href="project_view.asp?PROJECT_ID="+ projectNo;
+        },
+        error: function(info,a,b){
+            alert("오류가 발생하였습니다.\n\n 시스템지원팀에 문의 바랍니다.");
+        }
+    });   
+
+    
+}
+
+
+function eval_instGrade(evt){
+	e= evt.srcElement;
+	i_no= e.getAttribute("inst_no")
+	console.log(i_no,e.value)
+
+	formData= {
+		project_id:project_id,
+		mode:"eval",
+		
+		i_no:i_no,
+		ev: e.value
+	}
+	updateProc(formData)
+
+}
+function showEvalInst(st, evt){
+	
+	x= evt.clientX - 50
+	y= evt.clientY + $(window).scrollTop() - 30
+
+	if(st==1){
+		$(".areaEvalInst").css({"top":y +"px","left":x+"px"})
+		$(".areaEvalInst").show();
+	}else{
+		$(".areaEvalInst").hide()
+		if(instEval_changed)location.reload();
+
+	}
+}
+
+function updateProc(formData){
+	//console.log(formData)
+	
+	$.ajax({ 
+		url: "eval_inst_proc.asp", 
+		data: formData,
+		dataType:"json",
+		type:"POST",
+	 
+
+		success: function(data){
+		//	console.log(data)
+		 
+			if(data.result=="success"){
+				//console.log(data)
+				instEval_changed=true;
+
+			}
+			 
+			 
+			 
+		//	 if(data.result=="success")location.reload();
+		} ,
+		error:function(request,status,error){
+			alert("오류가 발생했습니다.\n\n새로고침후 다시 실행하세요.\n\n메시지가 계속 보여지면 IT전략실로 문의주세요.")
+		}
+	});
+}
+function requestDoc(ty){
+	console.log(ty)
+	if(ty=="operation"){
+		location.href="/business/echo/operate/main.asp?project_id="+project_id
+	}else if(ty=="lecture"){
+		location.href="/business/echo/lecture/main.asp?project_id="+project_id
+	}else if(ty=="dev"){
+		location.href="/business/echo/dev/main.asp?project_id="+project_id
+	}else if(ty=="operationIM"){
+		location.href="/business/echo/im/sheet_edit.asp?project_id="+project_id
+	}
+ 
+ 
+}
+</script>
+<style>
+.areaEvalInst{
+	position:absolute;
+	display:none;
+	z-index:100
+}
+.btnRequestDoc{
+	border-color:teal !important;
+	padding:2px;
+}
+</style>
+ <iframe name="processFrame" width=0 height=0></iframe>
+
+
+	
+ 
+
+
+
+<script src="/util/log/vpageLog.js"></script>
+ 
+</body>
+</html>
