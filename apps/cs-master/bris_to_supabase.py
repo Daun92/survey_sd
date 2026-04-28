@@ -63,6 +63,43 @@ from bris_api import BrisClient, BrisParser, BrisSessionExpired
 
 
 # ============================================================
+# 자동화 알림 큐 적재 헬퍼
+# ============================================================
+# cs_automation_settings (PR-Auto-1, version=20260428083739) 의 안전망 일부.
+# cron 모드 실패 시 이 헬퍼로 cs_dispatch_alerts 큐에 적재 → PR-Auto-5 의
+# 이메일 worker 가 운영자에게 알림 발송. pipeline 인스턴스가 깨져도 동작
+# 가능하도록 자체 supabase client 를 새로 만든다.
+
+def _enqueue_alert_via_rpc(severity: str, source: str, subject: str,
+                           body: Optional[str] = None,
+                           context: Optional[dict] = None) -> bool:
+    """fn_cs_automation_enqueue_alert RPC 호출. 실패해도 raise 안 함
+    (alert 적재 실패가 본 작업 실패를 가리지 않도록 — alert 자체는 보조 채널)."""
+    if create_client is None:
+        print("[alert] supabase 라이브러리 없음 — alert 스킵")
+        return False
+    url = os.environ.get('SUPABASE_URL', '')
+    key = os.environ.get('SUPABASE_SERVICE_KEY', '')
+    if not url or not key:
+        print("[alert] SUPABASE_URL/KEY 없음 — alert 스킵")
+        return False
+    try:
+        client = create_client(url, key)
+        client.rpc('fn_cs_automation_enqueue_alert', {
+            'p_severity': severity,
+            'p_source': source,
+            'p_subject': subject,
+            'p_body': body,
+            'p_context': context,
+        }).execute()
+        print(f"[alert] enqueued — severity={severity} source={source} subject={subject}")
+        return True
+    except Exception as exc:
+        print(f"[alert] enqueue 실패: {exc!r}")
+        return False
+
+
+# ============================================================
 # 검증/증분 sync 유틸
 # ============================================================
 
@@ -1139,6 +1176,14 @@ BRIS → Supabase 동기화 파이프라인
             bris = _BC()
             if not bris.login(bris_uid, bris_pwd):
                 print("[auth] 로그인 실패 — ID/PW를 확인하세요")
+                if mode == 'cron':
+                    _enqueue_alert_via_rpc(
+                        severity='error',
+                        source='bris_fetch',
+                        subject='BRIS 자동 fetch 실패: 로그인 실패',
+                        body='BRIS_USER_ID/PASSWORD 로 로그인 시도했으나 실패. 자격증명 확인 필요.',
+                        context={'mode': 'cron', 'auth_method': 'id_pw', 'user_id': bris_uid},
+                    )
                 sys.exit(1)
             print(f"[auth] 로그인 성공 — cookies: {list(dict(bris.session.cookies).keys())}")
             pipeline = BrisSyncPipeline(bris_client=bris)
@@ -1146,8 +1191,26 @@ BRIS → Supabase 동기화 파이프라인
             print(f"[auth] 쿠키 파일 사용: {cookie_file}")
             pipeline = BrisSyncPipeline(bris_cookie_file=cookie_file)
 
-        if mode == 'refresh':
-            result = pipeline.refresh_bris_code(bris_code_arg, date_hint=date_hint)
-        else:
-            result = pipeline.sync(start, end, auto_batch=auto)
-        print(json.dumps(result, ensure_ascii=False, indent=2))
+        try:
+            if mode == 'refresh':
+                result = pipeline.refresh_bris_code(bris_code_arg, date_hint=date_hint)
+            else:
+                result = pipeline.sync(start, end, auto_batch=auto)
+            print(json.dumps(result, ensure_ascii=False, indent=2))
+        except Exception as exc:
+            # cron 모드는 무인 실행 — 실패 시 운영자 알림 큐 적재 후 재발생.
+            # fetch/refresh 는 운영자가 손으로 돌리는 명령이라 알림 불필요.
+            if mode == 'cron':
+                _enqueue_alert_via_rpc(
+                    severity='error',
+                    source='bris_fetch',
+                    subject=f'BRIS 자동 fetch 실패: {type(exc).__name__}',
+                    body=f'{exc!r}',
+                    context={
+                        'mode': 'cron',
+                        'period_start': start,
+                        'period_end': end,
+                        'auto_batch': auto,
+                    },
+                )
+            raise
