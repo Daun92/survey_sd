@@ -1,5 +1,16 @@
 # cs-master
 
+> ✅ **이 폴더가 cs-master 의 진실원입니다** (2026-04-28 모노레포 이전 후)
+>
+> 옛 위치 `C:\Users\EXC\Downloads\cs\target\` 은 더 이상 운영 코드의 진실원이 아닙니다.
+> 그 폴더에는 secrets/, .env, 작업용 xlsx/csv (개인정보) 만 남기고, 코드 편집은 여기서.
+> 옛 폴더의 `MOVED.md` 도 참고.
+>
+> **DB SSOT** 는 본 모노레포 root 의 `supabase/migrations/` 입니다 (이 폴더의 `supabase/` 가 아님).
+> 신규 SQL 은 반드시 `apply_migration` MCP 사용 (Studio SQL Editor 수동 적용 금지).
+
+---
+
 CS 사후설문 대상자 관리 시스템. BRIS 교육과정 데이터를 수집해 설문 발송 대상자를 선정·심사하는 운영 도구.
 
 ## 위치 / 배포
