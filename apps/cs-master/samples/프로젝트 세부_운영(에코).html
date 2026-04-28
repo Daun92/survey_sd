@@ -1,0 +1,3082 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<title>::: BRIS ver.2022 (Expert Business Resources Imformation System) :::</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<link rel="StyleSheet" href="/common/css/common.css?v20221027_1128" type="text/css">
+<script src="/common/js/jquery-3.6.0.min.js"></script>
+<script type="text/javascript" src="/common/common.js?20260203"></script>
+
+<link rel="StyleSheet" href="https://code.jquery.com/ui/1.12.0/themes/smoothness/jquery-ui.css" type="text/css">
+<link rel="StyleSheet" href="/share/css/internal_trading.css" type="text/css">
+<script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+<script src="/common/js/jquery-ui/jquery-ui.min.js"></script>
+<script src="/common/js/dayjs.min.js"></script>
+
+<!-- 
+<script src="https://cdn.jsdelivr.net/npm/vue"></script>
+-->
+<style>
+.itemHeader{
+	margin-top:4px;
+	height:20px;
+}
+.hide{
+	display:none
+
+}
+.popupSetupItem{
+	position:absolute;
+	display:none;
+	background-color:white;
+	border:1px solid teal;
+	border-radius:6px;
+	padding:20px 20px;
+
+}
+ 
+span.hover:hover{
+	font-weight: 700;
+	color:blue;
+	cursor:pointer;
+
+}
+ 
+img.hover:hover{
+	opacity: 0.5;
+	cursor:pointer;
+	 
+}
+.txtHelp{
+	font-size:10px;
+	color:#4e4e4e;
+ 
+} 
+input.full{
+	width:100%;
+		height:25px;
+	
+}
+input.text{
+	height:25px;
+}
+ 
+input.left{
+	text-align:left !important;
+}
+td.input input{
+	padding:3px 0px;
+	border: 1px solid  #a2a2a2;
+	text-align:center;
+	 
+}
+td textarea{
+	padding:3px 3px;
+	border: 1px solid  #a2a2a2;
+	width:99%;
+	 
+}
+textarea{
+	resize: vertical;  
+}
+.btnEchoCreate{
+	background-color:teal;background-image:none;color:black;color:#2779aa;color:white;
+	padding:2px 6px;
+	border-radius:6px;
+	font-size:0.9em;
+}
+.btnEchoCreate:hover{
+	font-weight:bold;
+	cursor:pointer;
+	opacity:0.8;
+}
+.btnUpdateEchoTerm:hover{
+	font-weight:bold;
+	cursor:pointer;
+	opacity:0.8;
+
+}
+.btnUpdateEchoTerm{
+	color:#2779aa;color:white;
+	padding:2px 6px;
+	border-radius:6px;
+	font-size:0.9em;
+
+}
+td.inner   {
+	background-color:white;
+	border-right:none;
+	border-left:none;
+	border-top:none;
+	border-bottom:none;
+	padding:0px 0px;
+
+}
+.innerBox{
+	 
+	padding:10px 10px;
+}
+
+.sample{
+	font-size:9pt;
+	color:#777777;
+} 
+
+table.info{
+    border-spacing: 1px; /* cellspacing="1" */
+    padding: 0; /* cellpadding="0" */
+    background-color: #9bc0d8; /* bgcolor="9bc0d8" */
+}
+
+table.inner {
+	width:100%;
+	background-color:#9bc0d8;
+	border-collapse: collapse;
+}
+table.inner td {
+    border:1px solid #9bc0d8;
+	border-top:none;
+}
+table.inner td:last-child {
+    border-right:none 
+}
+table.inner td:first-child {
+    border-left:none 
+}
+table.inner tr:last-child td{
+    border-bottom:none 
+}
+input.require{
+	background-color:red;
+	color:white;
+}
+.course_date{
+	padding:6px 6px;
+}
+.course_date:hover{
+	color:#ec5353;
+	cursor:pointer;
+	text-decoration:line-through;
+}
+
+input::placeholder,  textarea::placeholder{
+    color: #a2a2a2;
+     
+    font-style: italic;
+    
+}
+ 
+span.etc::before {
+	content:"▣";
+	margin-left:10px;
+}     
+.lineDiv{
+	background-color:#ff7fff;
+	height:1px;
+	font-size:1px !important;
+}
+.targetData{
+	background-color:#a2a2a2;
+	border-color:teal;
+}
+.selTrCenter{
+	transition: background-color 0.3s ease;
+	background-color: white;
+}
+
+.highlight {
+	 
+	background-color: rgb(0, 128, 128, 0.6);
+}
+.val{
+	font-weight:bold
+}
+span.val{
+	margin-right:10px;
+}
+span.text{
+	padding:1px 4px;
+	background-color:#f5f5dc;
+}
+.hidePrint{
+	display:none;
+
+}
+</style>
+<style>
+  
+label:hover{
+	cursor: pointer;
+	text-decoration:underline;
+}
+label input[type="checkbox"] {
+	cursor: pointer;
+}
+label.disabled{
+	color:silver;
+}
+        
+.lodingMini {
+  width: 16px;
+  height: 16px;
+  border-top: 2px solid $color-primary;
+  border-right: 2px solid #222;
+  -webkit-animation: lodingMini 1s ease infinite;
+          animation: lodingMini 1s ease infinite;
+  border-radius: 100%;
+}
+@-webkit-keyframes lodingMini {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes lodingMini {
+  to {
+    transform: rotate(360deg);
+  }
+}
+</style>
+
+</head>
+ 
+<body topmargin=0 >
+
+
+<table border="0" width="640" cellspacing="0" cellpadding="0" id="headMenuTitle">
+  <tr>
+    <td width="100%" height=28 style="font-weight:bold;"><img src="/images/ico_path.gif" align="absmiddle"> HOME &gt; 
+	사업관리 &gt;
+	수주프로젝트 &gt;
+	
+		<span style="color:#4594b5">
+	에코현황 &gt;
+	
+	</td></tr>
+</table>
+
+	
+<div id="app"	 >
+ <div class="itemHeader">수주프로젝트</div>
+	<table border="0" width="700" cellspacing="1" cellpadding="0" bgcolor="9bc0d8">
+		<colgroup>
+			<col width="120px"  />
+			<col width="*"  />
+			<col width="120px"  />
+			<col width="*"  />
+		</colgroup>
+			<tr height="25">
+				<td  class="title"  align="center">&nbsp;<b>수주코드
+				
+				<td  class="cont"  colspan=2 ><span>2603-053</span>
+				
+				 
+				<td  class="cont">
+				<table width=100% >
+					<tr>
+						<td title="사업장구분"><span  >엑스퍼트</span> 
+						<td align=right>
+						 
+						 <button type="button" style="order: 1px solid #aed0ea;    background: #d7ebf9 url(images/ui-bg_glass_80_d7ebf9_1x400.png) 50% 50% repeat-x;    font-weight: bold;    color: #2779aa;    outline: none;"  class="s "  onclick="location.href='/business/success/project_view.asp?project_id=34595'">수주프로젝트 정보보기</button>
+						
+				</table>
+
+
+			
+			<tr height="25">
+				<td  class="title"  align="center">&nbsp;<b>고객사</b></td>
+				<td  class="cont"><b>유안타증권</b></td>
+				<td  class="title"  align="center">&nbsp;<b>수행팀</b></td>
+				<td  class="cont" width="230"><b>계층교육팀</b>
+				
+				<span>(담당자 : 윤보경책임컨설턴트)</span>
+				</td>
+		<tr height="25">
+				 
+				<td  class="title"  align="center">&nbsp;<b>운영</b></td>
+				<td  class="cont" > 
+				 
+				 
+			 
+				
+				<select name="im_no" onchange="imSetupMain(window.event)" style="padding:2px 0px;margin-top:6px"> 
+
+				<option value="">--선택--</option>
+
+						
+
+							<option value='6093' >김나영&nbsp;사원 </option>
+
+							<option value='3684' >김명환&nbsp;과장 </option>
+
+							<option value='6088' >김서하&nbsp;사원 </option>
+
+							<option value='5949' >김세리&nbsp;주임 </option>
+
+							<option value='6072' >김주연&nbsp;주임 </option>
+
+							<option value='4470' >김태종&nbsp;팀장 </option>
+
+							<option value='5821' >김혜린&nbsp;대리 </option>
+
+							<option value='6051' >김혜린&nbsp;사원 </option>
+
+							<option value='6094' >김효영&nbsp;사원 </option>
+
+							<option value='4407' >마아연&nbsp;과장 </option>
+
+							<option value='6078' >문수현&nbsp;사원 </option>
+
+							<option value='5757' >박동준&nbsp;파트장 </option>
+
+							<option value='5756' selected>서정은&nbsp;과장 </option>
+
+							<option value='5771' >서한나&nbsp;대리 </option>
+
+							<option value='5981' >손병운&nbsp;대리 </option>
+
+							<option value='6049' >이기현&nbsp;사원 </option>
+
+							<option value='5605' >이한나&nbsp;선임컨설턴트 </option>
+
+							<option value='4358' >이현우&nbsp;팀장 </option>
+
+							<option value='5996' >임가을&nbsp;주임 </option>
+
+							<option value='5924' >임성희&nbsp;주임 </option>
+
+							<option value='6025' >장희&nbsp;대리 </option>
+
+							<option value='5897' >정다운&nbsp;과장 </option>
+
+							<option value='4447' >정용호&nbsp;실장 </option>
+
+							<option value='4357' >정태영&nbsp;팀장 </option>
+
+							<option value='2900' >진소망&nbsp;팀장 </option>
+
+							<option value='1697' >최명인&nbsp;실장 </option>
+
+							<option value='5940' >최지영&nbsp;주임 </option>
+
+							<option value='5966' >홍서영&nbsp;주임 </option>
+				</select>
+				 
+
+				<td  class="title"  align="center">&nbsp;<b>담당AM</b></td>
+				<td  class="cont" >  <b>진소망 
+				<span class="contactTel">01048571438</span>
+				 
+				
+				 <span style="color:silver">서울3팀</span>
+				
+				</td>
+			 
+				 
+			</tr>
+			<tr height="28">
+			<td  class="title"  >고객사 담당자
+			<td class="cont" colspan=3 >
+			 
+			
+			<select name="im_contactor"   onchange="im_contactor_setup(window.event)" style="padding:2px 0px;margin-top:6px">
+				<option value=""></option>
+				<option value="147423" >곽윤서&nbsp;사원(인사팀)</option><option value="147360" >권재현&nbsp;대리(인사팀)</option><option value="147422" >박종성&nbsp;팀장(인재성장팀)</option><option value="99000" selected >박철우&nbsp;차장(인재성장팀)</option><option value="125479" >송미나&nbsp;주임(인사팀)</option><option value="117761" >유정수&nbsp;과장(리테일전략팀)</option><option value="115956" >이월아&nbsp;주임(인사팀)</option><option value="147716" >이충현&nbsp;주임(인사팀)</option><option value="123850" >이충환&nbsp;(인사팀)</option><option value="133336" >진주희&nbsp;주임(인사팀)</option>
+			</select>
+			
+	
+			<span>회사:(<span class="contactTel  ">0237705576</span>:0237705576</span>)<span>H.P : ( <span class="contactTel">01095916461</span> 01095916461</span>)
+		<tr height="25">
+				 
+				<td  class="title"  align="center">&nbsp;<b>에코</b></td>
+				<td  class="cont" colspan=3>   
+				 <span class="alert">(에코 제외) </span>   
+		
+	</table>
+
+
+<table border="0" width="700" cellspacing="1" cellpadding="0"  >
+	<tr>
+		<td>
+		<td align=right>
+			
+				<button type="button" class=" m "  @click="changeEditMode()" v-show="!state.basic_edit" >편집모드</button>
+				<button type="button" class=" m "  @click="state.basic_edit=!state.basic_edit" v-show="state.basic_edit" >조회모드</button>
+				<button type="button" class=" m "  onclick="printSheet()" v-show="!state.basic_edit" >인쇄</button>
+			
+			<!--
+			<button type="button" class=" btnEchoCreate " onclick="requestOperation()" v-if="state.sheetState!='Y'" >운영요청서 등록하기1</button>
+			-->
+
+				
+
+	
+</table>
+ 
+<!-- 교육기본정보 -->
+<table width=700>
+	<Tr>
+		<td><div class="itemHeader">교육기본정보</div>
+		<td align=right>
+			 
+		<button type="button" style="" class="btnEchoCreate" onclick="createSheet()" v-if="state.sheetCount=='0'"  ><span class="ui-button-text" ><span v-if="menuPage=='operation'">운영</span><span v-if="menuPage=='lf'">진행</span>요청서 신규등록하기(편집모드)</span></button>
+		<button type="button" class=" btnEchoCreate " onclick="requestOperation()" v-if="menuPage=='operation'&&state.sheetState!='Y' && state.sheetCount>0 ">운영요청서 등록하기</button>
+		<div class="savingShow hide savingShow1"><div class="lodingMini"></div></div>
+		<div class="notice" v-show="state.basic_edit">※자동저장</span>
+		  
+</table>
+
+<table   width="700"  class="info tblSheet" v-show="!state.basic_edit">
+	<colgroup>
+		<col width="120px"  />
+		<col width="*"  />
+		<col width="120px"  />
+		<col width="*"  />
+	</colgroup>
+		<tr height="28">
+			<td  class="title"  >교육 유형
+			<td class="cont"  >
+				<span class="val">대면교육
+				</span>
+				 
+			<td  class="title"  >고용보험
+			<td class="cont"  >
+				<span class="val">
+				
+				 
+				</span>
+				 
+				
+
+		<tr height="28">
+			
+			<td  class="title"  >교육일정
+			 
+			<td class="cont input" colspan=3 >
+			
+				
+				<span class="val"> 
+				
+				<div class=" " idx="7452" sDate="2026-03-16" eDate="2026-03-17" courseDay_d1="1" courseDay_d2="2" courseDay_d3="" courseDay_night="" courseDay_person="0" >2026-03-16 ~ 2026-03-17 &nbsp;<span>1</span>박<span>2</span>일 0명 </div>
+				</span>
+
+					
+
+				
+				<div class=" " idx="7453" sDate="2026-03-19" eDate="2026-03-20" courseDay_d1="1" courseDay_d2="2" courseDay_d3="" courseDay_night="" courseDay_person="0" >2026-03-19 ~ 2026-03-20 &nbsp;<span>1</span>박<span>2</span>일 0명 </div>
+				</span>
+
+					
+
+				
+				<div class=" " idx="7454" sDate="2026-03-23" eDate="2026-03-24" courseDay_d1="1" courseDay_d2="2" courseDay_d3="" courseDay_night="" courseDay_person="0" >2026-03-23 ~ 2026-03-24 &nbsp;<span>1</span>박<span>2</span>일 0명 </div>
+				</span>
+
+					
+
+				
+				<div class=" " idx="7455" sDate="2026-03-30" eDate="2026-03-31" courseDay_d1="1" courseDay_d2="2" courseDay_d3="" courseDay_night="" courseDay_person="0" >2026-03-30 ~ 2026-03-31 &nbsp;<span>1</span>박<span>2</span>일 0명 </div>
+				</span>
+
+					
+
+				
+				<div class=" " idx="7456" sDate="2026-04-09" eDate="2026-04-10" courseDay_d1="1" courseDay_d2="2" courseDay_d3="" courseDay_night="" courseDay_person="0" >2026-04-09 ~ 2026-04-10 &nbsp;<span>1</span>박<span>2</span>일 0명 </div>
+				</span>
+
+					
+
+				
+		<tr height="28">
+			<td  class="title"  >교육인원
+			<td class="cont  input"  >
+			총 <span class="val">215</span>명
+	 
+			<td  class="title"  >조운영
+			<td class="cont  input"  >
+				 <span class="val"></span>반  <span class="val"></span>조
+		<tr height="28">
+			<td  class="title"  >교육장소
+			<td   colspan=3  class="inner">
+			<table border="0" width="100%" cellspacing="1" cellpadding="0"   class="inner" >
+				<colgroup>
+					<col width="70px"  />
+					<col width="*"  />
+					<col width="60px"  />
+					<col width="130px"  />
+				</colgroup>
+				<tr height="28">
+					<td  class="title"  >연수원명
+					<td class="cont input"  >
+						<span class="val">가평 유안타증권인재개발원</span>
+					
+					<td  class="title"  >담당자
+					<td class="cont input"  >
+						<span class="val"></span>
+				<tr height="28">
+					<td  class="title"  >주소
+					<td class="cont input"  >
+						<span class="val">경기 가평군 가평읍 호반로 1334-82</span>
+					<td  class="title"  >연락처
+					<td class="cont input"  >
+						<span class="val"></span>
+						
+				<tr height="28">
+						
+					<td class="cont"  colspan=2>
+						
+					<span class="val check">진행자숙소</span>
+					 
+					<td  class="title"  >H.P
+					<td class="cont input"  >
+						<span class="val"></span>
+					
+			</table>
+		<tr height="28"   v-show="showItem(itemCustom_a,item.a_1)">
+			<td  class="title"  >강사 및 보조강사
+			<td class="cont" colspan=3>
+				<span class="val"></span>
+		<tr height="28"  v-show="showItem(itemCustom_a,item.a_2)">
+			<td  class="title"  >현장(보조)진행자
+			<td class="cont" colspan=3>
+				<span class="val"></span>
+				 
+		<tr height="28"  v-show="showItem(itemCustom_a,item.a_3)">
+			<td  class="title"  >비고
+			<td class="cont" colspan=3>
+				<span class="val"></span>
+				 
+		
+
+		<tr height="28">
+			<td  class="title"  >파일  
+			<td class="cont" colspan=3  >
+			 
+						
+							<div class="files_5981"><a href="/files/operation/34595/[제안서] 유안타증권_2026년 승진자 과정_엑스퍼트컨설팅_운영.pdf" class="dn">[제안서] 유안타증권_2026년 승진자 과정_엑스퍼트컨설팅_운영.pdf</a> <button type="button" class="btn s btn-outline-danger btn_operationfile_del hide" file_idx="5981 " >x</button></div> 
+				 
+			
+			
+
+		
+</table>
+
+
+	<form name="regForm1" class="regForm1" method="post" action="/business/echo/operate/update_process_json.asp" target="processFrame">
+		<input type="hidden" name="mode" value="submit">
+		<input type="hidden" name="subMode" value="basic">
+		<input type="hidden" name="sid" value="933933866">
+		<input type="hidden" name="project_id" value="34595">
+		<input type="hidden" name="rtype" value="submit">
+		<input type="hidden" name="targetData">
+		
+	<table   width="700"  class="info tblSheet" v-show="state.basic_edit">
+		<colgroup>
+			<col width="120px"  />
+			<col width="*"  />
+			<col width="120px"  />
+			<col width="*"  />
+		</colgroup>
+			<tr height="28">
+				<td  class="title"  >교육 유형
+				<td class="cont"  >
+					<label><input type="radio" value="F" name="sheetType" class="selSheetType" checked>대면교육</label>
+					<label><input type="radio" value="O" name="sheetType" class="selSheetType" >비대면교육</label>
+					<label><input type="radio" value="FO"  name="sheetType"  class="selSheetType" >혼합</label>
+				<td  class="title"  >고용보험
+				<td class="cont"  >
+					<label><input type="checkbox" value="위탁" name="EIType" class="formEl form1 unique" >위탁</label>
+					<label><input type="checkbox" value="자체" name="EIType"  class="formEl form1 unique" >자체</label>
+					 
+				 
+
+		 	<tr height="28">
+				
+				<td  class="title"  >교육일정
+				<button type="button" class="btn s btnaddCourseDayForm" @click="courseDayFormViewShow()" v-show="countCourseDays()>0 && state.courseDayFormView==false">추가</button>
+				<td class="cont input" colspan=3 >
+				
+				 
+			 		<button type="button" class="btn m btnaddCourseDayForm" @click="courseDayFormViewShow"  v-show="countCourseDays()==0 && state.courseDayFormView==false">등록</button>
+					 
+					<div class="courseDayForm " v-show="state.courseDayFormView">
+					기간:<input type="text" size=10 class="sDate courseDay courseDay_s sD">~<input type="text" size=10 class="sDate courseDay  courseDay_e eD">
+					 
+
+					
+					
+					&nbsp;&nbsp;<input type="text" size=2 maxlength=1 class="onlyNumber  courseDay_d1">박 <input type="text" size=2 maxlength=2  class="onlyNumber  courseDay_d2">일  <input type="text" size=2 maxlength=2  class="onlyNumber  courseDay_d3">H
+					&nbsp;교육인원:<input type="text" size=2 maxlength=3 class="onlyNumber  courseDay_person" title="교육생 수">명
+
+					<label v-show="state.nightAble" >&nbsp;<input type="checkbox" name="courseDay_night" class="courseDay_night"  value="Y" >합숙</label>
+					
+						<button type="button" class="btn s " onclick="saveCourseDay()" >저장</button>
+						<button type="button" class="btn s courseDayFormViewClose hide" @click="state.courseDayFormView=false" >닫기</button>
+						
+
+					</div>
+					
+					<div class="course_date" idx="7452" sDate="2026-03-16" eDate="2026-03-17" courseDay_d1="1" courseDay_d2="2" courseDay_d3="" courseDay_night="" courseDay_person="0" >2026-03-16 ~ 2026-03-17 &nbsp;<span>1</span>박<span>2</span>일 0명 </div>
+
+					 
+
+					
+					<div class="course_date" idx="7453" sDate="2026-03-19" eDate="2026-03-20" courseDay_d1="1" courseDay_d2="2" courseDay_d3="" courseDay_night="" courseDay_person="0" >2026-03-19 ~ 2026-03-20 &nbsp;<span>1</span>박<span>2</span>일 0명 </div>
+
+					 
+
+					
+					<div class="course_date" idx="7454" sDate="2026-03-23" eDate="2026-03-24" courseDay_d1="1" courseDay_d2="2" courseDay_d3="" courseDay_night="" courseDay_person="0" >2026-03-23 ~ 2026-03-24 &nbsp;<span>1</span>박<span>2</span>일 0명 </div>
+
+					 
+
+					
+					<div class="course_date" idx="7455" sDate="2026-03-30" eDate="2026-03-31" courseDay_d1="1" courseDay_d2="2" courseDay_d3="" courseDay_night="" courseDay_person="0" >2026-03-30 ~ 2026-03-31 &nbsp;<span>1</span>박<span>2</span>일 0명 </div>
+
+					 
+
+					
+					<div class="course_date" idx="7456" sDate="2026-04-09" eDate="2026-04-10" courseDay_d1="1" courseDay_d2="2" courseDay_d3="" courseDay_night="" courseDay_person="0" >2026-04-09 ~ 2026-04-10 &nbsp;<span>1</span>박<span>2</span>일 0명 </div>
+
+					 
+
+					
+			<tr height="28">
+				<td  class="title"  >교육인원
+				<td class="cont  input"  >
+				총<input type="text" size=2 class="formEl form1" name="person" value="215">명
+			<!--
+			 (냠<input type="text" size=2  class="formEl form1" name="person_m" value="">  여<input type="text" size=2  class="formEl form1" name="person_w" value="">)
+
+			 -->
+				<td  class="title"  >조운영
+				<td class="cont  input"  >
+				 <input type="text" size=2  class="formEl form1" name="classGroup1" value="">반  <input type="text" size=2  class="formEl form1" name="classGroup2" value="">조
+			<tr height="28">
+				<td  class="title"  >교육장소
+				<td   colspan=3  class="inner">
+				<table border="0" width="100%" cellspacing="1" cellpadding="0"   class="inner" >
+					<colgroup>
+						<col width="70px"  />
+						<col width="*"  />
+						<col width="60px"  />
+						<col width="130px"  />
+					</colgroup>
+					<tr height="28">
+						<td  class="title"  >교육장
+						<td class="cont input"  >
+						 <input type="text" size=20 class="txttrCenter_title formEl form1 left objTrcenter" name="trCenter_title" value="가평 유안타증권인재개발원">
+						 <button class="button s"  type="button" @click="trCenterShow()">연수원 목록</button>
+						  <button class="button s"  type="button" onclick="trCenterAtPlace()">자체(고객사)</button>
+						 <div class="" v-show="state.trCenter_showState" >
+						 	<select name="" v-model="trCenter_idx" @change="selTrCenter()" class="selTrCenter">
+								<optgroup v-for="(area , i) in al_trCenter_area"  :label="area">
+									<option v-for="(trCenter , i) in al_trCenter" :value="trCenter.idx" v-if="trCenter.area==area">{{trCenter.title}}</option>
+								</optgroup>
+
+								
+							</select>
+						 </div>
+						
+						<td  class="title"  >담당자
+						<td class="cont input"  >
+							<input type="text" size=15  class="txttrCenter_name left  formEl form1 objTrcenter" name="trCenter_name"  value="" >
+					<tr height="28">
+						<td  class="title"  >주소
+						<td class="cont input"  >
+						 <input type="text " style="width:98%"  class="txttrCenter_addr  left  formEl form1 objTrcenter" name="trCenter_addr"  value="경기 가평군 가평읍 호반로 1334-82" >
+						<td  class="title"  >연락처
+						<td class="cont input"  >
+						 <input type="text" size=15  class="txttrCenter_tel left  formEl form1 objTrcenter" name="trCenter_tel"   value="" >
+					<tr height="28">
+						 
+						<td class="cont"  colspan=2>
+						<label><input type="checkbox" class="chktrCenterOpt1  formEl form1" name="trCenter_opt1" value="Y"  checked  >진행자숙소</label>,
+						<label><input type="checkbox" class="chktrCenterOpt2   formEl form1" name="trCenter_opt2" value="Y"    >강사숙소</label> 
+						<span class="txtHelp">※사전숙박 가능시 체크</span>
+						<td  class="title"  >H.P
+						<td class="cont input"  >
+						 <input type="text" size=15  class="txttrCenter_hp left  formEl form1" name="trCenter_hp" value="">
+						
+				</table>
+			<tr height="28"   v-show="showItem(itemCustom_a,item.a_1)">
+				<td  class="title"  >강사 및 보조강사
+				<td class="cont" colspan=3>
+					<textarea rows=2 class="  formEl form1" name="memo_a"></textarea>
+			<tr height="28"  v-show="showItem(itemCustom_a,item.a_2)">
+				<td  class="title"  >현장(보조)진행자
+				<td class="cont" colspan=3>
+					<textarea rows=2 class="  formEl form1" name="memo_b"></textarea>
+			<tr height="28"  v-show="showItem(itemCustom_a,item.a_3)">
+				<td  class="title"  >비고
+				<td class="cont" colspan=3>
+					<textarea rows=2 class="  formEl form1" name="memo_c"></textarea>
+			
+
+			<tr height="28">
+				<td  class="title"  >파일 <button class="s" type="button" onclick="btnFileupActivate()">등록</button>
+				<td class="cont" colspan=3 style="padding:0px 0px;">
+					<table class="inner"  >
+						<colgroup>
+						<col width="180px"  />
+						<col width="*"  />
+						 
+					</colgroup>
+						<Tr height=25>
+							<td class="title" style="font-weight:normal">시간표 (강사님배정,연락처포함) 
+							<td class="cont">  
+			
+							
+							<div class="operationFile file_timetable"></div>
+							<div><button type="button" class="s btn_fileRegist hide" cate="timetable">파일 등록</button></div>
+						<tr  height=25>
+							<tD class="title"  style="font-weight:normal">제안서(비용,교육이해)
+
+							<td class="cont">
+								<div class="files_5981"><a href="/files/operation/34595/[제안서] 유안타증권_2026년 승진자 과정_엑스퍼트컨설팅_운영.pdf" class="dn">[제안서] 유안타증권_2026년 승진자 과정_엑스퍼트컨설팅_운영.pdf</a> <button type="button" class="btn s btn-outline-danger btn_operationfile_del hide" file_idx="5981 " >x</button></div> <div class="operationFile file_requestdoc"></div>
+							<div> <button type="button" class="s btn_fileRegist hide" cate="requestdoc">파일 등록</button></div>
+
+						<tr  height=25>
+							<tD class="title"  style="font-weight:normal">명단 및 기타파일
+							<td class="cont"> <div class="operationFile file_etc"></div>
+
+							 <div><button type="button" class="s btn_fileRegist hide" cate="etc">파일 등록</button></div>
+					</table>
+				
+				
+
+		 
+	</table>
+
+	</form> 
+
+<!-- 교재 -->
+
+<table width=700>
+	<Tr>
+		<td><div class="itemHeader">교재 및 표지시안</div>
+		<td align=right>
+		<div class="savingShow hide savingShow2"><div class="lodingMini"></div></div>
+			 
+		 
+</table>
+
+ 
+<form name="regForm2" class="rsgForm2" method="post" action="update_process_json.asp" target="processFrame">
+	<input type="hidden" name="mode" value="submit">
+	<input type="hidden" name="subMode" value="textBook">
+	<input type="hidden" name="sid" value="933933866">
+	<input type="hidden" name="project_id" value="34595">
+	<input type="hidden" name="rtype" value="submit">
+	
+<table   width="700"  class="info tblSheet"  v-show="state.basic_edit">
+	<colgroup>
+		<col width="110px"  />
+		<col width="*"  />
+		<col width="110px"  />
+		<col width="*"  />
+	</colgroup>
+	<tr height="28">
+		<td  class="title"  >교재유무
+		<td class="cont" >
+		<label><input type="checkbox" class="noTextBook formEl form2" name="noTextBook" value="Y" >교재없음</label>
+
+		<td  class="title"  >인쇄여부
+		<td class="cont" >
+		인쇄(
+		<label><input type="checkbox" class="unique formEl form2" name="result" value="링제본" >링제본</label>
+			<label><input type="checkbox" class="unique formEl form2" name="result" value="떡제본" checked>떡제본</label>
+		)
+
+		<label><input type="checkbox"  class="unique formEl form2" name="result"  value="파일" >파일</label>
+		&nbsp;&nbsp;&nbsp;
+		총 <input type="text" size=2 maxlength=3 class="formEl form2" name="textBook_ea" value="0">권
+	<tr height="28">
+		<td  class="title"  >사이즈
+		<td class="cont" title="B5가 기본양식(본사 기준)" >
+		<label><input type="checkbox"  class="unique formEl  form2" name="size" value="B5" checked ><b>B5</b></label>
+		<label><input type="checkbox" class="unique formEl  form2" name="size" value="A4"  >A4</label>
+
+		<td  class="title"  >컬러
+		<td class="cont" >
+		<label><input type="checkbox"  class="unique formEl  form2" name="color" value="컬러" >컬러</label>
+		<label><input type="checkbox"  class="unique formEl  form2" name="color" value="흑백" checked>흑백</label>
+		
+
+
+		
+</table>
+</form>
+<table   width="700"  class="info tblSheet" v-show="!state.basic_edit">
+	<colgroup>
+		<col width="110px"  />
+		<col width="*"  />
+		<col width="110px"  />
+		<col width="*"  />
+	</colgroup>
+	<tr height="28">
+		<td  class="title"  >교재유무
+		<td class="cont" >
+		<span class="val"></span>
+
+		<td  class="title"  >인쇄여부
+		<td class="cont" ><span class="val">떡제본</span>
+		
+		&nbsp;&nbsp;&nbsp;
+		총  <span class="val">0</span>권
+	<tr height="28">
+		<td  class="title"  >사이즈
+		<td class="cont" >
+		<span class="val"> B5</span>
+		 
+
+		<td  class="title"  >컬러
+		<td class="cont" >
+		<span class="val"> 흑백</span>
+	 
+
+
+		
+</table> 
+
+
+<!-- 진행 -->
+
+<table width=700>
+	<Tr>
+		<td><div class="itemHeader">진행 항목(대면)</div>
+		<td align=right>
+		<div class="savingShow hide savingShow3"><div class="lodingMini"></div></div>
+		<div class="notice" v-show="lf_call_edit">※자동저장</span> 
+		 
+</table>
+
+
+<table   width="700"  class="info tblSheet"  v-show="!lf_call_edit" >
+	<colgroup>
+		<col width="110px"  />
+		<col width="*"  />
+		<col width="110px"  />
+		<col width="*"  />
+	</colgroup>
+	<tr height="28" class="tr_chklf_call">
+		<td  class="title"  >배정요청(운영센터)
+		<td class="cont" colspan=3 >
+		<span class="val">배정요청</span>
+
+		
+	<tr height="28" v-show="state.lf_call=='Y'">
+		 
+
+		<td  class="title"  >추천 진행자
+		<td class="cont" ><span class="val">전지혜님</span>
+		<td  class="title"  >진행자매출
+		<td class="cont" ><span class="val">220,000원/일</span>
+	<tr height="28">
+		 
+
+		<td  class="title"  >진행자
+		<td class="cont" > 
+		<span class="val">1</span>명
+
+		 <td  class="title"  >업무(역량)
+		<td class="cont" >
+		Major <span class="val">1</span>명 &nbsp;&nbsp;&nbsp;
+		
+	<tr height="28">
+		<td  class="title"  >무비메이커
+		<td class="cont" >
+		<span class="val"></span>
+		<td  class="title"  >오리엔테이션
+		<td class="cont" > <span class="val">
+		<label>기본</span>
+
+		
+
+		
+	<tr height="28">
+		<td  class="title"  >사전입소
+		<td class="cont" >
+		<span class="val"><label></span>
+		 
+		<td  class="title"  >특수모듈
+		<td class="cont" >
+		<span class="val">AR미션레이스, 와인클래스</span>
+		
+		
+	<tr height="28">
+		 
+		<td  class="title"  >기타요청내역
+				<td class="cont" colspan=3>
+					<span class="val">연령대가 어린 분은 가급적 제외 부탁드리며, 경험이 많은 분으로 우선배정 부탁드립니다.<br>
+<br>
+AR미션레이스(우천시에는 람쥐패스도 대체) 및 와인클래스 있습니다.</span>
+	 
+		
+
+
+		
+</table>
+
+<form name="regForm3" class="regForm3" method="post" action="/business/echo/operate/update_process_json.asp"  target="processFrame" >
+	<input type="hidden" name="mode" value="submit">
+	<input type="hidden" name="subMode" value="lf">
+	<input type="hidden" name="sid" value="933933866">
+	<input type="hidden" name="project_id" value="34595">
+	<input type="hidden" name="rtype" value="submit">
+	
+<table   width="700"  class="info tblSheet" v-show="lf_call_edit">
+	<colgroup>
+		<col width="110px"  />
+		<col width="*"  />
+		<col width="110px"  />
+		<col width="*"  />
+	</colgroup>
+	<tr height="28" class="tr_chklf_call">
+		<td  class="title"  >배정요청(운영센터)
+		<td class="cont" colspan=3 >
+		<div v-show="state.lf_request_state!=''"><span  class="val check">배정요청</span></div>
+		<div v-show="state.lf_request_state==''">
+		<label><input type="checkbox" class="chklf_call formEl form3" name="lf_call" value="Y"   checked>배정요청</label>
+		</div>
+		
+
+		
+	<tr height="28" v-show="state.lf_call=='Y'">
+		 
+
+		<td  class="title"  >추천 진행자
+		<td class="cont" ><input type="text" size=15  class="txtlf_want left full  formEl form3" name="lf_want" value="전지혜님">
+		<td  class="title"  >진행자매출
+		<td class="cont" > <input type="text" size=15  class="txtlf_pay left full  formEl form3" name="lf_pay" value="220,000원/일">
+	<tr height="28">
+		 
+
+		<td  class="title"  >진행자
+		<td class="cont" > 
+		<input type="text" size=2  class="txtlf_person formEl form3" name="lf_person" value="1">명
+
+		 <td  class="title"  >업무(역량)
+		<td class="cont" >
+		Major<input type="text" size=2  class="txtlf_job_1  formEl form3" name="lf_job_1" value="1">명
+		Standard<input type="text" size=2  class="txtlf_job_2  formEl form3" name="lf_job_2" value="0">명
+		Minor<input type="text" size=2  class="txtlf_job_3  formEl form3" name="lf_job_3" value="0">명
+	<tr height="28">
+		<td  class="title"  >무비메이커
+		<td class="cont" >
+		<label><input type="checkbox" class="chklf_moviemaker formEl form3 unique" name="lf_moviemaker" value="Y" >제작</label>
+		<!-- <label><input type="checkbox" class="chklf_moviemaker formEl form3 unique" name="lf_moviemaker" value="N" >없음</label>
+		-->
+		<td  class="title"  >오리엔테이션
+		<td class="cont" >
+		<label><input type="checkbox" class="chklf_ori formEl form3 unique" name="lf_ori" value="D" checked>기본</label>
+		<label><input type="checkbox" class="chklf_ori formEl form3 unique" name="lf_ori" value="T" >팀빌딩</label>
+		
+		<label><input type="checkbox" class="chklf_ori formEl form3 unique" name="lf_ori" value="N" >없음</label>
+		
+
+		
+	<tr height="28">
+		<td  class="title"  >사전입소
+		<td class="cont" >
+		<label><input type="checkbox" class="txtlf_prevLod formEl form3 unique" name="lf_prevLod" value="Y" >가능</label>
+		<!--
+		<label><input type="checkbox" class="txtlf_prevLod formEl form3 unique" name="lf_prevLod" value="N" >없음</label> 
+		-->
+		<td  class="title"  >특수모듈
+		<td class="cont" >
+		<input type="text"    class="txtlf_module left full formEl form3" name="lf_module" value="AR미션레이스, 와인클래스">
+		
+		
+	<tr height="28">
+		 
+		<td  class="title"  >기타요청내역
+				<td class="cont" colspan=3>
+					<textarea rows=3 class="txtlf_memo left  formEl form3" name="lf_memo">연령대가 어린 분은 가급적 제외 부탁드리며, 경험이 많은 분으로 우선배정 부탁드립니다.
+
+AR미션레이스(우천시에는 람쥐패스도 대체) 및 와인클래스 있습니다.</textarea>
+	 
+		
+
+
+		
+</table>
+</form> 
+
+<!-- 대면준비 -->
+<!--include file="main_body_preOffline.asp"--> 
+
+
+<!-- 대면준비 -->
+<!--include file="main_body_preOnline.asp"--> 
+
+
+<table width=700>
+	<Tr>
+		<td><div class="itemHeader">교육준비</div>
+		<td align=right>
+		<div class="savingShow hide savingShow4"><div class="lodingMini"></div></div>
+			 
+		 
+</table>
+
+
+<form name="regForm4" class="regForm4" method="post" action="update_process_json.asp"  target="processFrame" >
+	<input type="hidden" name="mode" value="submit">
+	<input type="hidden" name="subMode" value="form4">
+	<input type="hidden" name="targetData"  >
+
+	<input type="hidden" name="sid" value="933933866">
+	<input type="hidden" name="project_id" value="34595">
+	<input type="hidden" name="rtype" value="submit">
+	
+<table   width="700"  class="info tblSheet" v-show="state.basic_edit">
+	<colgroup>
+		<col width="110px"  />
+		<col width="*"  />
+		<col width="110px"  />
+		<col width="*"  />
+	</colgroup>
+	<tr height="28">
+		<td  class="title"  >기본교보재
+		<td class="cont"   >
+		<label><input type="checkbox" class="chkm_basic formEl form4 unique" name="m_basic" value="Y"   checked>사용</label>
+		<label><input type="checkbox" class="chkm_basic formEl form4 unique" name="m_basic" value="N"   >없음</label>
+		<td  class="title"  >교보재회수
+		<td class="cont"   >
+		<label><input type="checkbox" class=" formEl form4 unique" name="m_recall" value="Y"   >회수</label>
+		<label><input type="checkbox" class=" formEl form4 unique" name="m_recall" value="N"   checked>회수없음</label>
+		 
+			 
+	 
+	<tr height="28" v-show="state.m_basic=='Y'">
+		<td  class="title"  >용기(포장)
+		<td class="cont"  >
+			<label><input type="checkbox" class=" formEl form4 unique" name="m_basket" value="바구니"   >바구니</label>
+			<label><input type="checkbox" class=" formEl form4 unique" name="m_basket" value="지퍼백"   >지퍼백</label>
+		
+		<td class="cont"  colspan=2 width=400>
+			
+			<label><input type="checkbox" class="formEl form4 " name="m_etc" value="볼펜"    >볼펜</label>
+			
+			<label><input type="checkbox" class="formEl form4 " name="m_etc" value="삼색펜"    >삼색펜</label>
+			
+			<label><input type="checkbox" class="formEl form4 " name="m_etc" value="포스티잇"    >포스티잇</label>
+			
+			<label><input type="checkbox" class="formEl form4 " name="m_etc" value="풀"    >풀</label>
+			
+			<label><input type="checkbox" class="formEl form4 " name="m_etc" value="칼"    >칼</label>
+			
+			<label><input type="checkbox" class="formEl form4 " name="m_etc" value="가위"    >가위</label>
+			
+			<label><input type="checkbox" class="formEl form4 " name="m_etc" value="마스킹테이프"    >마스킹테이프</label>
+			
+			<label><input type="checkbox" class="formEl form4 " name="m_etc" value="스카치테이프"    >스카치테이프</label>
+			
+		<tr height="28"  >
+			<td  class="title"  >다과
+			<td class="cont " colspan=3  >
+			<div style="padding:2px 2px;">
+			총액  <input type="text" size=4  class=" left  formEl form4 onlyNumber" name="snack_sum"  value="" >원
+
+			인당 <input type="text" size=2 maxlength=4  class=" left  formEl form4 onlyNumber" name="snack_per"  value="" >원(1일 기준)
+			<span class="etc">기타<input type="text" size=40 class=" left  formEl form4 text" name="snack_etc"  value="" ></span>
+			</div>
+			<div style="padding:2px 2px;">
+			커피 (
+					
+					<label><input type="checkbox" class="formEl form4 " name="snack" value="커피(캔)"     >캔</label>
+					
+					<label><input type="checkbox" class="formEl form4 " name="snack" value="커피(봉지)"     >봉지</label>
+					
+					<label><input type="checkbox" class="formEl form4 " name="snack" value="커피(병)"     >병</label>
+					 
+
+				)
+			
+				<label><input type="checkbox" class="formEl form4 " name="snack" value="생수"     >생수</label>
+				
+				<label><input type="checkbox" class="formEl form4 " name="snack" value="음료"     >음료</label>
+				
+				<label><input type="checkbox" class="formEl form4 " name="snack" value="티백"     >티백</label>
+				
+				<label><input type="checkbox" class="formEl form4 " name="snack" value="개별포장"     >개별포장</label>
+				
+				<label><input type="checkbox" class="formEl form4 " name="snack" value="케이터링"     >케이터링</label>
+				
+
+				 
+			</div>
+		<tr height="28"   v-show="showItem(itemCustom_b,item.b_2)">
+			<td  class="title"  >상품권
+			<td class="cont inner" colspan=3  >
+				<table border="0" width="100%" cellspacing="1" cellpadding="0"   class="inner" >
+					<colgroup>
+						<col width="70px"  />
+						<col width="*"  />
+						<col width="60px"  />
+						<col width="130px"  />
+					</colgroup>
+					<tr height="28">
+						<td  class="title"  >수량
+						<td class="cont "  ><input type="text"   class="full  formEl form4  " name="giftcard"  value="" placeholder="예) 1만원*20장, 5천원*5장">
+						<td  class="title"  >예산포함
+						<td class="cont "  ><label><input type="checkbox" class=" formEl form4 unique" name="giftcard_budget" value="Y"   >O</label>
+						<label><input type="checkbox" class=" formEl form4 unique" name="giftcard_budget" value="N"   >X</label>
+					<tr height="28">
+						<td  class="title"  >종류
+						<td class="cont "  colspan=3>
+						
+							<label><input type="checkbox" class="formEl form4 " name="giftcard_etc" value="스타벅스 카드"      >스타벅스 카드</label>
+							
+							<label><input type="checkbox" class="formEl form4 " name="giftcard_etc" value="백화점"      >백화점</label>
+							
+							<label><input type="checkbox" class="formEl form4 " name="giftcard_etc" value="모바일(스타벅스 정액권)"      >모바일(스타벅스 정액권)</label>
+							
+							<label><input type="checkbox" class="formEl form4 " name="giftcard_etc" value="모바일(커피한잔)"      >모바일(커피한잔)</label>
+							
+						
+				</table>
+		
+		<tr height="28"   >
+			<td  class="title"  >외부 강의장 예약
+			<td class="cont "   >
+				<input type="text" size=10 class=" full  formEl form4" name="place_rental"  value="" >
+			<td  class="title"  >장비 대여
+			<td class="cont "   >
+				<input type="text" size=10 class=" full  formEl form4" name="gear_rental"  value="" >
+		<tr height="28" >
+			<td  class="title"  >교육생 안내
+			<td class="cont "     >
+				
+						<label><input type="checkbox" class="formEl form4  " name="guideAlarm" value="이메일"      >이메일</label>
+						
+						<label><input type="checkbox" class="formEl form4  " name="guideAlarm" value="SMS"      >SMS</label>
+						
+			<td  class="title"  >단톡방 개설
+			<td class="cont "  >
+				<label><input type="checkbox" class="formEl form4 " name="o_openchat"  value="개설"    >개설</label> 
+		<tr    >
+			<td   class="lineDiv" colspan=4 ></td>
+		  
+		<tr height="28" v-if="state.sheetType.includes('F')" >
+			<td  class="title"  >준비물
+			<td class="cont" colspan=3  >
+				명찰(
+				
+					   <label><input type="checkbox" class="formEl form4  unique  " name="m_namecard" value="명찰(목걸이)"   checked   >목걸이형</label>
+					
+					   <label><input type="checkbox" class="formEl form4  unique  " name="m_namecard" value="명찰(가슴)"      >가슴형</label>
+					
+					   <label><input type="checkbox" class="formEl form4  unique  " name="m_namecard" value="명찰(이름 명패)"      >이름 명패</label>
+					 
+				)
+
+				조명패(
+				
+					   <label><input type="checkbox" class="formEl form4  unique  " name="m_namecard_team" value="조명패(플라스틱)"   checked   >플라스틱</label>
+					
+					   <label><input type="checkbox" class="formEl form4  unique  " name="m_namecard_team" value="조명패(백상지)"      >백상지</label>
+					
+					   <label><input type="checkbox" class="formEl form4  unique  " name="m_namecard_team" value="조명패(명함꽂이)"      >명함꽂이(POP)</label>
+					 
+				)
+				
+				 
+		<tr height="28"   v-if="state.sheetType.includes('F')" >
+				<td  class="title"  >강의장 부착물
+				<td class="cont" colspan=3  >
+					
+				
+						<label><input type="checkbox" class="formEl form4  " name="m_sticker" value="조편성표"   checked   >조편성표</label>
+						
+						<label><input type="checkbox" class="formEl form4  " name="m_sticker" value="일정표"   checked   >일정표</label>
+						
+						<label><input type="checkbox" class="formEl form4  " name="m_sticker" value="숙소배정표"   checked   >숙소배정표</label>
+						
+						<label><input type="checkbox" class="formEl form4  " name="m_sticker" value="출석부/케이스"   checked   >출석부/케이스</label>
+						
+				조편성 담당(<label><input type="checkbox" class=" formEl form4 " name="m_sticker" value="조편성 담당(고객사)"   >고객사</label> , <label><input type="checkbox" class=" formEl form4 " name="m_sticker" value="조편성 담당(엑스퍼트)"   >엑스퍼트</label>)
+					
+					 
+		<tr height="28"   v-if="state.sheetType.includes('F')" >
+			<td  class="title"  >현수막
+			<td class="cont "   >
+				<label><input type="checkbox" class=" formEl form4 unique" name="banner_L" value="사용"   checked>사용</label>
+				<label><input type="checkbox" class=" formEl form4 unique" name="banner_L" value="없음"   >없음</label>
+				<textarea placeholder="사이즈, 용도, 개수"  name="banner_L_memo" class=" formEl form4 " ></textarea>
+				 
+			<td  class="title"  >배너
+			<td class="cont"   >	
+			<label><input type="checkbox" class=" formEl form4 unique" name="banner" value="사용"   checked>사용</label>
+				<label><input type="checkbox" class=" formEl form4 unique" name="banner" value="없음"   >없음</label>
+				<textarea placeholder="용도, 개수, 거치대"  name="banner_memo" class=" formEl form4 " ></textarea>
+			  
+		<tr height="28"  v-if="state.sheetType.includes('F')"   >
+			<td  class="title"  >버스 및 차 렌트
+			<td class="cont "  colspan=3 >
+				<input type="text"   class=" left  formEl form4 text" name="transportation" size=51 value=""  >
+		 
+				<label><input type="checkbox" class="formEl form4 " name="travel_insure"  value="Y"   >여행자 보험</label> 
+		<tr height="28"   v-if="state.sheetType.includes('F')"  >
+			<td  class="title"  >특수 교보재
+			<td class="cont inner" colspan=3  >
+				
+				<label><input type="checkbox" class="formEl form4 " name="m_spe" value="스마트오피스"     >스마트오피스</label>
+				
+				<label><input type="checkbox" class="formEl form4 " name="m_spe" value="밸류체인"     >밸류체인</label>
+				
+				<label><input type="checkbox" class="formEl form4 " name="m_spe" value="맥스"     >맥스</label>
+				
+				<label><input type="checkbox" class="formEl form4 " name="m_spe" value="람쥐패스"     >람쥐패스</label>
+				
+				<label><input type="checkbox" class="formEl form4 " name="m_spe" value="협업시물레이션"     >협업시물레이션</label>
+				
+				<label><input type="checkbox" class="formEl form4 " name="m_spe" value="셔플보드"     >셔플보드</label>
+				
+				<label><input type="checkbox" class="formEl form4 " name="m_spe" value="GBMS"     >GBMS</label>
+				
+				<label><input type="checkbox" class="formEl form4 " name="m_spe" value="인생게임"     >인생게임</label>
+				
+				<label><input type="checkbox" class="formEl form4 " name="m_spe" value="비전퍼즐"     >비전퍼즐</label>
+				
+						
+			 
+		<tr height="28"   v-show="showItem(itemCustom_b,item.b_1)"  v-if="state.sheetType.includes('F')" >
+			<td  class="title"  >모듈별 교보재  
+			
+			<td class="cont" colspan=3  >
+				<label><input type="checkbox" class="formEl form4 " name="module_sheet" value="Y"    >강사별 시트 유무</label> 
+				<input type="text"  class=" left  formEl form4 text" size=70 name="module_memo"  value="" placeholder="예) 김종진 소장님 시트 있음/ 12일까지 회신예정">
+				 
+				
+				 
+		<tr height="28"   v-if="state.sheetType.includes('F')"  v-show="showItem(itemCustom_b,item.b_3)" >
+			<td  class="title"  >교보재 픽업 방법
+			<td class="cont" colspan=3  >
+				<input type="text"  class=" left  formEl form4 full" name="m_pickup"  value="" placeholder="예) AM이 직접픽업(날짜,시간) 또는 택배발송">
+		<tr height="28"   v-if="state.sheetType.includes('F')"  >
+			<td  class="title"  >기타 준비사항
+			<td class="cont" colspan=3  >
+				<textarea placeholder="택배 발송 주소 등.." class=" left  formEl form4 full" name="m_etc_memo">AR미션레이스 있음</textarea>
+		<tr height="2"   v-if="state.sheetType.includes('F')"  >
+			<td  class="lineDiv"  colspan=4   >
+		<tr height="28"   v-if="state.sheetType.includes('O')" >
+			<td  class="title"  >오리엔테이션
+
+			<td class="cont"   colspan=3>
+				
+				<label><input type="checkbox" class="formEl form4 unique" name="o_ori" value="ZOOM 기능 설명 포함"     >ZOOM 기능 설명 포함</label>
+				
+				<label><input type="checkbox" class="formEl form4 unique" name="o_ori" value="과정개요만"     >과정개요만</label>
+				
+				<label><input type="checkbox" class="formEl form4 unique" name="o_ori" value="필요없음"     >필요없음</label>
+				
+			 
+		<tr height="28"  v-if="state.sheetType.includes('O')" >
+			<td  class="title"  >플랫폼
+
+			<td class="cont"   colspan=3>
+				
+				<label><input type="checkbox" class="formEl form4 " name="o_platform" value="ZOOM"    >ZOOM</label>
+				
+				<label><input type="checkbox" class="formEl form4 " name="o_platform" value="게더타운"    >게더타운</label>
+				
+				<label><input type="checkbox" class="formEl form4 " name="o_platform" value="웹엑스"    >웹엑스</label>
+				
+				<label><input type="checkbox" class="formEl form4 " name="o_platform" value="ZEP"    >ZEP</label>
+				
+				<span class="etc">기타</span>:<input type="text" size=40 class=" left  formEl form4 text" name="o_platform_etc"  value="" >
+		<tr height="28"  v-if="state.sheetType.includes('O')" >
+			<td  class="title"  rowspan=2>교육생 개별Kit<br>
+			(택배 발송)
+			<td class="cont "   >
+				
+				<label><input type="checkbox" class="formEl form4 " name="o_kit" value="교재"    >교재</label>
+				
+				<label><input type="checkbox" class="formEl form4 " name="o_kit" value="다과박스"    >다과박스</label>
+				
+				<label><input type="checkbox" class="formEl form4 " name="o_kit" value="만들기 키트"    >만들기 키트</label>
+				
+				<label><input type="checkbox" class="formEl form4 " name="o_kit" value="기념품"    >기념품</label>
+				
+
+			 
+			<td  class="title"  >배송일자
+				<td class="cont "   >
+					<input type="text" size=10 class=" left  formEl form4 sDate o_kit_date" name="o_kit_date"  value="" >
+		<tR v-if="state.sheetType.includes('O')" >
+			<td class="cont "  colspan=3>
+				<textarea class=" left  formEl form4  " name="o_kit_memo"></textarea>
+	
+		<tr height="28"  v-if="state.sheetType.includes('O')"   >
+			<td  class="title"  >다과박스 종류
+			<td class="cont "   >
+				
+				<label><input type="checkbox" class="formEl form4 unique" name="o_snack_type" value="2000원"    >2000원</label>
+				
+				<label><input type="checkbox" class="formEl form4 unique" name="o_snack_type" value="3000원"    >3000원</label>
+				
+				<label><input type="checkbox" class="formEl form4 unique" name="o_snack_type" value="5000원"    >5000원</label>
+				
+
+			<td  class="title"  >수량
+				<td class="cont "   >
+					<input type="text" size=10 class=" left  formEl form4 full" name="o_snack_ea"  value="" >
+
+
+		<tr height="28"  v-if="state.sheetType.includes('O')"  >
+			<td  class="title"  >모니터링
+			<td class="cont " colspan=3 >
+			<input type="text" size=10 class=" left  formEl form4 full" name="o_monitoring"  value="" >
+		 
+			
+		 
+			
+		
+
+
+		<tr height="2"  v-if="state.sheetType.includes('O')"  >
+			<td  class="lineDiv"  colspan=4 >
+		<tr height="28"  >
+			<td  class="title"  >시상품
+			<td class="cont"   ><input type="text" size=10 class=" left  formEl form4  full" name="things_prize"  value="AR미션레이스 때 우수조시상품 있음" >
+			<td  class="title"  >기념품
+			<td class="cont"   ><input type="text" size=10 class=" left  formEl form4 full"  name="things_gift"  value="" >
+
+		<tr height="28"  >
+			<td  class="title"  >설문지
+			<td class="cont"   colspan=3>
+				
+				<label><input type="checkbox" class="formEl form4 unique" name="survey" value="사용"   checked >사용</label>
+				
+				<label><input type="checkbox" class="formEl form4 unique" name="survey" value="기존 설문문항"    >기존 설문문항</label>
+				
+				<label><input type="checkbox" class="formEl form4 unique" name="survey" value="고객사제공"    >고객사제공</label>
+				
+			 
+
+			<span class="etC">기타:<input type="text"   class=" left  formEl form4" name="survey_memo"  value=""  ></span>
+		
+
+			
+
+		
+		
+		<tr height="28"   >
+			<td  class="title"  >결과보고서
+			<td class="cont "  colspan=3 >
+				<label><input type="checkbox" class="formEl form4 " name="report" value="기본양식"   checked >기본양식</label> 
+				<span class="etc">기타</span>:<input type="text" size=10 class=" left  formEl form4" name="report_memo"  value="" >
+				
+
+				<span class="etc">교육종료</span> 후 <input type="text" size=1 maxlength=2 class=" left  formEl form4 onlyNumber" name="report_date"  value=""placeholder="5"	 >일 내로
+		<tr height="28"   >
+			<td  class="title"  >비고 및 추가내용
+			<td class="cont "  colspan=3 >
+			<textarea class=" left  formEl form4  " rows=5 name="total_memo">공간에 '힐링존', '오락존'이 필요하다보니
+보드게임,즉석카메라(+필름) 등이 필요합니다.
+그리고 인생네컷 같은 포토부스 설치 필요합니다.
+
+세부적인 내용은 배정된 IM분에게 추후 안내하겠습니다.</textarea>
+</table>
+
+</form>
+<br><br>
+<table   width="700"  class="info tblSheet" v-show="!state.basic_edit">
+	<colgroup>
+		<col width="110px"  />
+		<col width="*"  />
+		<col width="110px"  />
+		<col width="*"  />
+	</colgroup>
+	<tr height="28">
+		<td  class="title"  >기본교보재
+		<td class="cont"   >
+			<span class="val"> 
+			사용
+			</span>
+		<td  class="title"  >교보재회수
+		<td class="cont"   >
+			<span class="val">
+				회수없음
+			</span>
+		 
+			 
+	 
+	<tr height="28" v-show="state.m_basic=='Y'">
+		<td  class="title"  >용기(포장)
+		<td class="cont"  >
+			<span class="val"></span>
+		 
+		<td class="cont"  colspan=2 width=400>
+			<span class="val"></span>
+			 
+		<tr height="28"  >
+			<td  class="title"  >다과
+			<td class="cont " colspan=3  >
+			
+			<span class="val text"> </span>
+			</div>
+			<div style="padding:2px 2px;">
+			 
+					
+
+				 
+			</div>
+		<tr height="28"   v-show="showItem(itemCustom_b,item.b_2)">
+			<td  class="title"  >상품권
+			<td class="cont inner" colspan=3  >
+				<table border="0" width="100%" cellspacing="1" cellpadding="0"   class="inner" >
+					<colgroup>
+						<col width="70px"  />
+						<col width="*"  />
+						<col width="60px"  />
+						<col width="130px"  />
+					</colgroup>
+					<tr height="28">
+						<td  class="title"  >수량
+						<td class="cont "  >
+						<span class="val "> </span>
+						 
+						<td  class="title"  >예산포함
+						<td class="cont "  >
+						 <span class="val ">
+						 
+						  </span>
+						 
+					<tr height="28">
+						<td  class="title"  >종류
+						<td class="cont "  colspan=3>
+							<span class="val "> </span>
+						 
+						
+				</table>
+		
+		<tr height="28"   >
+			<td  class="title"  >외부 강의장 예약
+			<td class="cont "   >
+				<span class="val "> </span>
+				 
+			<td  class="title"  >장비 대여
+			<td class="cont "   >
+				<span class="val "> </span>
+				 
+		<tr height="28" >
+			<td  class="title"  >교육생 안내
+			<td class="cont "     >
+				<span class="val "> </span>
+				 
+			<td  class="title"  >단톡방 개설
+			<td class="cont "  >
+				<span class="val "> </span>
+				 
+		<tr    >
+			<td   class="lineDiv" colspan=4 ></td>
+		 
+		<tr height="28"  v-if="state.sheetType.includes('F')">
+			<td  class="title"  >준비물
+			<td class="cont" colspan=3  >
+				<span class="val check"> 명찰(목걸이)</span>
+				<span class="val check"> 조명패(플라스틱)</span>
+				 
+
+				 
+		<tr height="28"  v-if="state.sheetType.includes('F')">
+				<td  class="title"  >강의장 부착물
+				<td class="cont" colspan=3  >
+					<span class="val "> 조편성표, 일정표, 숙소배정표, 출석부/케이스</span>
+				 
+					
+					 
+		<tr height="28" v-if="state.sheetType.includes('F')" >
+			<td  class="title"  >현수막
+			<td class="cont "   >
+				<span class="val check">사용</span>
+				<div class="val text"></div>
+				
+				 
+			 
+				 
+			<td  class="title"  >배너
+			<td class="cont"   >
+				<span class="val check">사용</span>
+				<div class="val text"></div>	
+		 
+			  
+		<tr height="28"  v-if="state.sheetType.includes('F')" >
+			<td  class="title"  >버스 및 차 렌트
+			<td class="cont "  colspan=3 >
+				<span class="val  text"></span>
+				<span class="val   check"></span>
+				 
+		<tr height="28" v-if="state.sheetType.includes('F')"  >
+			<td  class="title"  >특수 교보재
+			<td class="cont "colspan=3  >
+				<span class="val "></span>
+				 
+						
+			 
+		<tr height="28"   v-show="showItem(itemCustom_b,item.b_1)" v-if="state.sheetType.includes('F')">
+			<td  class="title"  >모듈별 교보재  
+			
+			<td class="cont" colspan=3  >
+				<span class="val   check"></span>
+			 	<span class="val  text"></span>
+				 
+				 
+				
+				 
+		<tr height="28" v-if="state.sheetType.includes('F')"    v-show="showItem(itemCustom_b,item.b_3)" >
+			<td  class="title"  >교보재 픽업 방법
+			<td class="cont" colspan=3  >
+				<span class="val "></span>
+				 
+		<tr height="28"  v-if="state.sheetType.includes('F')" >
+			<td  class="title"  >기타 준비사항
+			<td class="cont" colspan=3  >
+				<div class="val ">AR미션레이스 있음</div>	
+				 
+		<tr height="2"    v-if="state.sheetType.includes('F')"  >
+			<td  class="lineDiv"  colspan=4 >
+		<tr height="28"    v-if="state.sheetType.includes('O')" >
+			<td  class="title"  >오리엔테이션
+
+			<td class="cont"   colspan=3>
+				<span class="val "></span>
+
+			 
+		<tr height="28"    v-if="state.sheetType.includes('O')" >
+			<td  class="title"  >플랫폼
+
+			<td class="cont"   colspan=3>
+				<span class="val "></span>
+				<span class="val text "></span> 
+				 
+		<tr height="28"    v-if="state.sheetType.includes('O')"  >
+			<td  class="title"  rowspan=2>교육생 개별Kit<br>
+			(택배 발송)
+			<td class="cont "   >
+				<span class="val "></span>
+			 
+
+			 
+			<td  class="title"  >배송일자
+				<td class="cont "   >
+					<span class="val "></span>
+					 
+		<tR   v-if="state.sheetType.includes('O')" >
+			<td class="cont "  colspan=3>
+				<div class="val "></div>	
+				 
+	
+		<tr height="28"   v-if="state.sheetType.includes('O')"   >
+			<td  class="title"  >다과박스 종류
+			<td class="cont "   >
+
+			
+				<span class="val "></span>
+				 
+			<td  class="title"  >수량
+			<td class="cont "   >
+				<span class="val "></span>
+					
+
+
+		<tr height="28"     v-if="state.sheetType.includes('O')" >
+			<td  class="title"  >모니터링
+			<td class="cont " colspan=3 >
+				<div class="val "></div>	
+		 
+			
+		 
+			
+		
+
+
+		<tr height="2"   v-if="state.sheetType.includes('O')"   >
+			<td  class="lineDiv"  colspan=4 >
+		<tr height="28"  >
+			<td  class="title"  >시상품
+			<td class="cont"   >
+				<span class="val ">AR미션레이스 때 우수조시상품 있음</span>
+			
+			<td  class="title"  >기념품
+			<td class="cont"   >
+				<span class="val "></span>
+			 
+		<tr height="28"  >
+			<td  class="title"  >설문지
+			<td class="cont"   colspan=3>
+				<span class="val ">사용</span>
+				 
+			 	<span class="val text"></span>
+
+			 
+		
+
+			
+
+		
+		
+		<tr height="28"   >
+			<td  class="title"  >결과보고서
+			<td class="cont "  colspan=3 >
+				<span class="val check">기본양식</span>
+				<span class="val text"></span> 
+				 
+				
+				
+	 
+			 
+		<tr height="28"   >
+			<td  class="title"  >비고 및 추가내용
+			<td class="cont "  colspan=3 >공간에 '힐링존', '오락존'이 필요하다보니<br>
+보드게임,즉석카메라(+필름) 등이 필요합니다.<br>
+그리고 인생네컷 같은 포토부스 설치 필요합니다.<br>
+<br>
+세부적인 내용은 배정된 IM분에게 추후 안내하겠습니다.	
+				
+			
+
+
+
+ 
+
+		
+</table>
+<div v-show="!state.basic_edit">작성일: <span title="2026-02-23 오후 3:57:06">2026-02-23</span> ( <span title="2026-02-23 오후 4:01:47">2026-02-23 )</div>
+
+<div style="text-align:right;width:700px">
+	
+				  
+			 
+		  
+		 
+					
+	</div>
+
+
+	<div class="updateAlarm"  v-if="state.updateAlarm&& state.sheetState=='Y'">
+		<table width=700>
+			<Tr>
+				<td><div class="itemHeader">변경내역 알림 </div>
+				<td align=right>
+			
+					
+				
+		</table>
+
+
+		<form name="msgForm" class="msgForm" method="post" action="/business/echo/operate/update_process_json.asp" target="processFrame" >
+			<input type="hidden" name="mode" value="submit">
+			<input type="hidden" name="subMode" value="updateAlarm">
+			<input type="hidden" name="sid" value="933933866">
+			<input type="hidden" name="project_id" value="34595">
+			<input type="hidden" name="rtype" value="submit">
+			<input type="hidden" name="rawData" >
+			
+		<table   width="700"  class="info tblSheet">
+			<colgroup>
+				<col width="110px"  />
+				<col width="*"  />
+				<col width="110px"  />
+				
+			</colgroup>
+			<tr height="28">
+				<td  class="title"  >변경내역 저장 및 알림
+				<td class="cont" ><label><input type="checkbox" v-model="updateAlarmSendState" name="msgSend" value="Y">메시지알림</label>
+			 
+				<span >(
+					<label class="    "><input type="checkbox"  name="updateAlarmTarget" value="2900"  :disabled="!updateAlarmSendState" checked  >AM</label>
+					<label class=" " ><input type="checkbox"  name="updateAlarmTarget" value="5756"  :disabled="!updateAlarmSendState"   checked >IM</label>
+					<label  class="   "><input type="checkbox" name="updateAlarmTarget" value="2771"   :disabled="!updateAlarmSendState" checked>운영센터</label>
+
+				)</span>
+				<textarea class="full" rows=5 v-model="updateAlarmMsg" name="cont"></textarea>
+				<td class="cont" >
+				
+				<button type="button" onclick="updateAlarmMsg()" :disabled="!updateAlarmMsg" v-show="!updateAlarmSendState" >내역 저장</button>
+				<button type="button" onclick="updateAlarmMsg()" :disabled="!updateAlarmMsg" v-show="updateAlarmSendState">메시지 전송</button>
+		</table>
+		</form>
+	</div>
+		<br><br>
+ 
+ 
+
+
+ 
+ 
+	<table border="0" width="700" cellspacing="1" cellpadding="0"  >
+		<tr>
+			<td>
+				
+			<td align=right>
+			 
+
+				
+				<button type="button" class=" m "  @click="changeEditMode()" v-show="!state.basic_edit" >편집모드</button>
+				<button type="button" class=" m "  @click="state.basic_edit=!state.basic_edit" v-show="state.basic_edit" >조회모드</button>
+				
+				
+				<button type="button" class="m btnSetupItem"  v-show="state.basic_edit" >항목설정</button>
+				
+				
+				<button type="button" class=" m "  onclick="printSheet()" v-show="!state.basic_edit" >인쇄</button>
+				
+				<button type="button" class=" btnEchoCreate " onclick="requestOperation()" v-if="state.sheetState!='Y'" >운영요청서 등록하기</button>
+
+				<button type="button" class="m" onclick="history.back()" v-show="compareUrl()">돌아가기..</button>
+				<button type="button" class="m" onclick="location.href='/business/success/project_view.asp?project_id=34595'" v-show="!compareUrl()">메인으로..</button>
+				
+		
+	</table>
+
+
+<table width=700   v-show="state.updateMemoShow && !state.basic_edit">
+	<Tr>
+		<td><div class="itemHeader">변경내역</div>
+		<td align=right>
+		<div class="savingShow hide savingShow2"><div class="lodingMini"></div></div>
+			 
+		 
+</table>
+<table   width="700"  class="list1 "   v-show="state.updateMemoShow && !state.basic_edit">
+	<colgroup>
+		<col width="50px"  />
+		
+		<col width="110px"  />
+		<col width="*"  />
+		<col width="100px"  />
+	</colgroup>
+	<tr >
+		<th>No.
+		<th>일자
+		<th>내역
+		<th>등록인
+	
+</table>
+	
+	<div class="popupSetupItem">
+		<div class="itemHeader">추가항목 설정</div>
+		<table border="0" width="400" cellspacing="1" cellpadding="0" bgcolor="9bc0d8">
+			<colgroup>
+				<col width="120px"  />
+				<col width="*"  />
+			 
+			</colgroup>
+				<tr height="25">
+					<td  class="title"  align="center">교육기본정보
+					
+					<td  class="cont"   >
+					<label><input type="checkbox" :checked="showItem(itemCustom_a,item.a_1)"  :value="item.a_1"  @change="changeItemSetup('a',item.a_1,$event)" >강사 및 보조강사</label><br>
+					<label><input type="checkbox"    :checked="showItem(itemCustom_a,item.a_2)"  :value="item.a_2"  @change="changeItemSetup('a',item.a_2,$event)">현장(보조)진행자</label><br>
+					<label><input type="checkbox"  :checked="showItem(itemCustom_a,item.a_3)"  :value="item.a_3"  @change="changeItemSetup('a',item.a_3,$event)">비고</label>
+				<tr height="25">
+					<td  class="title"  align="center">교육준비(공통)
+					
+					<td  class="cont"   >
+				 
+					<label><input type="checkbox"    :checked="showItem(itemCustom_b,item.b_2)"  :value="item.b_2"  @change="changeItemSetup('b',item.b_2,$event)">상품권</label><br>
+				<tr height="25">
+					<td  class="title"  align="center">교육준비(대면교육)
+					
+					<td  class="cont"   >
+					<label><input type="checkbox" :checked="showItem(itemCustom_b,item.b_1)"  :value="item.b_1"  @change="changeItemSetup('b',item.b_1,$event)" >모듈별 교보재</label><br>
+					<label><input type="checkbox" :checked="showItem(itemCustom_b,item.b_3)"  :value="item.b_3"  @change="changeItemSetup('b',item.b_3,$event)" >교보재 픽업방법</label><br>
+					 
+					 
+		</table>
+			<div style="float:right;margin-top:4px;" >
+			<button type="button" class="m btnSaveCustomItemDefault "  >초기설정 저장</button>
+			<button type="button" class="m btnSetupItem setupItemClose" style="margin-left:10px;" >닫기</button>
+			
+			</div>
+			
+	</div>
+
+
+ 
+
+</div>
+<br><br>
+<div>※사용에 이상이 있으시면 IT전략실로 알려주시면 감사하겠습니다.</div>
+<br><br><br><br>
+
+<div style="display:none">
+<form id="fileUpForm" name="fileUpForm" class="fileUpForm" method="post" enctype="multipart/form-data" >
+<input type="hidden" name="project_id" value="34595">
+<input type="hidden" name="cate" id="cate"  >
+<input type="hidden" name="upCode" value="oerationFile">
+<input type="hidden" name="mode">
+<input type="file" name="file" id="operationFile" class="fileUpFormFile" >
+<input type="hidden" name="file_idx"  >
+</form>
+</div>
+ 
+<script>
+const project_id="34595"
+var im_no="5756"
+const sid="933933866"
+const e_id="4320"
+ 
+const sheetCount = "1"
+const lf_call = "Y"
+const m_basic = "Y"
+const lf_request_state ="Y"
+
+const sheetState ="Y"  //운영요청서 작성상태 ( Ing, Yes)
+const sheetType = "F"
+const rUrl = ""
+
+
+//커스텀항목
+const itemCustom_a = "0"
+const itemCustom_b = "0"
+const itemCustom_c = "0"
+const itemCustom_d = "0"
+const doc_referrer = document.referrer
+$(document).ready(function(){
+	
+	$(".chkm_basic").on("change",function(){
+		if($(this).val()=="Y" && $(this).prop("checked")){
+			app.state.m_basic="Y"
+			$("input[name='m_basket']").eq(0).prop("checked",true)
+			$("input[name='m_etc']").prop("checked",true)
+		}else{
+			app.state.m_basic=""
+			$("input[name='m_basket']").prop("checked",false)
+			$("input[name='m_etc']").prop("checked",false)
+		}
+		 
+	})
+
+	$(".chklf_call").on("change",function(){
+		 
+		if($(this).prop("checked")){
+			app.state.lf_call="Y"
+		}else{
+			app.state.lf_call=""
+
+		}
+	})
+	if(lf_request_state !=''){
+		
+		$('.chklf_call').on('click', function(event) {
+			event.preventDefault();
+			event.stopPropagation();
+			return false;
+		});
+	}
+
+	
+	 
+	$(".noTextBook").on("change",function(){
+		if($(this).prop("checked")){
+			$(".rsgForm2").find("input[type='text']").not(this).prop("disabled",true)
+			$(".rsgForm2").find("input[type='checkbox']").not(this).prop("disabled",true).prop("checked",false)
+			
+			$(".rsgForm2").find("buttton").prop("disabled",true)
+			$(".rsgForm2").find("label").not(this).addClass("disabled")
+		}else{
+			$(".rsgForm2").find("input[type='text']").prop("disabled",false)
+			$(".rsgForm2").find("input[type='checkbox']").not(this).prop("disabled",false)
+			$(".rsgForm2").find("buttton").prop("disabled",false)
+			$(".rsgForm2").find("label").removeClass("disabled")
+
+		}
+	})
+	$(".noTextBook").change();
+
+	$("input.unique").on("click", function(evt){
+		console.log(new Date())
+		if($(this).prop("checked")){
+			name = $(this).attr("name")
+			console.log(name)
+			$(this).closest("td").find("input[name='"+name+"']").not(this).prop("checked",false)
+		}else{
+
+		}
+		 
+
+	})
+	$("td").each(function(){
+		tag = $(this).children().first().prop('tagName')
+		if(tag){
+			tag= tag.toLowerCase()	
+			if(tag=="input" ||  $(this).find("textarea").length>0 ){
+				$(this).css({"padding-left":"1px","padding-right":"1px"})
+			}
+		}
+		 
+		
+	})
+
+	if(sheetState=="Y"){
+		
+		app.state.basic_edit=false;
+	}
+	if(lf_request_state!=""){
+		// $(".btn_call_lfRequest").hide();
+		app.state.basic_edit=false;
+	}
+	if(app.state.basic_edit){
+		cls_formData.init();
+	}
+	
+	
+})
+function getWorkSAlarm(){
+	 
+	formData = {
+		mode:"getWorksAlarm",
+		project_id:project_id
+	}
+	gScript.updateProcF(formData, function(data){
+		
+		if(data.al_works_alarm){
+			app.al_works_alarm = data.al_works_alarm
+		}else{
+			app.al_works_alarm = []
+		}
+		setTimeout(() => {
+			init_workAlarm()
+		}, 500); 
+	},true);
+}
+function init_workAlarm(){
+	
+	$(".chk_workAlarm").on("click",function(){
+		cate =$(this).attr("cate")
+		if(cate=="worked"){
+			if($(this).prop("checked")){
+				if(!confirm("고객사담당자에게  완료알림 메시지를 전달하시겠습니까?"))return false;
+			}
+			
+		}
+		 
+	})
+
+	$(".chk_workAlarm").on("change",function(){
+		work_no = $(this).attr("work_no")
+		cate =$(this).attr("cate")
+		data_val=""
+		if($(this).prop("checked"))data_val="Y"
+
+		console.log(cate,work_no,data_val)
+		formData={
+			mode:"updateWorkAlarm",
+			project_id:project_id,
+			cate:cate,
+			work_no:work_no,
+			data_val:data_val
+		}
+		gScript.updateProcF(formData, function(data){
+			console.log(data);
+		},true);
+	})
+}
+function trCenterAtPlace(){
+	formData ={
+		mode:"trCenterAtPlace",
+		project_id:project_id
+	}
+	gScript.updateProcF(formData, function(data){
+		console.log(data);
+		trCenter_title = ""
+		trCenter_name=""
+		trCenter_addr=""
+		trCenter_tel=""
+		trCenter_hp=""
+
+		if(data.trCenter_title){
+			trCenter_title = data.trCenter_title
+		} 
+		if(data.trCenter_name){
+			trCenter_name = data.trCenter_name
+		} 
+		if(data.trCenter_addr){
+			trCenter_addr = data.trCenter_addr
+		} 
+		if(data.trCenter_tel){
+			trCenter_tel = data.trCenter_tel
+		} 
+		if(data.trCenter_hp){
+			trCenter_hp = data.trCenter_hp
+		} 
+
+		$(".txttrCenter_title").val(trCenter_title)
+		$(".txttrCenter_name").val(trCenter_name)
+		$(".txttrCenter_addr").val(trCenter_addr)
+		$(".txttrCenter_tel").val(trCenter_tel)
+		$(".txttrCenter_hp").val(trCenter_hp)
+
+	},true);
+
+ 
+
+}
+function printSheet(){
+	// $(".tilnote-saver-icon").remove()
+
+	$("button").addClass("hidePrint")
+	self.print()
+	$("button").removeClass("hidePrint")
+}
+function call_lfRequest(){
+	/*
+	교육일정, 진행자 인원 체크
+	*/
+	console.log($(".course_date").length,$(".txtlf_person").val() )
+	const lf_person_count = ($(".txtlf_person").val())
+	if($(".course_date").length==0){
+		alert("교육일정을 등록하세요")
+		return;
+	}
+	if(lf_person_count == ""){
+		$(".txtlf_person").focus();
+		alert("진행자 인원수를 등록하세요.")
+		return;
+	}
+
+	if(!confirm("배정요청등록합니다."))return;
+	formData={
+		mode:"call_lfRequest",
+		project_id:project_id
+	}
+	gScript.updateProcF(formData, function(data){
+		if(data.msg){
+			alert(data.msg)
+		}
+		// $(".btn_call_lfRequest").hide();
+		console.log(data);
+		location.reload();
+	},true);
+}
+function requestOperation(){
+	
+	let returnMsg ="필수항목을 등록하세요"
+	if(requiredCheck()){
+		alert(returnMsg)
+		return;
+	}
+	if(!confirm("운영요청서를 등록합니다.\n(운영요청 등록)"))return;
+	formData={
+		mode:"requestOperation",
+		project_id:project_id
+	}
+	gScript.updateProcF(formData, function(data){
+		console.log(data);
+		location.reload();
+	},true);
+
+	function requiredCheck(){
+		if($(".course_date").length==0){
+			returnMsg ="교육일정을 등록하세요."
+			app.courseDayFormViewShow();
+		 	//$(".courseDayForm").find("input").eq(0).focus();
+			return true;
+			
+		}
+		if($("input[name='m_basic']:checked").length==0){
+
+			returnMsg ="기본교보재 사용유무를 체크하세요."
+			
+		 	$("input[name='m_basic']").eq(0).focus();
+			return true;
+		}
+
+		if($("input[name='lf_call']:checked").length>0 ){
+			m = $("input[name='lf_person']").val()
+			console.log(m,parseInt(m))
+			if(!m || m=="0"){
+				$("input[name='lf_person']").focus();
+				returnMsg ="배정요청이 체크가 되어 있습니다. 진행자 인원수를 체크하세요."
+				return true
+			}
+		}
+		return false;
+		
+	}
+}
+function updateAlarmMsg(){
+
+	cls_formData.save();	
+	rawData = JSON.stringify(cls_formData.data_s)
+	
+		
+	f= document.msgForm
+	f.rawData.value= rawData
+	
+	f.submit();
+}
+function changeSheetType(){
+	$(".selSheetType").on("change",function(){
+		 
+		ty = $(this).val()
+
+		formData = {
+			mode:"changeSheetType",
+			project_id:project_id,
+			sheetType :ty
+		}
+		gScript.updateProcF(formData, function(data){
+			location.reload();
+			
+		},false);
+	})
+}
+function dataSaved(obj){
+	 
+	$(".savingShow").fadeOut();
+	$(".targetData").removeClass("targetData")
+
+	app.state.updateAlarm=true
+
+	if(obj){
+		try{
+			if(obj.msg)alert(obj.msg)
+			if(obj.resultMode=="saveUpdateRequest"){
+				location.reload();
+			}
+		}catch(e){
+			console.log(e)
+
+		}
+
+	}
+}
+function createSheet(opt){
+	if(!opt)if(!confirm("운영요청서를 작성합니다."))return;
+	formData={
+		mode:"createSheet",
+		project_id:project_id
+	}
+	gScript.updateProcF(formData, function(data){
+		location.reload();
+	},true);
+}
+function saveCourseDay(){
+	sDate= $(".courseDay_s").val()
+	eDate= $(".courseDay_e").val()
+	if(sDate=="" || eDate ==""){
+		alert("교육기간을 등록하세요.")
+		return;
+	}
+
+	sDay = dayjs(sDate) 
+	eDay = dayjs(eDate) 
+	 
+	dayDiff = dayjs(eDate).diff( dayjs(sDate) , 'day');
+	// if(dayDiff<0){
+	// 	alert("날짜가 올바르지 않습니다.")
+	// 	$(".courseDay_e").val("")
+	// }
+	
+
+	courseDay_d1= $(".courseDay_d1").val()
+	courseDay_d2= $(".courseDay_d2").val()
+	courseDay_d3= $(".courseDay_d3").val()
+	courseDay_night= $(".courseDay_night").val()
+	courseDay_person= $(".courseDay_person").val()
+	if(!$(".courseDay_night").prop("checked"))courseDay_night=""
+	
+	formData= {
+		mode :"saveCourseDay",
+		project_id:project_id,
+		sDate: sDate,
+		eDate: eDate,
+		courseDay_d1: courseDay_d1,
+		courseDay_d2: courseDay_d2,
+		courseDay_d3: courseDay_d3,
+		courseDay_night:courseDay_night,
+		courseDay_person:courseDay_person
+
+	}
+
+	
+	gScript.updateProcF(formData, function(data){
+		console.log(data);
+		location.reload();
+	},true);
+	
+}
+function updateEchoTerm(){
+	sDate= $(".txtEchoSdate").val()
+	eDate= $(".txtEchoEdate").val()
+
+	console.log(sDate,eDate)
+
+	if(sDate=="" || eDate==""){
+		alert("운영기간을 등록하세요.")
+		$(".txtEchoSdate").focus();
+		return;
+	}
+
+	formData={
+		mode:"updateEchoTerm",
+		project_id:project_id,
+		e_id:e_id,
+		sDate:sDate,
+		eDate,eDate
+	}
+	gScript.updateProcF(formData, function(data){
+		//console.log(data);
+		location.reload();
+	},true);
+
+	
+}
+function echoCreate(){
+	if(!confirm("에코를 사용등록합니다."))return;
+	formData={
+		mode:"echoCreate",
+		project_id:project_id
+	}
+	gScript.updateProcF(formData, function(data){
+		//console.log(data);
+		location.reload();
+	},true);
+
+}
+
+function imSetupMain(evt){
+	e= evt.srcElement;
+	im_no= $(e).val()
+	formData={
+		mode:"imSetupMain",
+		project_id:project_id,
+		im_no : im_no
+
+	}
+	gScript.updateProcF(formData, function(data){
+		console.log(data);
+	},true);
+}
+function im_contactor_setup(evt){
+	e= evt.srcElement;
+	im_no= $(e).val()
+
+	formData={
+		mode:"im_contactor_setup",
+		project_id:project_id,
+		im_no : im_no
+
+	}
+
+	gScript.updateProcF(formData, function(data){
+		console.log(data);
+	},true);
+}
+function getTrCenter(){
+	if (sheetCount=="0")return;
+	formData= {
+		mode:"getTrCenter",
+
+	}
+	gScript.updateProcF(formData, function(data){
+		// console.log(data);
+		const al_trCenter_area = [...new Set(data.al_trCenter.map(item => item.area))].sort();
+		const al_trCenter_cate = [...new Set(data.al_trCenter.map(item => item.cate))].sort();
+		
+		if(data.al_trCenter){
+			app.al_trCenter_area = al_trCenter_area
+			app.al_trCenter_cate = al_trCenter_cate
+			app.al_trCenter= data.al_trCenter
+		}else{
+			app.al_trCenter=[]
+			app.al_trCenter_area=[]
+			app.al_trCenter_cate=[]
+
+		}
+
+		
+	},true);
+
+}
+function formInit(){
+	$(".formEl").on("change" , function(){
+		 
+		if($(this).hasClass("form1")){
+			
+			$(".savingShow1").fadeIn();
+			$(this).addClass("targetData")
+
+			
+			f= document.regForm1
+			f.targetData.value =  $(this).attr("name")
+			f.submit();
+		}else if($(this).hasClass("form2")){
+			$(".savingShow2").fadeIn();
+			document.regForm2.submit();
+		}else if($(this).hasClass("form3")){
+			$(".savingShow3").fadeIn();
+			document.regForm3.submit();
+		}else if($(this).hasClass("form4")){
+			$(".savingShow4").fadeIn();
+			$(this).addClass("targetData")
+			f= document.regForm4
+			f.targetData.value =  $(this).attr("name")
+
+			// console.log( $(this).attr("name"),gScript.getForm(".regForm4"))
+			// try{
+			// f= document.regForm4
+
+			// for(var i=0; i<f.elements.length;i++){
+			// 	f.elements[i].checked=true;
+			// }
+			// }catch(e){}
+			 
+			document.regForm4.submit();
+
+		}
+
+	})
+	$("span").each(function(){
+		v =$(this).text()
+
+		if(v.trim().length>=1){
+			if ($(this).hasClass("check")){
+				$(this).html("&#10004;"+$(this).html())
+			}
+		}else{
+			$(this).remove();
+		}
+		//$(this).html("&#9745;"+$(this).html())
+		
+		
+	})
+	 
+
+	$("input[name='m_sticker']").on("click",function(){
+		 
+		v = $(this).val()
+		if(v =="조편성 담당(엑스퍼트)"){
+			var targetInputs = $("input[name='m_sticker']").filter(function() {
+                return $(this).val() === '조편성 담당(고객사)';
+            });
+
+            $(targetInputs).prop("checked", false)
+
+		}else if (v=="조편성 담당(고객사)"){
+			var targetInputs = $("input[name='m_sticker']").filter(function() {
+                return $(this).val() === '조편성 담당(엑스퍼트)';
+            });
+
+            $(targetInputs).prop("checked", false)
+			
+		}
+	})
+	$(".objTrcenter").on("change",function(){
+		
+		 
+		title = $(".txttrCenter_title").val()
+		name = $(".txttrCenter_name").val()
+		addr = $(".txttrCenter_addr").val()
+		tel = $(".txttrCenter_tel").val()
+		hp =$(".txttrCenter_hp").val()
+
+		
+		if(!app.selectedTrCenter)return;
+		if(app.selectedTrCenter.title== title){
+
+			app.selectedTrCenter.name = name
+			app.selectedTrCenter.addr = addr
+			app.selectedTrCenter.tel = tel
+			app.selectedTrCenter.hp = hp
+
+			app.al_trCenter = [...app.al_trCenter]
+
+			setTimeout(() => {
+
+				formData={
+					mode:"updateTrCenter",
+					project_id:project_id,
+					idx:app.selectedTrCenter.idx,
+					 
+
+				}
+				// console.log(formData)
+				gScript.updateProcF(formData, function(data){
+					console.log(data);
+				},true);
+				
+			}, 1000);
+		}
+ 
+	})
+
+}
+function initSheet(){
+	if(sheetCount=="0"){
+		if(confirm("운영요청서를 작성하시겠습니까?")){
+			createSheet("init");
+
+		}else{
+			$(".tblSheet").find("input").attr("disabled",true)
+			$(".tblSheet").find("button").attr("disabled",true)
+		}
+	}
+	$(".btnSaveCustomItemDefault").on("click",function(){
+		formData={
+			mode:"changeItemSetup",
+			subMode:"default",
+			project_id:project_id,
+			item_a:(app.itemCustom_a),
+			item_b:(app.itemCustom_b),
+			item_c:(app.itemCustom_c),
+			item_d:(app.itemCustom_d),
+			
+				
+
+		}
+		
+		gScript.updateProcF(formData, function(data){
+			console.log(data);
+		},true);
+	})
+}
+$(document).ready(function(){
+	 
+	gScript.updateProcF_url="update_process_json.asp"
+	gCal.init(".sDate")
+	gCal.next= function(obj){
+		if($(obj).hasClass("courseDay")){
+			sDate= $(".courseDay_s").val()
+			eDate= $(".courseDay_e").val()
+			if(sDate && eDate ){
+				sDay = dayjs(sDate) 
+				eDay = dayjs(eDate) 
+				dayDiff = dayjs(eDate).diff( dayjs(sDate) , 'day') ;
+				$(".courseDay_d1").val(dayDiff)
+				$(".courseDay_d2").val(dayDiff+1)
+				if(dayDiff>0)app.state.nightAble=true;
+			}
+
+			
+
+		}else if($(obj).hasClass("o_kit_date")){
+			$(obj).change()
+		}
+
+		
+
+		
+	}
+	getTrCenter();
+	formInit();
+	getWorkSAlarm();
+	$(".course_date").on("click",function(){
+		idx= $(this).attr("idx")
+
+		// sDate= $(this).attr("sDate")
+		// eDate= $(this).attr("eDate")
+		// courseDay_d1= $(this).attr("courseDay_d1")
+		// courseDay_d2= $(this).attr("courseDay_d2")
+		// courseDay_d3= $(this).attr("courseDay_d3")
+		// courseDay_night= $(this).attr("courseDay_night")
+
+		// $(".courseDay_s").val(sDate)
+		// $(".courseDay_e").val(eDate)
+		// $(".courseDay_d1").val(courseDay_d1)
+		// $(".courseDay_d2").val(courseDay_d2)
+		// $(".courseDay_d3").val(courseDay_d3)
+		// if (courseDay_night=="Y"){
+		// 	$(".courseDay_night").prop("checked",true)
+		// }
+		//console.log(idx)
+		if(!confirm("해당 강의일정을 취소합니다."))return;
+		formData ={
+			mode:"deleteCourseDate",
+			idx:idx,
+			project_id:project_id
+
+		}
+		gScript.updateProcF(formData, function(data){
+			//console.log(data);
+			location.reload()
+		},true);
+		
+	})
+
+	
+	
+
+	$("#operationFile").on("change",function(){
+		
+		fileUp();
+	})
+	 
+	$(".btn_fileRegist").on("click",function(){
+		 cate = $(this).attr("cate")
+        //  console.log("cate" + cate);
+         $("input[name=cate]").val(cate);
+		//document.fileUpForm.cate.value= cate;
+		$("#operationFile").click();
+
+	});
+
+	$(".btn_operationfile_del").on("click",function(){
+		if(confirm("해당 파일을 삭제합니다")){
+			file_idx = $(this).attr("file_idx")
+			document.fileUpForm.mode.value="delFile"
+			document.fileUpForm.file_idx.value=file_idx
+			fileUp();
+		}
+
+	});
+	
+
+	gUtil_qrTel.init(".contactTel")
+	onlyNumberSetup();
+	initSheet();
+	changeSheetType();
+
+	$('.btnSetupItem').on('click', function(event) {
+		var popup = $('.popupSetupItem').eq(0);
+		if($(this).hasClass("setupItemClose")){
+			popup.css({"display":"none"})
+			return;
+		}
+		var buttonOffset = $(this).offset();
+		popup.css({
+			top: buttonOffset.top + $(this).outerHeight() -200,
+			left: buttonOffset.left+ 10,
+			display: 'block'
+		});
+		 
+
+	});
+	
+	app.initItemCustom("init")
+
+}); 
+
+
+gScript.updateProcF=function(formData,fn,loadingOpt){
+	
+	if(this.updateProcF_url == ""){
+		console.log("gScript.updateProcF_url 값 등록후 사용하세요")
+		return
+		
+	}
+	if(!$.LoadingOverlay){
+		$.getScript( "/common/js/loadingoverlay.min.js", function( data, textStatus, jqxhr ) {
+			gScript.updateProcF(formData,fn,loadingOpt)
+		});
+		return 
+	}
+	try{if(sid){formData.sid = sid;}}catch(e){ console.log("sid오류(ASP)", "session.sessionid")	}
+	 
+	if(loadingOpt)loding("show")
+	let procUrl = this.updateProcF_url
+	if(formData.procUrl)procUrl= formData.procUrl
+	$.ajax({ 
+		url: procUrl, 
+		data: formData,
+		dataType:"json",
+		type:"POST",
+		success: function(data){
+			if(data.result=="success"){
+				fn(data)
+			}else{
+				console.log("error",data)
+				alert("오류가 발생했습니다.\n\n새로고침후 다시 실행하세요.\n\n"+ JSON.stringify(data) )
+			}
+			loding("hide")
+			
+			
+			
+		//	 if(data.result=="success")location.reload();
+		} ,
+		error:function(request,status,error){
+			loding("hide")
+			alert("오류가 발생했습니다.\n\n새로고침후 다시 실행하세요.\n\n메시지가 계속 보여지면 IT전략실로 문의주세요.")
+		}
+	});
+	function loding(method){
+		if(!method)method="show" // hide	
+		$.LoadingOverlay(method, {
+			background       : "rgba(0, 0, 0, 0.2)",
+			image            : "/images/spinner-solid.svg",
+			maxSize          : 60,
+			/*
+			-fontawesome      : "fa fa-spinner fa-pulse fa-fw",
+			fontawesomeColor : "#FFFFFF",
+			*/
+		});
+	}
+	
+}
+
+var gUtil_qrTel={
+	data:{
+		ver:"20221108",
+		cls:"",
+		qrCodeScript:"/common/js/jquery.qrcode.min.js"
+	},
+	init:function(cls){
+		if(cls){
+			this.data.cls=cls
+		}else{
+			cls= gUtil_qrTel.data.cls
+		}
+		if(typeof($.fn.qrcode)=="function"){
+			gUtil_qrTel.setup(cls);
+		}else{
+			this.data.installCount ++
+			this.loadJavascript(this.data.qrCodeScript,this.init);
+		}
+	},
+	setup:function(cls){
+		$(cls).each(function(){
+			hp = $(this).text()
+			if(hp!=""){
+				$(this).html("<img src='/images/phone-solid.svg' class='hover' width='10px' ><div class='contactTelDiv' style='display:none' >"+ gUtil_qrTel.toHP(hp)+"<div class='contactTelQr'></div></div>")
+				if(hp!="")hp="tel:"+ gUtil_qrTel.toHP(hp)
+				let info =$(this).find("div").eq(0)
+				$(info).css({"position":"absolute","padding":"10px 10px","border":"1px solid teal","border-radius":"4px","background-color":"white"})
+				$(this).on("click",function(){
+					if(!$(info).hasClass("contactTelActive"))$(".contactTelActive").removeClass("contactTelActive").hide()
+					if($(info).is(':visible')){
+						$(info).hide()
+					}else{
+						$(this).find(".contactTelQr").css({"padding-top":"4px"}).html("").qrcode({width: 80,height: 80,text:   hp});
+						$(info).addClass("contactTelActive").show()
+					}
+				});
+			}
+		});
+
+	},
+	
+	loadJavascript:function(url, callback) {
+        var head= document.getElementsByTagName('head')[0];
+        var script= document.createElement('script');
+        script.type= 'text/javascript';
+        script.charset = "UTF-8";
+        var loaded = false;
+        script.onreadystatechange= function () {
+            if (this.readyState == 'loaded' || this.readyState == 'complete') {
+                if (loaded){return;}
+                loaded = true;
+                callback();
+            }
+        }
+        script.onload = function () {
+            callback();
+        }
+        script.src = url;
+        head.appendChild(script);
+    },
+	toHP:function(hp){
+		hp= hp.replace(/[^0-9]/g, '')
+		if(hp.length==11){
+			hp= hp.replace(/^(\d{2,3})(\d{3,4})(\d{4})$/, '$1-$2-$3');
+		}
+		return hp
+	}
+}
+function fileUp(){
+	 
+ 
+	// 등록할 파일 리스트를 formData로 데이터 입력
+	var form = $('.fileUpForm')[0];
+	 
+	var formData = new FormData(form);
+	 
+	// console.log(formData)
+	
+	$.ajax({
+		url:"/common/fileUp_json.asp",
+		data:formData,
+		type:'POST',
+		enctype:'multipart/form-data',
+		processData:false,
+		contentType:false,
+		dataType:'json',
+		cache:false,
+		success:function(data){
+			// console.log(data)
+			mode= data.mode
+
+
+			filepath= data.filepath
+			filename= data.filename
+			filesize= data.filesize
+
+
+			$(".fileUpFormFile").val("");
+			if(mode=="delFile"){
+				file_idx= data.file_idx
+				$(".files_"+ file_idx).html("")
+			}else{
+				html="<div><a href='"+filepath+"'>"+filename+"</a></div>"
+				$(".file_"+cate).append(html)
+
+			}
+			console.log(cate,html)
+
+			document.fileUpForm.mode.value=""
+			document.fileUpForm.file_idx.value=""
+		 
+			
+			
+			
+		 
+
+
+				 
+		 
+		},
+		error:function(request,status,error){
+			console.log(error);
+		}
+	});
+	 
+}
+function btnFileupActivate(){
+	$(".btn_fileRegist").show();
+	$(".btn_operationfile_del").show();
+}
+
+function test(){
+	console.log(app.courseDayFormState())
+}
+
+var app = new Vue({
+	el: '#app',
+	data: {
+		menuPage:"operation", //현페이지 설정
+		state:{
+			echoTermEdit:false,
+			courseDayFormView:false,
+			nightAble:false,   // 합숙여부
+			trCenter_showState:false, // 연수원 목록
+			sheetCount:sheetCount,
+			lf_call:lf_call, // 배정요청 여부 (운영센터 역할)
+			m_basic:m_basic,  // 기본교보재 사용여부
+			
+			lf_request_state:lf_request_state, // 배정요청 상태
+			basic_edit:true, // 편집모드
+			updateAlarm:false, // 업데이트 알림
+			sheetState:sheetState ,  //운영요청 상태 (Ing, Yes),
+			sheetType:sheetType,  //   교육유형  F, O , FO
+			updateMemoShow:false, //변경내역 view
+			 
+		},
+		itemCustom:[], //DB설정값 sheet, default
+		itemCustom_a:{},itemCustom_b:{},itemCustom_c:{},
+
+		item:{
+			a_1:2,a_2:4,a_3:8,
+			b_1:2,b_2:4,b_3:8,
+			c_1:2,c_2:4,c_3:8,
+			
+		},
+		al_trCenter:[],
+		al_trCenter_cate:[],
+		al_trCenter_area:[],
+
+		trCenter_idx:"",
+		updateAlarmMsg:"",
+		updateAlarmSendState:true,
+		doc_referrer:doc_referrer,
+		rUrl:rUrl,
+		al_works_alarm:[]
+	},
+	methods:{
+		compareUrl:function(){
+			p1= this.doc_referrer.split('?')[0];
+			p2 =p1.split('/').pop();
+
+			s= window.location.href
+			s1= s.split('?')[0];
+			s2=s1.split('/').pop();
+			if(this.rUrl=="back"){p1=p2=1}
+			return  (p1==p2)
+		},
+		 
+		changeEditMode:function(){
+			this.state.basic_edit=true;
+			cls_formData.init();
+		},
+		
+		trCenterShow:function(){
+			this.state.trCenter_showState=true
+			var select = $(".selTrCenter")
+			select.focus().addClass("highlight");
+			setTimeout(function() {
+				select.removeClass('highlight');
+			}, 1000);
+
+		},
+		initItemCustom:function(opt){
+			if(opt=="init"){
+			this.itemCustom["a"]=itemCustom_a
+			this.itemCustom["b"]=itemCustom_b
+			this.itemCustom["c"]=itemCustom_c
+			}
+			this.itemCustom_a= this.itemCustom["a"]
+			this.itemCustom_b= this.itemCustom["b"]
+			this.itemCustom_c= this.itemCustom["c"]
+		},
+		showItem:function(obj, item){
+			 
+			if( ( obj & item)== item){
+				return true;
+			}else{
+				return false;
+			}
+
+		},
+		changeItemSetup:function(cate,item, evt){
+			
+			if( (this.itemCustom[cate] & item )== item){
+				this.itemCustom[cate] = parseInt(this.itemCustom[cate]) - parseInt(item)
+			}else{
+				this.itemCustom[cate] = parseInt(this.itemCustom[cate]) + parseInt(item)
+			}
+			
+
+			this.initItemCustom()
+		  
+			// this.itemCustom= this.itemCustom
+			 
+			formData={
+				mode:"changeItemSetup",
+				project_id:project_id,
+				item_a:(this.itemCustom_a),
+				item_b:(this.itemCustom_b),
+				item_c:(this.itemCustom_c),
+				item_d:(this.itemCustom_d),
+				
+				 
+
+			}
+			console.log(formData)
+			
+			gScript.updateProcF(formData, function(data){
+				console.log(data);
+			},true);
+			 
+
+		},
+		selTrCenter:function(){
+			
+			console.log(this.selectedTrCenter)
+			$(".txttrCenter_title").val(this.selectedTrCenter.title)
+			$(".txttrCenter_name").val(this.selectedTrCenter.name)
+			$(".txttrCenter_addr").val(this.selectedTrCenter.addr)
+			$(".txttrCenter_tel").val(this.selectedTrCenter.tel)
+			$(".txttrCenter_hp").val(this.selectedTrCenter.hp)
+			// $(".txttrCenter_title").trigger("change");
+
+			formData ={
+				mode:"selectTrCenter",
+				idx:this.selectedTrCenter.idx,
+				project_id : project_id
+			}
+			//console.log(formData)
+			gScript.updateProcF(formData, function(data){
+				console.log(data);
+				 
+			},true);
+
+		},
+		countCourseDays:function(){
+			 
+			return $(".course_date").length
+		} ,
+		courseDayFormViewShow:function(){
+			this.state.courseDayFormView=true;
+			setTimeout(() => {
+				$(".courseDayFormViewClose").show();
+			}, 10*1000);
+			setTimeout(() => {
+				this.state.courseDayFormView=false;
+				$(".courseDayFormViewClose").hide();
+			}, 30*1000);
+		}
+	},
+	 computed: {
+		selectedTrCenter() {
+			return this.al_trCenter.find(item => item.idx === this.trCenter_idx);
+		},
+		lf_call_edit:function(){
+			if(!this.state.basic_edit  ){
+				return false
+			}else{
+				return true
+
+			}
+		}, 
+  	}
+})
+gScript.getForm=function(formCls){
+	 
+	var formData = $(formCls).serializeArray();
+	var json = {};
+
+	$.each(formData, function() {
+		if (json[this.name]) {
+			if (!json[this.name].push) {
+				json[this.name] = [json[this.name]];
+			}
+			json[this.name].push(this.value || '');
+		} else {
+			json[this.name] = this.value || '';
+		}
+	});
+
+	// 체크박스 및 라디오 버튼의 상태를 수동으로 처리
+	$(formCls).find('input[type="checkbox"]').each(function() {
+		if ($(this).is(':checked')) {
+			json[this.name] += $(this).val();
+		} else {
+			if (!json[this.name]) {
+				json[this.name] = '';
+			}
+		}
+	});
+	return json
+}
+
+const cls_formData={
+	key:"",
+	data_i:{},
+	data_s:{},
+	init:function(){
+		if(!this.key){
+			
+			try{
+				this.key= "formData_"+sid
+			}catch(e){
+				let nD= dayjs()
+				nD= nD.format("YYMMDD"); 
+				this.key="formData_" + nD
+			}
+			
+		}
+		initData = localStorage.getItem(this.key)
+		if(initData){
+			this.data_i = initData
+			 
+		}else{
+			this.data_i = this.chkData()
+			localStorage.setItem(this.key,this.data_i )
+		}
+
+		 
+		 
+		 
+		
+	},
+	save:function(){
+		this.data_s = this.chkData()
+		
+		let diffJson =this.compareJSON(this.data_i,this.data_s)
+		diffJson  = JSON.stringify(diffJson)
+		diffJson  = diffJson.replace('"added":{},',"")
+		diffJson  = diffJson.replace('"deleted":{},',"")
+		diffJson  = diffJson.replace('"modified":{}',"")
+	 
+	 	// console.log(diffJson)
+		return diffJson
+		// document.dm_edit.updateData.value=diffJson
+
+	},
+	chkData:function(){
+
+		var formData = {};
+
+		
+		
+
+		$('input, select, textarea').each(function() {
+			var name = $(this).attr('name');
+			var type = $(this).attr('type');
+			var value = $(this).val();
+
+			if ((type === 'checkbox' || type === 'radio')) {
+				if ($(this).is(':checked')) {
+					if (formData[name]) {
+						if (Array.isArray(formData[name])) {
+							formData[name].push(value);
+						} else {
+							formData[name] = [formData[name], value];
+						}
+					} else {
+						formData[name] = value;
+					}
+				}
+			} else {
+				if (value !== '') {
+					formData[name] = value;
+				}
+			}
+		});
+
+		console.log(formData)
+		return(formData)
+	
+	},
+	 compareJSON:function(obj1, obj2) {
+		let diffs = {
+			added: {},
+			deleted: {},
+			modified: {}
+		};
+
+		function compare(obj1, obj2, path) {
+			for (let key in obj1) {
+				if (obj1.hasOwnProperty(key)) {
+					let currentPath = path ? `${path}.${key}` : key;
+
+					if (!obj2.hasOwnProperty(key)) {
+						diffs.deleted[currentPath] = obj1[key];
+					} else if (typeof obj1[key] === 'object' && obj1[key] !== null && typeof obj2[key] === 'object' && obj2[key] !== null) {
+						compare(obj1[key], obj2[key], currentPath);
+					} else if (obj1[key] !== obj2[key]) {
+						if (obj2[key] === "" || obj2[key] === null) {
+							diffs.deleted[currentPath] = obj1[key];
+						} else {
+							diffs.modified[currentPath] = { old: obj1[key], new: obj2[key] };
+						}
+					}
+				}
+			}
+
+			for (let key in obj2) {
+				if (obj2.hasOwnProperty(key) && !obj1.hasOwnProperty(key)) {
+					let currentPath = path ? `${path}.${key}` : key;
+					diffs.added[currentPath] = obj2[key];
+				}
+			}
+		}
+
+		compare(obj1, obj2, '');
+		return diffs;
+	}
+
+}
+</script>
+
+
+
+
+	
+ 
+
+
+
+<script type="text/javascript" src="/common/js/common_init.js"></script>
+<script src="/util/log/vpageLog.js"></script>
+<iframe name="processFrame"   height=100  style="display:none"></iframe>
+
+
+ 
+</body>
+</html>
+
+

@@ -1,0 +1,1186 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CS v2 (Phase B) — 스키마 + 초기화</title>
+<style>
+  :root {
+    --bg:#f7f8fa; --panel:#ffffff; --border:#e4e7ec; --ink:#1f2328;
+    --muted:#6b7280; --accent:#2563eb; --ok:#16a34a; --fail:#dc2626;
+    --pending:#9ca3af; --skip:#a78bfa; --warn:#ea580c;
+    --danger:#b91c1c; --chip:#eef2ff;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin:0; padding:0; background:var(--bg); color:var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Malgun Gothic", sans-serif;
+    font-size: 14px; line-height: 1.5; }
+  code, pre { font-family: "SF Mono", "Consolas", "Menlo", monospace; font-size: 12.5px; }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  .cs2-hdr { background:var(--panel); border-bottom:1px solid var(--border);
+    padding: 14px 20px; display:flex; align-items:baseline; gap:14px; flex-wrap:wrap; }
+  .cs2-hdr h1 { margin:0; font-size: 18px; font-weight: 600; }
+  .cs2-hdr .cs2-version { font-size: 12px; color:var(--muted);
+    background:var(--chip); padding: 2px 8px; border-radius: 10px; }
+  .cs2-hdr .cs2-meta { font-size: 12px; color:var(--muted); margin-left:auto; }
+
+  main { max-width: 1200px; margin: 0 auto; padding: 20px; }
+  section { background: var(--panel); border:1px solid var(--border);
+    border-radius: 8px; padding: 16px; margin-bottom: 16px; }
+  section h2 { margin: 0 0 10px; font-size: 14px; font-weight: 600; color: var(--muted); }
+
+  .cs2-banner { display:flex; align-items:center; gap:12px; }
+  .cs2-banner .chip { display:inline-block; padding: 2px 10px; border-radius: 10px;
+    font-size: 12px; font-weight: 600; }
+  .chip.ok { background:#dcfce7; color:#166534; }
+  .chip.pending { background:#fef3c7; color:#92400e; }
+  .chip.fail { background:#fee2e2; color:#991b1b; }
+  .chip.skip { background:#ede9fe; color:#5b21b6; }
+  .chip.v1 { background:#e0f2fe; color:#075985; }
+  .chip.v2 { background:#dbeafe; color:#1e40af; }
+  .cs2-banner .desc { color:var(--muted); font-size: 13px; }
+
+  .cs2-counts { width: 100%; border-collapse: collapse; }
+  .cs2-counts th, .cs2-counts td { text-align:left; padding: 8px 10px;
+    border-bottom: 1px solid var(--border); vertical-align: top; font-size: 13px; }
+  .cs2-counts th { color: var(--muted); font-weight: 500; background: #fafbfc; }
+  .cs2-counts td.count { font-variant-numeric: tabular-nums; text-align:right;
+    width: 80px; font-weight: 600; }
+  .cs2-counts td.matrix code { color: var(--muted); font-size: 11.5px; }
+  .cs2-counts td.matrix .stage { display:inline-block; margin-right: 10px; }
+  .cs2-counts td.matrix .stage b { color: var(--ink); }
+  .cs2-counts tr.entity-root td:first-child { font-weight: 600; }
+
+  .cs2-actions { display:flex; gap:10px; flex-wrap:wrap; }
+  button { background: var(--panel); border: 1px solid var(--border);
+    padding: 8px 14px; border-radius: 6px; font-size: 13px; cursor: pointer;
+    font-family: inherit; color: var(--ink); }
+  button:hover { background: #f3f4f6; }
+  button.primary { background: var(--accent); color: white; border-color: var(--accent); }
+  button.primary:hover { background: #1d4ed8; }
+  button.danger { background: var(--panel); color: var(--danger); border-color: var(--danger); }
+  button.danger:hover { background: #fef2f2; }
+  button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  ul.archives { list-style: none; padding: 0; margin: 0; }
+  ul.archives li { display:flex; align-items:center; gap:10px; padding: 6px 0;
+    border-bottom: 1px solid var(--border); font-size: 12.5px; }
+  ul.archives li:last-child { border-bottom: none; }
+  ul.archives .key { font-family: "SF Mono", "Consolas", monospace; flex: 1; }
+  ul.archives .size { color: var(--muted); font-variant-numeric: tabular-nums; }
+  ul.archives button { padding: 4px 8px; font-size: 11px; }
+  ul.archives .empty { color: var(--muted); padding: 6px 0; }
+
+  .cs2-console { background: #fafbfc; font-size: 12.5px; color: var(--muted); }
+  .cs2-console code { background: var(--chip); padding: 1px 5px; border-radius: 3px; color: var(--ink); }
+
+  .toast { position: fixed; bottom: 24px; right: 24px; background: var(--ink);
+    color: white; padding: 10px 14px; border-radius: 6px; font-size: 13px;
+    max-width: 400px; opacity: 0; transform: translateY(8px);
+    transition: opacity .2s, transform .2s; pointer-events: none; }
+  .toast.show { opacity: 1; transform: translateY(0); }
+  .toast.error { background: var(--fail); }
+</style>
+</head>
+<body>
+<header class="cs2-hdr">
+  <h1>CS v2 <span style="color:var(--muted);font-weight:400;">— Phase B</span></h1>
+  <span class="cs2-version">v<span id="cs2-ver">?</span></span>
+  <span class="cs2-meta" id="cs2-meta-line"></span>
+</header>
+
+<main>
+  <section id="cs2-boot-state" class="cs2-banner"></section>
+
+  <section>
+    <h2>엔터티 스토어 (13)</h2>
+    <table class="cs2-counts">
+      <thead>
+        <tr><th>엔터티</th><th class="count">레코드</th><th>상태 매트릭스</th></tr>
+      </thead>
+      <tbody id="cs2-counts-body"></tbody>
+    </table>
+  </section>
+
+  <section>
+    <h2>초기화</h2>
+    <div class="cs2-actions">
+      <button id="btn-init">빈 스키마 초기화</button>
+      <button id="btn-backup-reset" class="primary">v1 백업 + 재설정</button>
+      <button id="btn-force-reset" class="danger">전체 재설정 (force)</button>
+      <button id="btn-reload">새로고침</button>
+    </div>
+  </section>
+
+  <section>
+    <h2>레거시 아카이브</h2>
+    <ul class="archives" id="cs2-archives-list"></ul>
+  </section>
+
+  <section class="cs2-console">
+    콘솔에서 <code>window.CS2</code> 사용 가능.
+    예) <code>CS2.stores.courses.all()</code> · <code>CS2.migration.backupAndReset()</code> · <code>CS2.countAll()</code>
+  </section>
+</main>
+
+<div class="toast" id="cs2-toast"></div>
+
+<script>
+// ==================== S0. CONSTANTS ====================
+const CS2_VERSION = '2.0.0-phaseB';
+const CS2_SCHEMA_VERSION = 1;
+
+const BRIS_BASE = 'https://bris.exc.co.kr';
+const PROXY_PATH = '/default.asp?bris_proxy='; // Phase C 예약, 이번 세션 미사용
+
+const STAGES = Object.freeze(['list', 'project', 'echoview', 'echoOp', 'bizList', 'edu', 'dm', 'place']);
+const STAGE_STATUS = Object.freeze(['pending', 'ok', 'fail', 'skip']);
+
+const STORE_KEYS = Object.freeze({
+  places:         'cs2_places',
+  customers:      'cs2_customers',
+  staff:          'cs2_staff',
+  instructors:    'cs2_instructors',
+  facilitators:   'cs2_facilitators',
+  projects:       'cs2_projects',
+  courses:        'cs2_courses',
+  sessions:       'cs2_sessions',
+  modules:        'cs2_modules',
+  echo_ops:       'cs2_echo_ops',
+  course_people:  'cs2_course_people',
+  campaigns:      'cs2_campaigns',
+  dispatch:       'cs2_dispatch',
+  meta:           'cs2_meta',
+});
+
+const V1_STORE_KEYS = Object.freeze([
+  'cs_courses', 'cs_schedules', 'cs_operations',
+  'cs_managers', 'cs_history', 'cs_settings',
+]);
+
+const STATUS_FIELDS_BY_ENTITY = Object.freeze({
+  places:    ['place'],
+  customers: ['dm'],
+  projects:  ['project', 'echoview', 'echoOp', 'bizList'],
+  courses:   ['list', 'edu'],
+});
+
+const ENTITY_PK = Object.freeze({
+  places:         'placeId',
+  customers:      'customerId',
+  staff:          'staffId',
+  instructors:    'instructorId',
+  facilitators:   'facilitatorId',
+  projects:       'projectId',
+  courses:        'businessId',
+  sessions:       'sessionId',
+  modules:        'moduleId',
+  echo_ops:       'projectId',
+  course_people:  'id',
+  campaigns:      'yearMonth',
+  dispatch:       'id',
+});
+
+// ==================== S1. NORMALIZERS ====================
+function genId() {
+  return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+}
+
+// djb2 변형 해시 (임시 placeId 용)
+function hashStr(s) {
+  s = String(s ?? '');
+  let h = 5381;
+  for (let i = 0; i < s.length; i++) {
+    h = ((h << 5) + h + s.charCodeAt(i)) | 0;
+  }
+  return (h >>> 0).toString(36);
+}
+
+function normalizeText(s) {
+  if (s == null) return '';
+  return String(s)
+    .replace(/\u00A0/g, ' ')       // NBSP
+    .replace(/\u3000/g, ' ')       // 전각 공백
+    .replace(/[\u200B-\u200D\uFEFF]/g, '') // zero-width
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function normalizePhone(raw) {
+  const s = normalizeText(raw);
+  if (!s) return '';
+  const digits = s.replace(/[^\d]/g, '');
+  if (!digits) return '';
+  // 휴대폰 010/011/016/017/018/019
+  if (/^01[016789]/.test(digits)) {
+    if (digits.length === 11) return digits.replace(/(\d{3})(\d{4})(\d{4})/, '$1-$2-$3');
+    if (digits.length === 10) return digits.replace(/(\d{3})(\d{3})(\d{4})/, '$1-$2-$3');
+  }
+  // 서울 02
+  if (digits.startsWith('02')) {
+    if (digits.length === 10) return digits.replace(/(\d{2})(\d{4})(\d{4})/, '$1-$2-$3');
+    if (digits.length === 9)  return digits.replace(/(\d{2})(\d{3})(\d{4})/, '$1-$2-$3');
+  }
+  // 일반 지역번호 (3자리)
+  if (/^0\d{2}/.test(digits)) {
+    if (digits.length === 11) return digits.replace(/(\d{3})(\d{4})(\d{4})/, '$1-$2-$3');
+    if (digits.length === 10) return digits.replace(/(\d{3})(\d{3})(\d{4})/, '$1-$2-$3');
+  }
+  // 대표번호 등 — 원문 유지
+  return s;
+}
+
+function normalizeDate(s) {
+  const t = normalizeText(s);
+  if (!t) return '';
+  // YYYY-MM-DD (이미 정규)
+  let m = t.match(/^(\d{4})[-.\/](\d{1,2})[-.\/](\d{1,2})$/);
+  if (m) return `${m[1]}-${String(m[2]).padStart(2,'0')}-${String(m[3]).padStart(2,'0')}`;
+  // YYYYMMDD
+  m = t.match(/^(\d{4})(\d{2})(\d{2})$/);
+  if (m) return `${m[1]}-${m[2]}-${m[3]}`;
+  // YYYY-MM-DD HH:mm[:ss] 또는 변종 → 앞 10자 정규화
+  m = t.match(/^(\d{4})[-.\/](\d{1,2})[-.\/](\d{1,2})\s/);
+  if (m) return `${m[1]}-${String(m[2]).padStart(2,'0')}-${String(m[3]).padStart(2,'0')}`;
+  return t;
+}
+
+// "2026/04/13→04/14", "2026.04.13~04.14", "2026-04-13 ~ 2026-04-14"
+function parseBrisDate(s) {
+  const t = normalizeText(s);
+  if (!t) return { startDate: '', endDate: '' };
+  // 화살표/물결 분리
+  const parts = t.split(/[→~∼]/).map(p => p.trim());
+  if (parts.length === 1) {
+    const d = normalizeDate(parts[0]);
+    return { startDate: d, endDate: d };
+  }
+  const start = normalizeDate(parts[0]);
+  let end = parts[1];
+  // 끝쪽이 MM-DD 만 있으면 start 의 YYYY 차용
+  const mdOnly = end.match(/^(\d{1,2})[-.\/](\d{1,2})$/);
+  if (mdOnly && start) {
+    const yyyy = start.slice(0, 4);
+    end = `${yyyy}-${String(mdOnly[1]).padStart(2,'0')}-${String(mdOnly[2]).padStart(2,'0')}`;
+  } else {
+    end = normalizeDate(end);
+  }
+  return { startDate: start, endDate: end };
+}
+
+function normalizeTeamName(raw) {
+  const s = normalizeText(raw);
+  if (!s) return '';
+  // "201205002 - 변화디자인팀" → "변화디자인팀"
+  const m = s.match(/^\d+\s*-\s*(.+)$/);
+  return m ? m[1].trim() : s;
+}
+
+function htmlUnescape(s) {
+  if (s == null) return '';
+  const el = new DOMParser().parseFromString(String(s), 'text/html');
+  return el.documentElement.textContent || '';
+}
+
+// "2026-04-01 오전 10:00:36" → ISO "2026-04-01T10:00:36"
+function oranoonToISO(s) {
+  const t = normalizeText(s);
+  if (!t) return '';
+  const m = t.match(/^(\d{4})[-.\/](\d{1,2})[-.\/](\d{1,2})\s+(오전|오후)\s+(\d{1,2}):(\d{2})(?::(\d{2}))?$/);
+  if (!m) return normalizeDate(t);
+  const [, Y, M, D, ampm, hhRaw, mm, ss] = m;
+  let hh = parseInt(hhRaw, 10);
+  if (ampm === '오후' && hh < 12) hh += 12;
+  if (ampm === '오전' && hh === 12) hh = 0;
+  const date = `${Y}-${String(M).padStart(2,'0')}-${String(D).padStart(2,'0')}`;
+  const time = `${String(hh).padStart(2,'0')}:${mm}${ss ? ':' + ss : ':00'}`;
+  return `${date}T${time}`;
+}
+
+// "5,500,000원" / "220,000원/일" / "1,000"
+function parseMoney(s) {
+  const t = normalizeText(s);
+  if (!t) return { display: '', numeric: null };
+  const nm = t.match(/([\d,]+)/);
+  const numeric = nm ? parseInt(nm[1].replace(/,/g, ''), 10) : null;
+  return { display: t, numeric: Number.isFinite(numeric) ? numeric : null };
+}
+
+// ==================== S2. STORAGE LAYER ====================
+function lsGet(key, fallback) {
+  try {
+    const raw = localStorage.getItem(key);
+    if (raw === null) return fallback === undefined ? [] : fallback;
+    return JSON.parse(raw);
+  } catch (e) {
+    console.warn(`[lsGet] parse failed for "${key}":`, e.message);
+    return fallback === undefined ? [] : fallback;
+  }
+}
+
+function lsSet(key, value) {
+  const payload = JSON.stringify(value);
+  try {
+    localStorage.setItem(key, payload);
+    return true;
+  } catch (e) {
+    if (e && (e.name === 'QuotaExceededError' || e.code === 22)) {
+      // dispatch 를 뒤에서부터 트림 후 재시도
+      try {
+        const disp = lsGet(STORE_KEYS.dispatch, []);
+        if (Array.isArray(disp) && disp.length > 50) {
+          const trimmed = disp.slice(-50);
+          localStorage.setItem(STORE_KEYS.dispatch, JSON.stringify(trimmed));
+          console.warn(`[lsSet] quota exceeded; trimmed dispatch to 50 records`);
+          localStorage.setItem(key, payload);
+          return true;
+        }
+      } catch (e2) {
+        console.error(`[lsSet] retry failed for "${key}":`, e2.message);
+        toast('저장소 용량 초과 — 콘솔 확인', true);
+        throw e2;
+      }
+    }
+    console.error(`[lsSet] failed for "${key}":`, e.message);
+    toast(`저장 실패: ${key}`, true);
+    throw e;
+  }
+}
+
+function lsRemove(key) {
+  try { localStorage.removeItem(key); } catch (e) { /* noop */ }
+}
+
+function lsKeys(prefix) {
+  const out = [];
+  for (let i = 0; i < localStorage.length; i++) {
+    const k = localStorage.key(i);
+    if (k && (prefix === undefined || k.startsWith(prefix))) out.push(k);
+  }
+  return out;
+}
+
+function readMeta() {
+  const raw = localStorage.getItem(STORE_KEYS.meta);
+  if (!raw) return {};
+  try { return JSON.parse(raw) || {}; } catch { return {}; }
+}
+
+function writeMeta(patch) {
+  const cur = readMeta();
+  const next = { ...cur, ...patch, updatedAt: new Date().toISOString() };
+  localStorage.setItem(STORE_KEYS.meta, JSON.stringify(next));
+  return next;
+}
+
+function createStore(storageKey) {
+  return {
+    load() { return lsGet(storageKey, []); },
+    save(list) { lsSet(storageKey, Array.isArray(list) ? list : []); return list; },
+    all() { return this.load(); },
+    get(pkField, id) {
+      return this.load().find(r => r && r[pkField] === id) || null;
+    },
+    upsert(pkField, record) {
+      if (!record || record[pkField] == null) {
+        console.warn(`[${storageKey}.upsert] missing pk "${pkField}"`, record);
+        return null;
+      }
+      const list = this.load();
+      const idx = list.findIndex(r => r && r[pkField] === record[pkField]);
+      if (idx >= 0) list[idx] = { ...list[idx], ...record };
+      else list.push(record);
+      this.save(list);
+      return record;
+    },
+    remove(pkField, id) {
+      const list = this.load();
+      const next = list.filter(r => !r || r[pkField] !== id);
+      this.save(next);
+      return list.length - next.length;
+    },
+    clear() { lsSet(storageKey, []); },
+  };
+}
+
+// ==================== S3. STATUS HELPERS ====================
+function createStatus(entityKind) {
+  const stages = STATUS_FIELDS_BY_ENTITY[entityKind];
+  if (!stages) return null;
+  const _status = {};
+  for (const s of stages) _status[s] = 'pending';
+  return { _status, _lastFetched: {}, _errors: {} };
+}
+
+function markStage(record, entityKind, stage, status, extra = {}) {
+  const allowed = STATUS_FIELDS_BY_ENTITY[entityKind];
+  if (!allowed || !allowed.includes(stage)) {
+    console.warn(`[markStage] invalid stage "${stage}" for "${entityKind}"`);
+    return record;
+  }
+  if (!STAGE_STATUS.includes(status)) {
+    console.warn(`[markStage] invalid status "${status}"`);
+    return record;
+  }
+  record._status = { ...(record._status || {}), [stage]: status };
+  record._lastFetched = { ...(record._lastFetched || {}), [stage]: new Date().toISOString() };
+  if (status === 'fail') {
+    record._errors = { ...(record._errors || {}), [stage]: String(extra.error || 'unknown') };
+  } else if (record._errors && Object.prototype.hasOwnProperty.call(record._errors, stage)) {
+    const { [stage]: _drop, ...rest } = record._errors;
+    record._errors = rest;
+  }
+  return record;
+}
+
+const markOk   = (r, k, stage)       => markStage(r, k, stage, 'ok');
+const markFail = (r, k, stage, err)  => markStage(r, k, stage, 'fail', { error: err });
+const markSkip = (r, k, stage)       => markStage(r, k, stage, 'skip');
+
+function isStageDone(record, stage) {
+  return !!(record && record._status && record._status[stage] === 'ok');
+}
+
+function getStatusMatrix(entityKind) {
+  const stages = STATUS_FIELDS_BY_ENTITY[entityKind];
+  if (!stages) return null;
+  const store = stores[entityKind];
+  const list = store ? store.all() : [];
+  const matrix = {};
+  for (const s of stages) {
+    matrix[s] = { ok: 0, fail: 0, pending: 0, skip: 0 };
+  }
+  for (const rec of list) {
+    if (!rec || !rec._status) continue;
+    for (const s of stages) {
+      const v = rec._status[s] || 'pending';
+      if (matrix[s][v] !== undefined) matrix[s][v] += 1;
+    }
+  }
+  return matrix;
+}
+
+// ==================== S4. ENTITY FACTORIES ====================
+function createPlace(opts = {}) {
+  const {
+    placeId, company = '', address = '', ceo = '', mainPhone = '',
+    grade = '', relatedStaffCount = null,
+  } = opts;
+  if (!placeId) console.warn('[createPlace] missing placeId');
+  if (!company) console.warn('[createPlace] missing company');
+  return Object.assign({
+    placeId, company, address, ceo, mainPhone, grade, relatedStaffCount,
+  }, createStatus('places'));
+}
+
+function createCustomer(opts = {}) {
+  const {
+    customerId, placeId = null, company = '', name = '', position = '',
+    department = '', phone = '', mobile = '', email = '', fax = '',
+    area = null, customerLevel = '', favorability = '', keyMan = '',
+    temperament = '', outOfControl = '', dmSubscription = '',
+    inflowPath = '', personalNote = '', registrant = '', registDate = '',
+    modifier = '', modifyDate = '', educationSystem = '',
+    expertExperience = '', externalEducation = '', currentDuty = '',
+    staffStatus = '', seminars = [],
+  } = opts;
+  if (!customerId) console.warn('[createCustomer] missing customerId');
+  return Object.assign({
+    customerId, placeId, company, name, position, department,
+    phone, mobile, email, fax, area, customerLevel, favorability, keyMan,
+    temperament, outOfControl, dmSubscription, inflowPath, personalNote,
+    registrant, registDate, modifier, modifyDate, educationSystem,
+    expertExperience, externalEducation, currentDuty, staffStatus,
+    seminars: Array.isArray(seminars) ? seminars : [],
+  }, createStatus('customers'));
+}
+
+function createStaff(opts = {}) {
+  const {
+    staffId = genId(), name = '', team = '', teamCode = '',
+    role, phone = '', imNo = '',
+  } = opts;
+  if (!name) console.warn('[createStaff] missing name');
+  if (!role) console.warn('[createStaff] missing role (AM|BM|IM|LF)');
+  return { staffId, name, team, teamCode, role, phone, imNo };
+}
+
+function createInstructor(opts = {}) {
+  const { instructorId = genId(), name = '', team = '' } = opts;
+  if (!name) console.warn('[createInstructor] missing name');
+  return { instructorId, name, team };
+}
+
+function createFacilitator(opts = {}) {
+  const {
+    facilitatorId = genId(), name = '', pay = null,
+    level = null, position = '',
+  } = opts;
+  if (!name) console.warn('[createFacilitator] missing name');
+  return { facilitatorId, name, pay, level, position };
+}
+
+function createProject(opts = {}) {
+  const {
+    projectId, orderCode = '', projectName = '', placeId = null,
+    amStaffId = null, bmStaffId = null, teamPerformer = '',
+    contractAmount = '', contractDate = '', commissionRate = '',
+    revenueAllocation = '', projectClosed = '미적용', echoActive = '',
+    eId = '', remarkNotes = '', instructorEvaluation = '',
+    registrant = '', registDate = '',
+  } = opts;
+  if (!projectId) console.warn('[createProject] missing projectId');
+  return Object.assign({
+    projectId, orderCode, projectName, placeId,
+    amStaffId, bmStaffId, teamPerformer,
+    contractAmount, contractDate, commissionRate, revenueAllocation,
+    projectClosed, echoActive, eId, remarkNotes, instructorEvaluation,
+    registrant, registDate,
+  }, createStatus('projects'));
+}
+
+function createCourse(opts = {}) {
+  const {
+    businessId, projectId = null, courseName = '', programName = '',
+    type = '', eduDelivery = '', participants = null, hours = null,
+    lectureRate = '', mainRevenue = '', trainingCenter = '',
+    trainingPhone = '', sessionNumber = '',
+    internalStaffId = null, customerIdInternal = null, am = '',
+  } = opts;
+  if (!businessId) console.warn('[createCourse] missing businessId');
+  return Object.assign({
+    businessId, projectId, courseName, programName, type, eduDelivery,
+    participants, hours, lectureRate, mainRevenue,
+    trainingCenter, trainingPhone, sessionNumber,
+    internalStaffId, customerIdInternal, am,
+  }, createStatus('courses'));
+}
+
+function createSession(opts = {}) {
+  const {
+    sessionId = genId(), projectId, businessId = null, sessionIndex,
+    startDate = '', endDate = '', days = null, nights = null,
+    day3 = false, overnight = false, participants = null,
+    nonFaceToFace = false, revenue = null,
+  } = opts;
+  if (!projectId) console.warn('[createSession] missing projectId');
+  if (sessionIndex == null) console.warn('[createSession] missing sessionIndex');
+  return {
+    sessionId, projectId, businessId, sessionIndex,
+    startDate, endDate, days, nights, day3, overnight,
+    participants, nonFaceToFace, revenue,
+  };
+}
+
+function createModule(opts = {}) {
+  const {
+    moduleId = genId(), businessId, instructorId = null,
+    moduleName = '', startAt = '', endAt = '',
+    hours = null, cost = null,
+  } = opts;
+  if (!businessId) console.warn('[createModule] missing businessId');
+  return { moduleId, businessId, instructorId, moduleName, startAt, endAt, hours, cost };
+}
+
+function createEchoOp(opts = {}) {
+  const {
+    projectId, eId = '', sid = '', sheetCount = null,
+    sheetState = '', sheetType = '', lfCall = '',
+    lfRequestState = '', mBasic = '', imStaffId = null,
+    lfWanted = '', lfRate = '', lfPerson = null,
+    lfMajor = null, lfStandard = null, lfMinor = null,
+    venue = '', venueAddress = '', educationType = '',
+    totalParticipants = null, personM = null, personF = null,
+    surveyUsed = '', surveyStatus = '', reportType = '',
+    reportNote = '', echoStatus = '', clientContactId = null,
+    clientContactPhone = '', clientContactMobile = '',
+  } = opts;
+  if (!projectId) console.warn('[createEchoOp] missing projectId');
+  return {
+    projectId, eId, sid, sheetCount, sheetState, sheetType,
+    lfCall, lfRequestState, mBasic, imStaffId,
+    lfWanted, lfRate, lfPerson, lfMajor, lfStandard, lfMinor,
+    venue, venueAddress, educationType, totalParticipants,
+    personM, personF, surveyUsed, surveyStatus,
+    reportType, reportNote, echoStatus,
+    clientContactId, clientContactPhone, clientContactMobile,
+  };
+}
+
+function createCoursePerson(opts = {}) {
+  const { id = genId(), businessId, personId, kind, role = '' } = opts;
+  if (!businessId) console.warn('[createCoursePerson] missing businessId');
+  if (!personId) console.warn('[createCoursePerson] missing personId');
+  if (kind !== 'instructor' && kind !== 'facilitator') {
+    console.warn(`[createCoursePerson] invalid kind "${kind}" (expect instructor|facilitator)`);
+  }
+  return { id, businessId, personId, kind, role };
+}
+
+function createCampaign(opts = {}) {
+  const {
+    yearMonth, status = 'draft', snapshotAt = null,
+    targetCount = 0, sentCount = 0, note = '', snapshot = [],
+  } = opts;
+  if (!yearMonth) console.warn('[createCampaign] missing yearMonth (YYYY-MM)');
+  return {
+    yearMonth, status, snapshotAt, targetCount, sentCount, note,
+    snapshot: Array.isArray(snapshot) ? snapshot : [],
+  };
+}
+
+function createDispatch(opts = {}) {
+  const {
+    id = genId(), campaignId = null, sentDate, round = 1,
+    method = '', customerId, businessId = null, sessionId = null,
+    status = '', note = '',
+  } = opts;
+  if (!sentDate) console.warn('[createDispatch] missing sentDate');
+  if (!customerId) console.warn('[createDispatch] missing customerId');
+  return { id, campaignId, sentDate, round, method, customerId, businessId, sessionId, status, note };
+}
+
+// ==================== S5. ID REGISTRY ====================
+const idRegistry = {
+  // sources: [{ from:'echoOp', value:'45812' }, ...]
+  ensureCustomerId(sources, hints = {}) {
+    if (!Array.isArray(sources)) return null;
+    const chosen = sources.find(s => s && s.value)?.value ?? null;
+    if (!chosen) {
+      console.warn('[ensureCustomerId] no id from any source', { sources, hints });
+      return null;
+    }
+    const distinct = [...new Set(sources.map(s => s?.value).filter(Boolean))];
+    if (distinct.length > 1) {
+      console.warn('[ensureCustomerId] conflicting ids', distinct, '→ chose', chosen);
+    }
+    return chosen;
+  },
+
+  ensureProjectId(sources) {
+    if (!Array.isArray(sources)) return null;
+    const chosen = sources.find(s => s && s.value)?.value ?? null;
+    if (!chosen) {
+      console.warn('[ensureProjectId] no id from any source', { sources });
+      return null;
+    }
+    const distinct = [...new Set(sources.map(s => s?.value).filter(Boolean))];
+    if (distinct.length > 1) {
+      console.warn('[ensureProjectId] conflicting ids', distinct, '→ chose', chosen);
+    }
+    return chosen;
+  },
+
+  ensurePlaceId({ fromDmLink = null, company = '' } = {}, placesStore) {
+    if (fromDmLink) return fromDmLink;
+    if (company && placesStore) {
+      const existing = placesStore.all().find(p => p && p.company === company);
+      if (existing) return existing.placeId;
+    }
+    if (!company) return null;
+    return `tmp_${hashStr(company)}`;
+  },
+
+  // 임시 placeId → 실제 BRIS ID 일괄 교체
+  promotePlaceId(tmpId, realId) {
+    if (!tmpId || !realId || tmpId === realId) return { updated: 0 };
+    let updated = 0;
+    // places
+    const plList = stores.places.all();
+    for (const p of plList) {
+      if (p && p.placeId === tmpId) { p.placeId = realId; updated++; }
+    }
+    stores.places.save(plList);
+    // customers
+    const cList = stores.customers.all();
+    for (const c of cList) {
+      if (c && c.placeId === tmpId) { c.placeId = realId; updated++; }
+    }
+    stores.customers.save(cList);
+    // projects
+    const pjList = stores.projects.all();
+    for (const p of pjList) {
+      if (p && p.placeId === tmpId) { p.placeId = realId; updated++; }
+    }
+    stores.projects.save(pjList);
+    return { updated };
+  },
+
+  // orderCode ↔ projectId 일관성 확인. 불일치 시 _errors.project 기록.
+  reconcileOrderCode(projectId, orderCode, projectsStore) {
+    if (!projectId || !orderCode || !projectsStore) return { matched: false };
+    const list = projectsStore.all();
+    const target = list.find(p => p && p.projectId === projectId);
+    if (!target) return { matched: false };
+    if (target.orderCode && target.orderCode !== orderCode) {
+      target._errors = {
+        ...(target._errors || {}),
+        project: `orderCode mismatch: ${target.orderCode} vs ${orderCode}`,
+      };
+      projectsStore.save(list);
+      return { matched: false, reason: 'mismatch' };
+    }
+    if (!target.orderCode) {
+      target.orderCode = orderCode;
+      projectsStore.save(list);
+    }
+    return { matched: true };
+  },
+};
+
+// ==================== S6. FETCH QUEUE (골격) ====================
+class FetchQueue {
+  constructor({ delayMs = 300, maxRetries = 2 } = {}) {
+    this.seen = new Map();      // kind → Set(id)
+    this.pending = [];          // [{ kind, id, stage, opts }]
+    this.inflight = new Map();  // `${kind}:${id}:${stage}` → Promise
+    this.delayMs = delayMs;
+    this.maxRetries = maxRetries;
+    this.stats = { hits: 0, dedupedHits: 0, fails: 0 };
+  }
+
+  _bucket(kind) {
+    if (!this.seen.has(kind)) this.seen.set(kind, new Set());
+    return this.seen.get(kind);
+  }
+
+  has(kind, id) {
+    return this._bucket(kind).has(String(id));
+  }
+
+  mark(kind, id) {
+    this._bucket(kind).add(String(id));
+  }
+
+  enqueue(kind, id, stage, opts = {}) {
+    if (this.has(kind, id)) {
+      this.stats.dedupedHits += 1;
+      return false;
+    }
+    this.pending.push({ kind, id: String(id), stage, opts });
+    return true;
+  }
+
+  async run(performFetch) {
+    // Phase B: 실행 금지. Phase C 에서 performFetch 주입 후 활성화.
+    throw new Error('FetchQueue.run() not wired until Phase C');
+  }
+
+  snapshot() {
+    const seenCounts = {};
+    for (const [k, s] of this.seen) seenCounts[k] = s.size;
+    return {
+      seen: seenCounts,
+      pending: this.pending.length,
+      inflight: this.inflight.size,
+      stats: { ...this.stats },
+    };
+  }
+
+  reset() {
+    this.seen.clear();
+    this.pending.length = 0;
+    this.inflight.clear();
+    this.stats = { hits: 0, dedupedHits: 0, fails: 0 };
+  }
+}
+
+const fetchQueue = new FetchQueue();
+
+// TODO(Phase C): fetchViaProxy(path, qs) — /default.asp?bris_proxy= 래퍼
+// TODO(Phase C): applyExtractedData(kind, rawExtract) — stores + idRegistry + markStage 오케스트레이터
+
+// ==================== S7. MIGRATION ====================
+const migration = {
+  hasV1Data() {
+    return V1_STORE_KEYS.some(k => localStorage.getItem(k) !== null);
+  },
+
+  isInitialized() {
+    const meta = readMeta();
+    return !!meta.initializedAt;
+  },
+
+  _stamp() {
+    const d = new Date();
+    const pad = n => String(n).padStart(2, '0');
+    return `${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}_` +
+           `${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}`;
+  },
+
+  archiveV1() {
+    const archived = [];
+    const ts = this._stamp();
+    for (const key of V1_STORE_KEYS) {
+      const raw = localStorage.getItem(key);
+      if (raw === null) continue;
+      const archiveKey = `cs_legacy_${ts}_${key}`;
+      localStorage.setItem(archiveKey, raw);
+      archived.push(archiveKey);
+    }
+    return { archived, timestamp: ts };
+  },
+
+  purgeV1() {
+    const removed = [];
+    for (const key of V1_STORE_KEYS) {
+      if (localStorage.getItem(key) !== null) {
+        localStorage.removeItem(key);
+        removed.push(key);
+      }
+    }
+    return { removed };
+  },
+
+  seedEmptySchema() {
+    for (const [kind, key] of Object.entries(STORE_KEYS)) {
+      if (kind === 'meta') continue;
+      if (localStorage.getItem(key) === null) {
+        localStorage.setItem(key, '[]');
+      }
+    }
+    // meta 는 객체
+    if (!readMeta().schemaVersion) {
+      writeMeta({
+        schemaVersion: CS2_SCHEMA_VERSION,
+        v2Version: CS2_VERSION,
+        initializedAt: new Date().toISOString(),
+      });
+    }
+  },
+
+  backupAndReset(opts = {}) {
+    const { v1 = 'archive', force = false } = opts;
+    const actions = [];
+
+    if (this.isInitialized() && !force) {
+      actions.push('skip (already initialized; pass force:true to overwrite)');
+      return { actions };
+    }
+
+    const ts = this._stamp();
+
+    // 1. v1 아카이브
+    if (this.hasV1Data() && v1 !== 'keep') {
+      for (const key of V1_STORE_KEYS) {
+        const raw = localStorage.getItem(key);
+        if (raw === null) continue;
+        const archiveKey = `cs_legacy_${ts}_${key}`;
+        localStorage.setItem(archiveKey, raw);
+        actions.push(`archived ${key} → ${archiveKey}`);
+      }
+      if (v1 === 'purge') {
+        for (const key of V1_STORE_KEYS) {
+          if (localStorage.getItem(key) !== null) {
+            localStorage.removeItem(key);
+            actions.push(`purged ${key}`);
+          }
+        }
+      }
+    }
+
+    // 2. 기존 v2 아카이브 (force 때만)
+    if (force && this.isInitialized()) {
+      for (const [kind, key] of Object.entries(STORE_KEYS)) {
+        const raw = localStorage.getItem(key);
+        if (raw === null) continue;
+        const rotKey = `cs_legacy_v2_${ts}_${key}`;
+        localStorage.setItem(rotKey, raw);
+        localStorage.removeItem(key);
+        actions.push(`rotated ${key} → ${rotKey}`);
+      }
+    }
+
+    // 3. 빈 스키마 시드 + meta 기록
+    const prev = readMeta().initializedAt || null;
+    for (const [kind, key] of Object.entries(STORE_KEYS)) {
+      if (kind === 'meta') continue;
+      localStorage.setItem(key, '[]');
+    }
+    writeMeta({
+      schemaVersion: CS2_SCHEMA_VERSION,
+      v2Version: CS2_VERSION,
+      initializedAt: new Date().toISOString(),
+      previousResetAt: prev,
+    });
+    actions.push('seeded empty v2 schema');
+
+    return { actions };
+  },
+
+  listArchives() {
+    const keys = lsKeys('cs_legacy_');
+    return keys.map(k => {
+      const raw = localStorage.getItem(k) || '';
+      // 타임스탬프 복원: cs_legacy_YYYYMMDD_HHmmss_<origKey> or cs_legacy_v2_YYYYMMDD_...
+      const m = k.match(/^cs_legacy_(?:v2_)?(\d{8})_(\d{6})_/);
+      let createdAt = null;
+      if (m) {
+        const d = m[1], t = m[2];
+        createdAt = `${d.slice(0,4)}-${d.slice(4,6)}-${d.slice(6,8)}T` +
+                    `${t.slice(0,2)}:${t.slice(2,4)}:${t.slice(4,6)}`;
+      }
+      return { key: k, size: raw.length, createdAt };
+    }).sort((a, b) => (a.createdAt || '').localeCompare(b.createdAt || ''));
+  },
+
+  // 특정 타임스탬프 prefix (예: 'cs_legacy_20260413_143012') 의 아카이브를 원본 키로 복원
+  restoreArchive(prefix) {
+    const restored = [];
+    if (!prefix) return { restored };
+    const keys = lsKeys(prefix);
+    for (const k of keys) {
+      // prefix_<origKey>
+      const origKey = k.slice(prefix.length + 1);
+      if (!origKey) continue;
+      const raw = localStorage.getItem(k);
+      if (raw === null) continue;
+      localStorage.setItem(origKey, raw);
+      restored.push(origKey);
+    }
+    return { restored };
+  },
+};
+
+// ==================== S8. STORES SINGLETON ====================
+const stores = {
+  places:        createStore(STORE_KEYS.places),
+  customers:     createStore(STORE_KEYS.customers),
+  staff:         createStore(STORE_KEYS.staff),
+  instructors:   createStore(STORE_KEYS.instructors),
+  facilitators:  createStore(STORE_KEYS.facilitators),
+  projects:      createStore(STORE_KEYS.projects),
+  courses:       createStore(STORE_KEYS.courses),
+  sessions:      createStore(STORE_KEYS.sessions),
+  modules:       createStore(STORE_KEYS.modules),
+  echo_ops:      createStore(STORE_KEYS.echo_ops),
+  course_people: createStore(STORE_KEYS.course_people),
+  campaigns:     createStore(STORE_KEYS.campaigns),
+  dispatch:      createStore(STORE_KEYS.dispatch),
+};
+
+function loadAll() {
+  const out = {};
+  for (const k of Object.keys(stores)) out[k] = stores[k].all();
+  return out;
+}
+
+function countAll() {
+  const out = {};
+  for (const k of Object.keys(stores)) out[k] = stores[k].all().length;
+  return out;
+}
+
+// ==================== S9. BOOT UI ====================
+function toast(msg, isError = false) {
+  const el = document.getElementById('cs2-toast');
+  if (!el) return;
+  el.textContent = msg;
+  el.className = 'toast show' + (isError ? ' error' : '');
+  clearTimeout(toast._t);
+  toast._t = setTimeout(() => { el.className = 'toast'; }, 2400);
+}
+
+function renderBootState() {
+  const el = document.getElementById('cs2-boot-state');
+  if (!el) return;
+  const hasV1 = migration.hasV1Data();
+  const hasV2 = migration.isInitialized();
+  let html = '';
+  if (hasV2 && hasV1) {
+    html = `<span class="chip ok">v2 초기화됨</span>
+      <span class="chip v1">v1 데이터 존재</span>
+      <span class="desc">v2는 사용 가능. v1 원본도 유지 중 (같은 브라우저에서 v1 병행 가능).</span>`;
+  } else if (hasV2 && !hasV1) {
+    html = `<span class="chip ok">v2 초기화됨</span>
+      <span class="desc">v1 데이터 없음. v2 전용 상태.</span>`;
+  } else if (!hasV2 && hasV1) {
+    const v1Keys = V1_STORE_KEYS.filter(k => localStorage.getItem(k) !== null);
+    html = `<span class="chip v1">v1 감지 (${v1Keys.length}개 키)</span>
+      <span class="chip pending">v2 초기화 안됨</span>
+      <span class="desc">오른쪽 <b>[v1 백업 + 재설정]</b> 을 눌러 v1 을 아카이브하고 v2 빈 스키마로 시작.</span>`;
+  } else {
+    html = `<span class="chip pending">v2 초기화 안됨</span>
+      <span class="desc">v1 데이터 없음. <b>[빈 스키마 초기화]</b> 로 v2 를 시작.</span>`;
+  }
+  el.innerHTML = html;
+
+  const meta = readMeta();
+  const verEl = document.getElementById('cs2-ver');
+  const metaEl = document.getElementById('cs2-meta-line');
+  if (verEl) verEl.textContent = CS2_VERSION;
+  if (metaEl) {
+    metaEl.textContent = meta.initializedAt
+      ? `schema v${meta.schemaVersion ?? '?'} · initialized ${meta.initializedAt.replace('T',' ').slice(0,19)}`
+      : 'schema 미초기화';
+  }
+}
+
+function formatMatrix(entityKind) {
+  const matrix = getStatusMatrix(entityKind);
+  if (!matrix) return '<code>—</code>';
+  return Object.entries(matrix).map(([stage, counts]) => {
+    const parts = STAGE_STATUS.map(s => `${s}<b>${counts[s]}</b>`).join('/');
+    return `<span class="stage"><code>${stage}:${parts}</code></span>`;
+  }).join('');
+}
+
+function renderCounts() {
+  const tbody = document.getElementById('cs2-counts-body');
+  if (!tbody) return;
+  const order = [
+    'places', 'customers', 'staff', 'instructors', 'facilitators',
+    'projects', 'courses', 'sessions', 'modules', 'echo_ops',
+    'course_people', 'campaigns', 'dispatch',
+  ];
+  const rows = order.map(k => {
+    const n = stores[k].all().length;
+    const tracked = STATUS_FIELDS_BY_ENTITY[k];
+    const matrix = tracked ? formatMatrix(k) : '<code style="color:var(--muted)">(no status)</code>';
+    return `<tr class="entity-root">
+      <td>${k}</td>
+      <td class="count">${n}</td>
+      <td class="matrix">${matrix}</td>
+    </tr>`;
+  }).join('');
+  tbody.innerHTML = rows;
+}
+
+function renderArchives() {
+  const ul = document.getElementById('cs2-archives-list');
+  if (!ul) return;
+  const arcs = migration.listArchives();
+  if (arcs.length === 0) {
+    ul.innerHTML = '<li class="empty">아카이브 없음</li>';
+    return;
+  }
+  // 같은 타임스탬프끼리 묶기
+  const groups = new Map();
+  for (const a of arcs) {
+    const m = a.key.match(/^(cs_legacy_(?:v2_)?\d{8}_\d{6})_/);
+    const prefix = m ? m[1] : a.key;
+    if (!groups.has(prefix)) groups.set(prefix, { prefix, items: [], createdAt: a.createdAt });
+    groups.get(prefix).items.push(a);
+  }
+  const items = [...groups.values()].sort((a, b) =>
+    (b.createdAt || '').localeCompare(a.createdAt || ''));
+  ul.innerHTML = items.map(g => {
+    const totalSize = g.items.reduce((s, a) => s + a.size, 0);
+    const keyList = g.items.map(a => a.key.slice(g.prefix.length + 1)).join(', ');
+    return `<li>
+      <span class="key">${g.prefix}</span>
+      <span style="color:var(--muted);font-size:11px;flex:1;">${keyList}</span>
+      <span class="size">${(totalSize/1024).toFixed(1)} KB</span>
+      <button data-restore="${g.prefix}">복원</button>
+    </li>`;
+  }).join('');
+  ul.querySelectorAll('button[data-restore]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const prefix = btn.getAttribute('data-restore');
+      if (!confirm(`${prefix} 를 원본 키로 복원하시겠습니까?\n(기존 같은 키가 있으면 덮어씁니다)`)) return;
+      const { restored } = migration.restoreArchive(prefix);
+      toast(`복원: ${restored.length}개 키`);
+      renderAll();
+    });
+  });
+}
+
+function renderAll() {
+  renderBootState();
+  renderCounts();
+  renderArchives();
+}
+
+// ==================== S10. WINDOW.CS2 ====================
+window.CS2 = Object.freeze({
+  version: CS2_VERSION,
+  schemaVersion: CS2_SCHEMA_VERSION,
+
+  constants: Object.freeze({
+    STAGES, STAGE_STATUS, STORE_KEYS, V1_STORE_KEYS,
+    STATUS_FIELDS_BY_ENTITY, ENTITY_PK, BRIS_BASE, PROXY_PATH,
+  }),
+
+  utils: Object.freeze({
+    genId, hashStr, normalizeText, normalizePhone, normalizeDate,
+    parseBrisDate, normalizeTeamName, htmlUnescape, oranoonToISO, parseMoney,
+  }),
+
+  factories: Object.freeze({
+    createPlace, createCustomer, createStaff, createInstructor,
+    createFacilitator, createProject, createCourse, createSession,
+    createModule, createEchoOp, createCoursePerson, createCampaign,
+    createDispatch,
+  }),
+
+  stores,
+  loadAll,
+  countAll,
+
+  status: Object.freeze({
+    createStatus, markStage, markOk, markFail, markSkip,
+    isStageDone, getStatusMatrix,
+  }),
+
+  idRegistry,
+
+  queue: fetchQueue,
+  FetchQueue,
+
+  migration,
+
+  ui: Object.freeze({ renderAll, renderCounts, renderBootState, renderArchives }),
+
+  _storage: Object.freeze({ lsGet, lsSet, lsRemove, lsKeys, readMeta, writeMeta }),
+});
+
+// ==================== S11. BOOTSTRAP ====================
+function boot() {
+  renderAll();
+
+  document.getElementById('btn-init').addEventListener('click', () => {
+    if (migration.isInitialized()) {
+      if (!confirm('이미 초기화되어 있습니다. 덮어쓰지 않고 누락된 스토어만 채웁니다. 진행할까요?')) return;
+    }
+    migration.seedEmptySchema();
+    toast('빈 스키마 초기화 완료');
+    renderAll();
+  });
+
+  document.getElementById('btn-backup-reset').addEventListener('click', () => {
+    const hasV1 = migration.hasV1Data();
+    const hasV2 = migration.isInitialized();
+    let msg = 'v1 데이터를 cs_legacy_* 로 아카이브하고 v2 빈 스키마를 시드합니다.\n';
+    if (!hasV1) msg += '(v1 데이터 없음 — 시드만 실행)\n';
+    if (hasV2) msg += '※ v2 는 이미 초기화됨 → 건너뜀. 완전 재설정을 원하면 [전체 재설정 (force)] 사용.\n';
+    if (!confirm(msg + '\n진행할까요?')) return;
+    const { actions } = migration.backupAndReset({ v1: 'archive' });
+    console.log('[backupAndReset]', actions);
+    toast(`완료: ${actions.length}개 작업`);
+    renderAll();
+  });
+
+  document.getElementById('btn-force-reset').addEventListener('click', () => {
+    if (!confirm('⚠️ 기존 v2 데이터를 cs_legacy_v2_* 로 로테이션하고 빈 스키마로 재시드합니다. 계속할까요?')) return;
+    if (!confirm('정말 진행하시겠습니까? (v1 은 archive 기본값으로 보존됩니다)')) return;
+    const { actions } = migration.backupAndReset({ v1: 'archive', force: true });
+    console.log('[backupAndReset force]', actions);
+    toast(`전체 재설정: ${actions.length}개 작업`);
+    renderAll();
+  });
+
+  document.getElementById('btn-reload').addEventListener('click', () => location.reload());
+
+  console.log(`[CS2] ${CS2_VERSION} booted. Try: CS2.countAll() · CS2.migration.isInitialized()`);
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', boot);
+} else {
+  boot();
+}
+</script>
+</body>
+</html>

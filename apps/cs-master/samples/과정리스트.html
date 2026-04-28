@@ -1,0 +1,593 @@
+
+<html>
+
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<link rel="StyleSheet" href="/bris.css" type="text/css">
+<title>Expert Consulting Bris ver.2021</title>
+<!-- <script language=javascript src="/share/js/expertHelper.js"></script> -->
+<script src="/share/js/jquery.min.js"></script>
+<script type="text/javascript" src="/share/common.js?1773676849"></script>
+<script src="/util/log/vpageLog.js"></script>
+</head>
+
+<script language=javascript>
+<!--
+//마우스 클릭이 LimitTime동안 없을경우
+//자동 로그아웃
+var LimitTime=60*20//60*20;//20분
+var CheckTime=0;
+
+function ClearTime() {
+	CheckTime=0;
+}
+
+function TimeFormat(arg) {
+	var min,sec;
+
+	min=parseInt(arg/60);
+	sec=arg%60;
+	return "자동 로그아웃 "+min+":"+sec+" 남음"
+}
+
+function initTime() {
+	CheckTime++;
+	setTimeout("initTime();",1000);
+	if(CheckTime>=(LimitTime))
+		top.location.href='/logout.asp?CHK=TimeOut';
+	defaultStatus=TimeFormat(LimitTime-CheckTime);
+}
+
+//initTime();
+//document.onmousedown=ClearTime;
+//-->
+
+</script>
+
+
+<link rel="stylesheet" href="/common/js/jquery-ui/jquery-ui.min.css">
+<script src="/common/js/jquery-ui/jquery-ui.min.js"></script>
+<div id="divCalendar" style="position:absolute;top:-1000;left:-1000"> 
+<object classid="clsid:D27CDB6E-AE6D-11cf-96B8-444553540000"  id="swfCalendar" codebase="http://download.macromedia.com/pub/shockwave/cabs/flash/swflash.cab#version=8,0,0,0" height=224 width=193 >
+<param name="movie" value="/share/cal.swf">
+<embed src="/share/cal.swf"   allowScriptAccess="always"height=224 width=193 id="swfCalendarF" ></embed>
+</object>
+</div>
+<script>
+ 
+var gr= new Galimto_calendar();
+function Galimto_calendar(){
+	this.state=false;
+	this.actType=true;
+	this.id_name_str="";
+};
+Galimto_calendar.prototype.isIE = navigator.appName.indexOf("Microsoft") != -1;
+Galimto_calendar.prototype.init= function(){
+	 
+	this.state=true;
+};
+Galimto_calendar.prototype.cal_setDateStr= function(obj){
+ 
+	var tmpstr;
+	/*	obj.obj;
+	*/
+	if (this.actType)
+	{
+		tmpstr = obj.year + "-"+ obj.month + "-"+ obj.date;
+	}else{
+		tmpstr = obj.year + ""+ obj.month + ""+ obj.date;
+	}
+	
+	this.getObj(this.id_name_str).value=tmpstr;
+	this.cal_hide();
+	nextF= obj.nextFunction;
+
+	if (nextF!="")
+	{	
+		eval(nextF)
+	}
+};
+ Galimto_calendar.prototype.getPosition=function (ev,ev_obj){
+	var obj= new Object();
+	var x,y;
+	if(this.isIE){
+		y=document.body.clientHeight
+		x=document.body.clientWidth
+	}else{
+		x=window.innerWidth;
+		y=window.innerHeight;
+	}
+	if(ev.x){
+		obj.x= ev.x+15;
+		obj.y= ev.y+5 ;
+	}else{
+		obj.x= ev.clientX+10;
+		obj.y= ev.clientY;
+	};
+	var swf_obj=gr.swf_getObj();
+	 if(obj.x+parseInt(swf_obj.width) > x){
+		obj.x -= swf_obj.width;
+	 }
+	 if(obj.y+parseInt(swf_obj.height) > y){
+		obj.y -= swf_obj.height;
+	 }
+	if (obj.x<0)obj.x=0;
+	if (obj.y<0)obj.y=0;
+	 
+
+	return obj;
+};
+Galimto_calendar.prototype.call_cal=function (evt){
+	var e;
+
+	if(!this.state)this.init();
+	this.actType=true;
+  	if(evt.target){
+		e=evt.target;
+	}else{
+		e= evt.srcElement;
+	};
+	if(document.all["galimto_obj_calendar_tag"]){
+		try{
+			document.all["galimto_obj_calendar_tag"].setAttribute("id","");
+		}catch(e){}	
+	};
+	this.id_name_str=e.getAttribute("id");
+	if (this.id_name_str==null||this.id_name_str.length==0){
+	
+		this.id_name_str="galimto_obj_calendar_tag";
+		e.setAttribute("id",this.id_name_str);
+	}
+	var div_obj= this.getObj("divCalendar");
+	var coo=this.getPosition(evt,e);
+	div_obj.style.top= coo.y;
+	div_obj.style.left=coo.x;
+	str= e.parentNode.name +"."+ e.name;
+	var tr_data= new this.obj_data();
+	tr_data.add_data("fromObj","galimto");
+	tr_data.add_data("nextF","");
+	tr_data.add_data("obj_value",e.value);
+	var swf_obj=gr.swf_getObj();
+	swf_obj.setinit(tr_data);
+};
+Galimto_calendar.prototype.call_cal_nextF=function (evt,fName){
+	var e;
+
+	if(!this.state)this.init();
+	this.actType=true;
+  	if(evt.target){
+		e=evt.target;
+	}else{
+		e= evt.srcElement;
+	};
+	if(document.all["galimto_obj_calendar_tag"]){
+		try{
+			document.all["galimto_obj_calendar_tag"].setAttribute("id","");
+		}catch(e){}	
+	};
+	this.id_name_str=e.getAttribute("id");
+	if (this.id_name_str==null||this.id_name_str.length==0){
+	
+		this.id_name_str="galimto_obj_calendar_tag";
+		e.setAttribute("id",this.id_name_str);
+	}
+	var div_obj= this.getObj("divCalendar");
+	var coo=this.getPosition(evt,e);
+	div_obj.style.top= coo.y;
+	div_obj.style.left=coo.x;
+	str= e.parentNode.name +"."+ e.name;
+	var tr_data= new this.obj_data();
+	tr_data.add_data("fromObj","galimto");
+	tr_data.add_data("nextF",fName);
+	tr_data.add_data("obj_value",e.value);
+	var swf_obj=gr.swf_getObj();
+	swf_obj.setinit(tr_data);
+
+}
+ 
+Galimto_calendar.prototype.obj_data=function(){
+	this.add_data= function(str,str_value){
+		eval("this."+str+"='"+str_value+"'");
+	};
+};
+Galimto_calendar.prototype.swf_getObj=function(){
+	 return (this.isIE) ? window["swfCalendar"] : document["swfCalendarF"];
+};
+Galimto_calendar.prototype.getObj=function(str){
+	if(this.isIE){
+        return document.all[str];
+     }else{
+		return document.getElementById(str);
+     };
+};
+ Galimto_calendar.prototype.cal_hide=function(){
+
+	try{
+		if(this.id_name_str=="galimto_obj_calendar_tag"){
+			this.getObj("galimto_obj_calendar_tag").setAttribute("id","");
+		}
+		var div_obj= this.getObj("divCalendar");
+		div_obj.style.top="-1000";
+		div_obj.style.left="-1000";
+	}catch(e){};
+};
+ 
+ 
+Galimto_calendar.prototype.call_cal_nohyphen=function (evt){	
+	var e;
+	if(!this.state)this.init();
+	this.actType=false;
+  	if(evt.target){
+		e=evt.target;
+	}else{
+		e= evt.srcElement;
+	};
+	if(document.all["galimto_obj_calendar_tag"]){
+		try{
+			document.all["galimto_obj_calendar_tag"].setAttribute("id","");
+		}catch(e){}	
+	};
+	this.id_name_str=e.getAttribute("id");
+
+	if (e.getAttribute("id")==null ||this.id_name_str.toString().length==0){
+	
+		this.id_name_str="galimto_obj_calendar_tag";
+		e.setAttribute("id",this.id_name_str);
+	}
+
+	var div_obj= this.getObj("divCalendar");
+	var coo=this.getPosition(evt,e);
+	div_obj.style.top= coo.y;
+	div_obj.style.left=coo.x;
+	str= e.parentNode.name +"."+ e.name;
+	var tr_data= new this.obj_data();
+	tr_data.add_data("fromObj","galimto");
+	tr_data.add_data("nextF","");
+	tr_data.add_data("obj_value",e.value);
+	var swf_obj=gr.swf_getObj();
+
+	if (e.value != "")
+	{
+		swf_obj.setinit_nohyphen(tr_data);
+	}
+	 
+};
+ 
+ 
+</script>
+
+<style>
+	table tr > td {
+		background-position-y: 15px;
+	}
+	.mixTitle{
+		display: flex;	
+    	flex-direction: column
+	}
+</style>
+<body topmargin=0>
+<table border="0" width="800" cellspacing="0" cellpadding="0">
+  <tr>
+    <td width="100%" height=28> HOME &gt; <font color="blue">사업관리</font></tr>
+  <tr>
+    <td width="100%">
+      <table border="0" width="800" cellspacing="0" cellpadding="0">
+      <tr>
+        <form method="POST" action=index.asp name="searchForm">
+        <td width="100%">
+            회사명 <input type="text" name="NICKNAME" size="11" value="">&nbsp; 과정명<input type="text" name="PROGRAM" size="10" value="">
+			팀<select name="team_code">
+				<option value=""></option>
+			
+				<option value="201300001" >경기팀</option>	
+			
+				<option value="2003" >경인팀</option>	
+			
+				<option value="201304001" >공개교육사</option>	
+			
+				<option value="2506" >공공사업1</option>	
+			
+				<option value="2511" >공공사업2</option>	
+			
+				<option value="201204003" >대구경북팀</option>	
+			
+				<option value="201204001" >부산울산경</option>	
+			
+				<option value="201201001" >서울1팀</option>	
+			
+				<option value="201201002" >서울2팀</option>	
+			
+				<option value="201202001" >서울3팀</option>	
+			
+				<option value="2501" >서울4팀</option>	
+			
+				<option value="201204002" >중부팀</option>	
+			
+				<option value="201204004" >호남팀</option>	
+			
+			</select>
+			AM <input type=text name=PM size=6 value="">강사 <input type=text name=inst size=6 value="">
+            기간 <input name="SD" type="text" size="8" class="sDate" value="20260316"> ~ <input name="ED" type="text" size="8" class="sDate" value="20260316">
+			<!--input type="text" name="SD" size="8" value="20260316" onclick="gr.call_cal_nohyphen(event)">~<input type="text" name="ED" size="8" value="20260316" onclick="gr.call_cal_nohyphen(event)"-->
+            <input type="submit" value="찾기">
+        </td>
+        </form>
+      </tr>
+	  </table>
+	  <table width=800 border=0 cellpadding="1" cellspacing="3" bgcolor=#f6f6f6>
+		<tr>
+		  <td width="7%" bgcolor="#DDECB4" align="center"><b>구분</b></td>
+		  <td width="23%" bgcolor="#DDECB4" align="center"><b>기간</b></td>
+		  <td width="26%" bgcolor="#DDECB4" align="center">
+		  	<b>과정명</b><br>
+			<b>프로그램명</b>
+		  </td>
+		  <td width="23%" bgcolor="#DDECB4" align="center"><b>회사/장소</b></td>
+		  <td width="7%" bgcolor="#DDECB4" align="center"><b>기간</b></td>
+		  <td width="7%" bgcolor="#DDECB4" align="center"><b>인원</b></td>
+		  <td width="7%" bgcolor="#DDECB4"><b>AM</b></td>
+		</tr>
+
+		<tr>
+		  <td align="center">사내</td>
+		  <td >2026/03/16→03/17</td>
+		  <td  class="mixTitle">
+		  	<a href="program_mng.asp?DIVISION=1&page=1&NICKNAME=&PROGRAM=&PM=&SD=20260316&ED=20260316&inst=&BUSINESS_ID=72757">
+				현장관리자 교육
+			</a>
+				현장 사원 교육
+		  </td>
+		  <td>대한제당 </td>
+		  <td align="center">13</td>
+		  <td align="center">23</td>
+		  <td align="center">황태균</td>
+		</tr>
+			
+		<tr>
+		  <td align="center">사내</td>
+		  <td >2026/03/16</td>
+		  <td  class="mixTitle">
+		  	<a href="program_mng.asp?DIVISION=1&page=1&NICKNAME=&PROGRAM=&PM=&SD=20260316&ED=20260316&inst=&BUSINESS_ID=72632">
+				팀단위워크샵
+			</a>
+				조직성장 프로그램
+		  </td>
+		  <td>BGF리테일(종로)</td>
+		  <td align="center">7</td>
+		  <td align="center">10</td>
+		  <td align="center">박다빈</td>
+		</tr>
+			
+		<tr>
+		  <td align="center">사내</td>
+		  <td >2026/03/16</td>
+		  <td  class="mixTitle">
+		  	<a href="program_mng.asp?DIVISION=1&page=1&NICKNAME=&PROGRAM=&PM=&SD=20260316&ED=20260316&inst=&BUSINESS_ID=72826">
+				승진자 교육
+			</a>
+				전직급 통합 승진자교육
+		  </td>
+		  <td>서원밸리컨트리클럽</td>
+		  <td align="center">4</td>
+		  <td align="center">20</td>
+		  <td align="center">김용현</td>
+		</tr>
+			
+		<tr>
+		  <td align="center">사내</td>
+		  <td >2026/03/16→03/17</td>
+		  <td  class="mixTitle">
+		  	<a href="program_mng.asp?DIVISION=1&page=1&NICKNAME=&PROGRAM=&PM=&SD=20260316&ED=20260316&inst=&BUSINESS_ID=72701">
+				승진자 교육
+			</a>
+				승진자 과정
+		  </td>
+		  <td>유안타증권</td>
+		  <td align="center">9</td>
+		  <td align="center">45</td>
+		  <td align="center">진소망</td>
+		</tr>
+			
+		<tr>
+		  <td align="center">사내</td>
+		  <td >2026/03/16</td>
+		  <td  class="mixTitle">
+		  	<a href="program_mng.asp?DIVISION=1&page=1&NICKNAME=&PROGRAM=&PM=&SD=20260316&ED=20260316&inst=&BUSINESS_ID=72649">
+				AI 리터러시
+			</a>
+				3. 16(월)_판단의..
+		  </td>
+		  <td>중랑구청</td>
+		  <td align="center">4</td>
+		  <td align="center">40</td>
+		  <td align="center">유용완</td>
+		</tr>
+			
+		<tr>
+		  <td align="center">사내</td>
+		  <td >2026/03/11→03/27</td>
+		  <td  class="mixTitle">
+		  	<a href="program_mng.asp?DIVISION=1&page=1&NICKNAME=&PROGRAM=&PM=&SD=20260316&ED=20260316&inst=&BUSINESS_ID=72639">
+				재취업지원
+			</a>
+				
+		  </td>
+		  <td>국민건강보험공단(인..</td>
+		  <td align="center"></td>
+		  <td align="center"></td>
+		  <td align="center">정태영</td>
+		</tr>
+			
+		<tr>
+		  <td align="center">사내</td>
+		  <td >2026/03/10→03/18</td>
+		  <td  class="mixTitle">
+		  	<a href="program_mng.asp?DIVISION=1&page=1&NICKNAME=&PROGRAM=&PM=&SD=20260316&ED=20260316&inst=&BUSINESS_ID=72627">
+				승진자 교육
+			</a>
+				차장 신임자 과정 
+		  </td>
+		  <td>금호석유화학(서울)</td>
+		  <td align="center">4</td>
+		  <td align="center">20</td>
+		  <td align="center">김미송</td>
+		</tr>
+			
+		<tr>
+		  <td align="center">사내</td>
+		  <td >2026/03/10→03/17</td>
+		  <td  class="mixTitle">
+		  	<a href="program_mng.asp?DIVISION=1&page=1&NICKNAME=&PROGRAM=&PM=&SD=20260316&ED=20260316&inst=&BUSINESS_ID=72660">
+				면접관 교육
+			</a>
+				면접관교육
+		  </td>
+		  <td>동국제약(강남)</td>
+		  <td align="center">4</td>
+		  <td align="center">30</td>
+		  <td align="center">장채영</td>
+		</tr>
+			
+		<tr>
+		  <td align="center">사내</td>
+		  <td >2026/03/09→03/20</td>
+		  <td  class="mixTitle">
+		  	<a href="program_mng.asp?DIVISION=1&page=1&NICKNAME=&PROGRAM=&PM=&SD=20260316&ED=20260316&inst=&BUSINESS_ID=72546">
+				계층별 교육
+			</a>
+				신임자 과정(대리 과장..
+		  </td>
+		  <td>금호석유화학(서울)</td>
+		  <td align="center">4</td>
+		  <td align="center"></td>
+		  <td align="center">김미송</td>
+		</tr>
+			
+		<tr>
+		  <td align="center">사내</td>
+		  <td >2026/03/04→03/31</td>
+		  <td  class="mixTitle">
+		  	<a href="program_mng.asp?DIVISION=1&page=1&NICKNAME=&PROGRAM=&PM=&SD=20260316&ED=20260316&inst=&BUSINESS_ID=72731">
+				계층별 교육
+			</a>
+				승진자 교육
+		  </td>
+		  <td>한화비전</td>
+		  <td align="center">9</td>
+		  <td align="center">60</td>
+		  <td align="center">이제혁</td>
+		</tr>
+			
+		<tr>
+		  <td align="center">사내</td>
+		  <td >2026/03/03→04/30</td>
+		  <td  class="mixTitle">
+		  	<a href="program_mng.asp?DIVISION=1&page=1&NICKNAME=&PROGRAM=&PM=&SD=20260316&ED=20260316&inst=&BUSINESS_ID=72729">
+				리텐션 교육
+			</a>
+				리텐션과정
+		  </td>
+		  <td>HL만도(평택)</td>
+		  <td align="center">14</td>
+		  <td align="center">23</td>
+		  <td align="center">정용호</td>
+		</tr>
+			
+		<tr>
+		  <td align="center">사내</td>
+		  <td >2026/03/01→03/31</td>
+		  <td  class="mixTitle">
+		  	<a href="program_mng.asp?DIVISION=1&page=1&NICKNAME=&PROGRAM=&PM=&SD=20260316&ED=20260316&inst=&BUSINESS_ID=72501">
+				계층별 교육
+			</a>
+				핵심역량 과정
+		  </td>
+		  <td>한국고용노동교육원</td>
+		  <td align="center">48</td>
+		  <td align="center">120</td>
+		  <td align="center">이제혁</td>
+		</tr>
+			
+
+	  </table>
+	  <script>
+	  function addCon(){
+		if(confirm("영업활동 없는 프로젝트를 등록하시겠습니까?")){
+			location.href='consulting_detail_edit.asp';
+		}
+	  }
+	  function viewAll(){
+		f= document.searchForm
+		f.action="index_nopaging.asp"
+		f.submit()
+	  }
+	  </script>
+	  <table width=100%>
+		<form method=post action=index.asp>
+        <td width="60%">
+			<input type=button value="집체교육추가" onclick="location.href='program_mng_edit.asp';">
+			<input type=button value="컨설팅추가" onclick="addCon()"><br>
+			<!--
+			<input type=button value="공개교육추가" onclick="location.href='open_pmng_edit.asp';">
+			-->
+			<input type=button value="이러닝추가" onclick="location.href='elearning_edit.asp';">
+		</td>
+        <td width="40%" align="right"><a href="#" onclick="viewAll()">전체 15건</a><br>
+			전체 2페이지 중 <input type=text size=4 name="page" value="1">페이지로 <input type=submit value="가기">
+			<input type="hidden" name="NICKNAME" size="13" value="">
+			<input type="hidden" name="PROGRAM" size="12" value="">
+			<input type="hidden" name="PM" size="12" value="">
+			<input type="hidden" name="SD" size="8" value="20260316">
+			<input type="hidden" name="ED" size="8" value="20260316">
+			<input type="hidden" name="inst" size="8" value="">
+			  <br>
+			   | <a href="index.asp?page=2&NICKNAME=&PROGRAM=&PM=&SD=20260316&ED=20260316&inst=&team_code=">다음페이지></a>
+
+		</td>
+      </tr>
+	</form>
+    </table>
+
+    </td>
+  </tr>
+  <tr>
+	<td>　&nbsp;</td>
+  </tr>
+  <tr>
+    <td width="100%" bgcolor=#F0FFCD>※ 설명</td>
+  </tr>
+</table>
+<script>
+$( function() {
+    $( ".sDate" ).datepicker({
+		monthNames: ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월' ],
+		dayNamesMin: ['일','월','화','수','목','금','토'],
+		onSelect: calcDateTerm,
+		dateFormat: 'yymmdd',
+		changeYear: true,
+		maxDate: "1Y",
+		autoSize: true   // 자동리사이즈 (false 이면 상위 정의에 따름)
+	});
+});
+
+function calcDateTerm(dateText, inst){
+	calc();
+}
+function calc(){
+	f= document.searchForm
+
+	if( f.SD.value !="" &&  f.ED.value !="" ){
+		var interval = f.ED.value - f.SD.value;
+		if(interval<0){
+			alert("종료일이 시작일보다 빠릅니다. 올바르지 않습니다.")
+			f.ED.value=""
+			return;
+		}
+	}
+}
+</script>
+
+</body>
+
+</html>
+

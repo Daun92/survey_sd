@@ -1,0 +1,13 @@
+{
+  "customerId": "CUST001",
+  "company": "샘플플레이스",
+  "companyGrade": "A",
+  "name": "홍길동",
+  "position": "과장",
+  "department": "인재개발팀",
+  "phone": "02-123-4567",
+  "mobile": "010-1234-5678",
+  "email": "hong@example.com",
+  "dmSubscription": "수신동의",
+  "customerLevel": "VIP"
+}

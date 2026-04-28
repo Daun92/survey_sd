@@ -1,0 +1,411 @@
+
+<html>
+
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<link rel="StyleSheet" href="/bris.css" type="text/css">
+<title>Expert Consulting Bris ver.2021</title>
+<!-- <script language=javascript src="/share/js/expertHelper.js"></script> -->
+<script src="/share/js/jquery.min.js"></script>
+<script type="text/javascript" src="/share/common.js?1773677420"></script>
+<script src="/util/log/vpageLog.js"></script>
+</head>
+
+<script language=javascript>
+<!--
+//마우스 클릭이 LimitTime동안 없을경우
+//자동 로그아웃
+var LimitTime=60*20//60*20;//20분
+var CheckTime=0;
+
+function ClearTime() {
+	CheckTime=0;
+}
+
+function TimeFormat(arg) {
+	var min,sec;
+
+	min=parseInt(arg/60);
+	sec=arg%60;
+	return "자동 로그아웃 "+min+":"+sec+" 남음"
+}
+
+function initTime() {
+	CheckTime++;
+	setTimeout("initTime();",1000);
+	if(CheckTime>=(LimitTime))
+		top.location.href='/logout.asp?CHK=TimeOut';
+	defaultStatus=TimeFormat(LimitTime-CheckTime);
+}
+
+//initTime();
+//document.onmousedown=ClearTime;
+//-->
+
+</script>
+
+<style>
+.menu{
+	text-align:center;
+	background-color:#eeeeee;
+	width:80
+}
+
+.id_title { padding:0 0 0 20; background:url(/images/ico_star.gif) 5px 5px no-repeat; margin:14px 36px 21px 20px; color:#0c7ead; font-weight:bold; height:25px;}
+</style>
+<script language=javascript>
+function viewTmLog(){
+	if(document.all["tmLogArea"].style.display==""){
+		document.all["tmLogArea"].style.display="none"
+	}else{
+		document.all["tmLogArea"].style.display=""
+	}
+
+}
+	function search_company() {
+		var win = window.open("search_place.asp?PLACE_NAME="+document.dm_place.NICKNAME.value, "place", "top=100, left=20, width=490, height=300, toolbar=no, location=no, directories=no, status=no, menubar=no, resizable=no, scrollbars=yes, copyhistory=no, mebar=no");
+		win.focus();
+	}
+function Delete() {
+	if(confirm('DM을 삭제합니다.\n\n삭제하면 복구할 수 업습니다.\n\n정말 삭제하시겠습니까?'))
+		location.href='dm_process.asp?PROCESS=Del&CUSTOMER_ID=99000';
+}
+</script>
+<script language=javascript>
+<!--
+function goSMS(snum,cust,plc){
+//var newWin=window.open("","crm","width=860,height=590,toolbar=no,scrollbars=no,status=no,menubar=no,resizable=no,top=30,left=50");
+var newWin=window.open("/util/sms/smsFlash.asp?send="+snum+"&customer="+cust+"&placeid="+plc,"sms","width=260,height=290,toolbar=no,scrollbars=no,status=no,menubar=no,resizable=no,top=30,left=50");
+newWin.focus();
+}
+//-->
+</script>
+
+<body topmargin=0>
+<table border="0" width="800" cellspacing="0" cellpadding="0">
+  <tr>
+    <td width="100%" height=28> HOME &gt; 고객관리 &gt; <font color="blue">DM</font> &gt; </tr>
+  <tr>
+    <td width="100%">
+		<table width="100%" border=0 cellpadding=0 cellspacing=0>
+				<tr>
+					<td class="id_title">기본정보</td>
+				</tr>
+			</table>
+		<table border="1" width="100%" bordercolordark="#FFFFFF" cellspacing="0" cellpadding="2">
+		<tr>
+		  <td width="12%" align="center" bgcolor="#DDECB4"><b>사업장</b></td>
+		  <td width="45%"><a href="place_view.asp?PLACE_ID=8356">유안타증권</a>&nbsp;</td>
+		  <td width="12%" align="center" bgcolor="#DDECB4"><b>사업장등급</b></td>
+		  <td width="31%">A:전년및 금년 거래사업장&nbsp;</td>
+		</tr>
+		<tr>
+		  <td width="12%" align="center" bgcolor="#DDECB4" rowspan=2><b>주소</b></td>
+		  <td width="45%"  rowspan=2>서울 영등포구 국제금융로 39 앵커원&nbsp;(07339)</td>
+		  <td width="12%" align="center" bgcolor="#DDECB4"><b>대표자</b></td>
+		  <td width="31%">궈밍쩡&nbsp;</td>
+		</tr>
+		<tr>
+			<td width="12%" align="center" bgcolor="#DDECB4"><b>대표전화</b></td>
+		  <td width="31%">02-3770-2000&nbsp;</td>
+		</table>
+		<table border="1" width="100%" bordercolordark="#FFFFFF" cellspacing="0" cellpadding="2">
+<!--
+		<tr>
+		  <td width="12%" align="center" bgcolor="#DDECB4"><b>주소</b></td>
+		  <td width="45%">&nbsp;</td>
+		  <td width="12%" align="center" bgcolor="#DDECB4"><b>우편번호</b></td>
+		  <td width="31%">&nbsp;</td>
+		</tr>
+-->
+		<tr>
+		  <td width="12%" align="center" bgcolor="#DDECB4"><b>성명</b></td>
+		  <td width="45%">박철우&nbsp;차장</td>
+		  <td width="12%" align="center" bgcolor="#DDECB4"><b>전화/휴대</b></td>
+		  <td width="31%">02-3770-5576 <BR>010-9591-6461&nbsp;<a href="javascript:goSMS('01095916461','99000','8356');"><img src="/images/dm/btn_sms.gif" border=0 align="absmiddle"></a></td>
+		</tr>
+		<tr>
+		  <td width="12%" align="center" bgcolor="#DDECB4"><b>부서</b></td>
+		  <td width="45%">인재성장팀&nbsp;</td>
+		  <td width="12%" align="center" bgcolor="#DDECB4"><b>팩스</b></td>
+		  <td width="31%">&nbsp;</td>
+		</tr>
+		<tr>
+		  <td width="12%" align="center" bgcolor="#DDECB4"><b>이메일</b></td>
+		  <td width="45%" ><a href="mailto:chulwoo.park@yuantakorea.com">chulwoo.park@yuantakorea.com</a>&nbsp; <img src="http://www.exc.co.kr/util/trace/brismail_confirm.asp?email=chulwoo.park@yuantakorea.com" border=0 align="absmiddle"></td>
+
+		  <td width="12%" align="center" bgcolor="#DDECB4"><b>&nbsp;</b></td>
+		  <td width="31%">&nbsp;
+		  </td>
+		</tr>
+		</table>
+		<table width="100%" border=0 cellpadding=0 cellspacing=0>
+				<tr>
+					<td class="id_title">유형 및 특성</td>
+				</tr>
+			</table>
+		<table border="1" width="100%" bordercolordark="#FFFFFF" cellspacing="0" cellpadding="2">
+
+		<tr>
+		  <td width="12%" align="center" bgcolor="#DDECB4"><b>담당영역</b></td>
+		  <td width="45%" >
+		   <table border="1" width="100%" bordercolordark="#FFFFFF" cellspacing="0" cellpadding="2">
+		   
+			<tr>
+				<td  align="center" bgcolor="#DDECB4" width=30%>HRD
+				<td>&nbsp;HRD(집합)
+			<tr>
+				<td  align="center" bgcolor="#DDECB4" width=30%>HRM
+				<td>&nbsp;
+			<tr>
+				<td  align="center" bgcolor="#DDECB4" width=30%>ETC
+				<td>&nbsp;
+			</table>
+</td>
+
+		  <td width="12%" align="center" bgcolor="#DDECB4"><b>고객레벨</b></td>
+		  <td width="31%">담당자&nbsp;
+		  </td>
+		</tr>
+		<tr>
+		  <td width="12%" align="center" bgcolor="#DDECB4"><b>우호도</b></td>
+		  <td width="45%">&nbsp;
+		  </td>
+
+		  <td width="12%" align="center" bgcolor="#DDECB4"><b>Key Man</b></td>
+		  <td  >&nbsp;
+		  </td>
+		  <tr>
+		  <td width=12% align=center bgcolor=#DDECB4><b>성향</b></td>
+
+			<td>	&nbsp;
+		  <td width="12%" align="center" bgcolor="#DDECB4"><b>관리권밖</b></td>
+		  <td width="31%">&nbsp;
+		  
+
+		  </td>
+		  </table>
+
+		  
+		 <table width="100%" border=0 cellpadding=0 cellspacing=0>
+				<tr>
+					<td class="id_title"  >세미나 및 공개교육 참석 내역</td>
+
+			</table>
+
+				<table border="1" width="100%" bordercolordark="#FFFFFF" cellspacing="0" cellpadding="2">
+
+				<tr bgcolor="#DDECB4"align="center" >
+				<td>no
+
+				<td>세미나유형
+				<td width="300" >세미나명(교육명)</td>
+				<td>시작일
+				<td>종료일
+
+
+					
+					<Tr>
+						<td colspan=5 align=center height=40>참석내역이 없습니다.
+					
+					</table>
+
+
+		  <table width="100%" border=0 cellpadding=0 cellspacing=0>
+				<tr>
+					<td class="id_title"  >기타 항목 및 관리</td>
+
+			</table>
+		<table border="1" width="100%" bordercolordark="#FFFFFF" cellspacing="0" cellpadding="2">
+		<tr>
+
+
+
+
+			<td width="12%" align="center" bgcolor="#DDECB4" rowspan=3><b>등록및 수정인</b></td>
+			<td style="padding:0 0 0 0"  rowspan=3>
+			
+				<Table style="font-size:9pt" border="1" bordercolordark="#FFFFFF" cellspacing="0" cellpadding="2">
+					<Tr>
+						<td bgcolor="#DDECB4">등록
+						<td>김나현
+						<td>2014-03-20
+					<Tr>
+						<td bgcolor="#DDECB4">수정
+						<Td>진소망
+						<td>2026-02-02
+				</table>
+			
+
+
+
+
+			<tr>
+		  <td width="12%" align="center" bgcolor="#DDECB4"><b>DM수신여부</b></td>
+		  <td width="45%">&nbsp;    수신함 
+
+		  
+		  
+		  
+		  </td>
+
+		<Tr>
+			 <td width="12%" align="center" bgcolor="#DDECB4"><b>고객 유입경로</b></td>
+		  <td  >
+		  &nbsp;
+		  
+			<input type="hidden" name="fromreg" value="0">
+		  </td>
+		    <tr>
+			<td width="12%" align="center" bgcolor="#DDECB4"><b>개인성향  <br>및<Br>기타메모</b></td>
+			<td style="padding:10 10 0 0" colspan=3 height=50>- 동양증권->유안타증권 사명변경. 손종희과장 -> 박철우대리 담당변경(김나현/14-09-23)<br>
+2016 프로그램 설명회 신청 후 불참 (2015-09-08, 차혜원)
+		</tr>
+		</table>
+
+
+
+
+
+			<table width="100%" border=0 cellpadding=0 cellspacing=0>
+				<tr>
+					<td class="id_title">고객사 및 담당자 현황</td>
+				</tr>
+			</table>
+		<table border="1" width="100%" bordercolordark="#FFFFFF" cellspacing="0" cellpadding="2">
+			<tr>
+
+				<td width=12% align=center bgcolor=#DDECB4><b>교육체계<br>교육현황</b></td>
+				<td  colspan="3">
+					&nbsp;
+				</td>
+			</tr>
+			<tr>
+				<td width=12% align=center bgcolor=#DDECB4><b>엑스퍼트<br>교육경험</b></td>
+				<td   colspan="3">
+					&nbsp;
+				</td>
+			</tr>
+			<tr>
+				<td width=12% align=center bgcolor=#DDECB4><b>외부 교육<br>위탁과정<br>및 경쟁사</b></td>
+				<td   colspan="3">
+					&nbsp;
+				</td>
+			</tr>
+
+			<tr>
+
+				<td width=12% align=center bgcolor=#DDECB4><b>현재<br>담당<br>업무</b></td>
+				<td width=80% colspan="3">
+					&nbsp;
+				</td>
+			</tr>
+
+			<tr>
+				<td width=12% align=center bgcolor=#DDECB4><b>담당자 현황 <br>및 비고</b></td>
+				<td width=80% colspan="3">
+					&nbsp;
+				</td>
+			</tr>
+
+		</table>
+		<SCRIPT language="javascript">
+		<!--
+
+			function go_MC_State(){
+
+				form.target = 'hiddenFrm';
+				form.action = '/Sales/Sales_Biz/MC_State.asp';
+				form.submit();
+			}
+
+			function go_BC_State(){
+
+				form.target = 'hiddenFrm';
+				form.action = '/Sales/Sales_Biz/BC_State.asp';
+				form.submit();
+			}
+
+		//-->
+		</SCRIPT>
+		
+
+		<table width=100%>
+			<form name="form" method="post">
+			<input type="hidden" name="B_MC_State" value="1">
+			<input type="hidden" name="B_BC_State" value="0">
+			<input type="hidden" name="CUSTOMER_ID" value="99000">
+			<input type="hidden" name="AM_i_no" value="5897">
+
+		  <tr>
+			<td   align="right">
+				
+				<!-- <input type=button value="" onclick="javascript:go_MC_State();">&nbsp; -->
+				<input type=button value="목록" onclick="location.href='index.asp?';">&nbsp;
+				<button type=button onclick="location.href='/sales/accountHistory_person.asp?customer_id=99000&name=박철우'">AccountHistory</button>&nbsp;
+				<button type=button onclick="viewTmLog()">TM기록</button>
+				<input type=button value=" 수정 " onclick="location.href='dm_edit.asp?CUSTOMER_ID=99000'">
+				<input type=button value=" 추가 " onclick="location.href='dm_edit.asp'">
+				<input type=button value="삭제" onclick="Delete();">&nbsp;
+				<button type=button  onclick="history.back();">돌아가기</button>
+			</td>
+		  </tr>
+		 </form>
+		</table>
+		<div id="tmLogArea" style="display:none">
+		
+<table   border="0" cellspacing="0" cellpadding="0" >
+	<tr> 
+		<td width="8" height="8"><img src="/images/table_sbg01.gif"></td>
+		<td background="/images/table_sbg02.gif"></td>
+		<td width="8" ><img src="/images/table_sbg03.gif"></td>
+	</tr>
+	<tr> 
+		<td background="/images/table_sbg04.gif"></td>
+		<td align="left" valign="top">
+
+			<table width=770>
+				<Tr class="menu">
+					<td width=120>일시
+					<td width=80>담당자
+					<td>상담내용
+			
+			<tr>
+				<td align=center colspan=3 height=60>자료가 없습니다.
+			
+			</table>
+			
+		</td>
+		<td background="/images/table_sbg05.gif"></td>
+	</tr>
+	<tr> 
+		<td width="8" height="8"><img src="/images/table_sbg06.gif"></td>
+		<td background="/images/table_sbg07.gif"></td>
+		<td><img src="/images/table_sbg08.gif"></td>
+	</tr>
+</table>
+
+		</div>
+    </td>
+  </tr>
+	<tr>
+		<td>
+		
+		- 동사업장(동부서) 에 등록된 인원은 총<A href="dm_member_list_by_placeID.asp?place_id=8356"> <b>16/(2)</b></a>명입니다.
+
+  <tr>
+	<td background="/images/underline.gif">　&nbsp;</td>
+  </tr>
+  <tr>
+    <td width="100%" bgcolor=#F0FFCD>※ DM등록입니다.<br>
+	　 사업장은 반드시 [찾기]로 찾으십시오.<br>
+	　 전화 및 FAX 번호는 '-'를 넣지마십시오.
+	</td>
+  </tr>
+</table>
+<iframe name="hiddenFrm" style="display:none;" width="300px" height="300px"></iframe>
+<!-- <iframe name="hiddenFrm"  width="500px" height="300px"></iframe> -->
+</body>
+
+</html>
+

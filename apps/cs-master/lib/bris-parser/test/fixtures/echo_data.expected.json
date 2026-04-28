@@ -1,0 +1,41 @@
+{
+  "projectId": "ED001",
+  "orderCode": "2026-500",
+  "company": "에코고객사",
+  "educationType": "대면",
+  "totalParticipants": "50",
+  "venue": "본사연수원",
+  "venueAddress": "서울시 강남구",
+  "operationIM": "김IM",
+  "amName": "장채영",
+  "amPhone": "02-111-2222",
+  "clientContact": "김고객",
+  "clientContactId": "CC1",
+  "clientContactPosition": "과장",
+  "clientContactDept": "인사팀",
+  "clientContactPhone": "02-111-2222",
+  "clientContactMobile": "02-333-4444",
+  "echoStatus": "",
+  "sheetState": "Y",
+  "surveyUsed": "사용",
+  "schedules": [
+    {
+      "sessionIndex": 1,
+      "startDate": "2026-05-01",
+      "endDate": "2026-05-02",
+      "days": "1",
+      "nights": "1",
+      "participants": "20",
+      "isOvernight": true
+    },
+    {
+      "sessionIndex": 2,
+      "startDate": "2026-05-15",
+      "endDate": "2026-05-16",
+      "days": "1",
+      "nights": "1",
+      "participants": "25",
+      "isOvernight": true
+    }
+  ]
+}

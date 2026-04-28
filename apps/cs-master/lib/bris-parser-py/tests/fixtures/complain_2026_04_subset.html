@@ -1,0 +1,59 @@
+<!-- BRIS complain_reference_list.asp subset (2026-04-21 수집 샘플).
+     회귀용 — 파서가 다음 엣지케이스를 모두 처리하는지 보증:
+       R1: place_name != company_name 그룹사 구조 (전한/코스모그룹)
+       R2: '에코 제외' 빨간 span + 에코 제외 사유 동일 행
+       R3: 2023년 마감일이 빨간 span 으로 기입된 레거시 행
+-->
+<!DOCTYPE html><html><body>
+<table class="ntbl_list_c">
+  <tr class="tfirst"><td>헤더</td><td>과정명</td><td>프로그램명</td><td>매출</td><td>시작일</td><td>종료일</td><td>유형</td><td>수주코드</td><td>프로젝트명</td><td>등록일</td><td>수주일</td><td>마감일</td></tr>
+
+  <!-- R1: 전한/코스모그룹 -->
+  <tr>
+    <td><span>business_id : 72890</span><br><span>project_id : 34810</span><br><span>echo_id : 없음</span><br><span>place_id : 26965</span><br><span>customer_id : 147460</span></td>
+    <td>AI 리터러시</td><td>리더대상 AI 공통 교육</td><td>1400000</td><td>20260403</td><td>20260403</td><td>대면</td>
+    <td>2604-063</td><td>전한_리더 대상 AI 공통 교육_26</td><td>2026-03-26 17:01</td><td>2026-04-01</td><td><span style="color:red"></span></td>
+  </tr>
+  <tr><td colspan="12" class="info-row"><span><b>에코 아이디 : </b>없음</span><span><b>에코 상태 : </b><span style="color: red;">에코 제외</span><b> 에코 제외 사유 : </b>집체(2시간이내 특강)</span></td></tr>
+  <tr>
+    <td colspan="6" class="info-row"><span><b>수주 : </b>김미송</span><span><b>수주팀 : </b>(201201001 - 서울1팀)</span></td>
+    <td colspan="6" class="info-row"><span><b>수행 : </b></span><span><b>수행팀 : </b>(2512 - 워크스마트팀)</span></td>
+  </tr>
+  <tr><td colspan="12" class="info-row"><span><b>사내강사 : </b></span></td></tr>
+  <tr><td colspan="12" class="info-row"><span><b>외부강사 : </b></span></td></tr>
+  <tr><td colspan="12" class="info-row"><span><b>플레이스 아이디 : </b>26965</span><span><b>회사명 : </b>코스모그룹</span><span><b>사업자번호 : </b>N</span><span><b>사업장명 : </b>전한</span></td></tr>
+  <tr><td colspan="12" class="info-row"><span><b>커스터머 아이디 : </b>147460</span><span><b>담당자 : </b>권혜원</span><span><b>부서 : </b>기획팀 교육파트대리</span><span><b>이메일 : </b>rnjs1520@sullai.com</span><span><b>전화 : </b>07049447135</span><span><b>휴대 : </b>01067763894</span></td></tr>
+
+  <!-- R2: 조인 (에코 제외 팀빌딩, 사내강사 있음) -->
+  <tr>
+    <td><span>business_id : 73014</span><br><span>project_id : 34934</span><br><span>echo_id : 4475</span><br><span>place_id : 27798</span><br><span>customer_id : 150980</span></td>
+    <td>신입사원 온보딩</td><td>리텐션 교육</td><td>1400000</td><td>20260430</td><td>20260430</td><td>대면</td>
+    <td>2604-143</td><td>조인주식회사_입사 1년차 리텐션 교육_2026</td><td>2026-04-10 15:43</td><td>2026-04-10</td><td><span style="color:red"></span></td>
+  </tr>
+  <tr><td colspan="12" class="info-row"><span><b>에코 아이디 : </b>4475</span><span><b>에코 상태 : </b><span style="color: red;">에코 제외</span><b> 에코 제외 사유 : </b>집체(4시간이내 조직활성화(팀빌딩))</span></td></tr>
+  <tr>
+    <td colspan="6" class="info-row"><span><b>수주 : </b>이제혁</span><span><b>수주팀 : </b>(201300001 - 경기팀)</span></td>
+    <td colspan="6" class="info-row"><span><b>수행 : </b></span><span><b>수행팀 : </b>(201206001 - 신입온보딩팀)</span></td>
+  </tr>
+  <tr><td colspan="12" class="info-row"><span><b>사내강사 : </b>안재현</span></td></tr>
+  <tr><td colspan="12" class="info-row"><span><b>외부강사 : </b></span></td></tr>
+  <tr><td colspan="12" class="info-row"><span><b>플레이스 아이디 : </b>27798</span><span><b>회사명 : </b>조인</span><span><b>사업자번호 : </b>N</span><span><b>사업장명 : </b>조인</span></td></tr>
+  <tr><td colspan="12" class="info-row"><span><b>커스터머 아이디 : </b>150980</span><span><b>담당자 : </b>이성은</span><span><b>부서 : </b>인사팀주임</span><span><b>이메일 : </b>seong@joinbio.co.kr</span><span><b>전화 : </b>0312807737</span><span><b>휴대 : </b>01054909423</span></td></tr>
+
+  <!-- R3: 레거시(2023) — 마감일 빨간 span 값 존재 -->
+  <tr>
+    <td><span>business_id : 66179</span><br><span>project_id : 29415</span><br><span>echo_id : 없음</span><br><span>place_id : 24857</span><br><span>customer_id : 120930</span></td>
+    <td>특강</td><td>법정필수특강</td><td>3600000</td><td>20231123</td><td></td><td>대면</td>
+    <td>2311-236</td><td>남양넥스모_법정필수교육대면_2023</td><td>2023-11-30 10:11</td><td>2023-11-30</td><td><span style="color:red">2023-12-04</span></td>
+  </tr>
+  <tr><td colspan="12" class="info-row"><span><b>에코 아이디 : </b>없음</span><span><b>에코 상태 : </b>에코 등록 (에코 등록 필요)</span></td></tr>
+  <tr>
+    <td colspan="6" class="info-row"><span><b>수주 : </b></span><span><b>수주팀 : </b>(201300001 - 경기팀)</span></td>
+    <td colspan="6" class="info-row"><span><b>수행 : </b></span><span><b>수행팀 : </b>(201205002 - 변화디자인팀)</span></td>
+  </tr>
+  <tr><td colspan="12" class="info-row"><span><b>사내강사 : </b></span></td></tr>
+  <tr><td colspan="12" class="info-row"><span><b>외부강사 : </b></span></td></tr>
+  <tr><td colspan="12" class="info-row"><span><b>플레이스 아이디 : </b>24857</span><span><b>회사명 : </b>남양넥스모(주)</span><span><b>사업자번호 : </b>1348104079</span><span><b>사업장명 : </b>남양넥스모</span></td></tr>
+  <tr><td colspan="12" class="info-row"><span><b>커스터머 아이디 : </b>120930</span><span><b>담당자 : </b>김현민</span><span><b>부서 : </b>기업문화팀</span><span><b>이메일 : </b>hyunmin.kim@nynexmo.com</span><span><b>전화 : </b>0314701877</span><span><b>휴대 : </b>01084951128</span></td></tr>
+
+</table></body></html>
