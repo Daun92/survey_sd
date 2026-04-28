@@ -153,6 +153,100 @@ export type Database = {
           },
         ]
       }
+      cs_bris_raw_pages: {
+        Row: {
+          bris_url: string
+          fetch_params: Json
+          fetched_at: string
+          fetched_by: string | null
+          id: string
+          page_kind: string
+          raw_bytes_sha1: string
+          raw_html: string | null
+          sync_id: string | null
+        }
+        Insert: {
+          bris_url: string
+          fetch_params?: Json
+          fetched_at?: string
+          fetched_by?: string | null
+          id?: string
+          page_kind: string
+          raw_bytes_sha1: string
+          raw_html?: string | null
+          sync_id?: string | null
+        }
+        Update: {
+          bris_url?: string
+          fetch_params?: Json
+          fetched_at?: string
+          fetched_by?: string | null
+          id?: string
+          page_kind?: string
+          raw_bytes_sha1?: string
+          raw_html?: string | null
+          sync_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cs_bris_raw_pages_sync_id_fkey"
+            columns: ["sync_id"]
+            isOneToOne: false
+            referencedRelation: "cs_sync_logs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cs_bris_raw_records: {
+        Row: {
+          bris_place_id: string | null
+          business_id: string | null
+          content_hash: string
+          customer_id: string | null
+          extracted_at: string
+          id: string
+          page_id: string
+          payload: Json
+          project_id: string | null
+          record_index: number | null
+          record_kind: string
+        }
+        Insert: {
+          bris_place_id?: string | null
+          business_id?: string | null
+          content_hash: string
+          customer_id?: string | null
+          extracted_at?: string
+          id?: string
+          page_id: string
+          payload: Json
+          project_id?: string | null
+          record_index?: number | null
+          record_kind: string
+        }
+        Update: {
+          bris_place_id?: string | null
+          business_id?: string | null
+          content_hash?: string
+          customer_id?: string | null
+          extracted_at?: string
+          id?: string
+          page_id?: string
+          payload?: Json
+          project_id?: string | null
+          record_index?: number | null
+          record_kind?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cs_bris_raw_records_page_id_fkey"
+            columns: ["page_id"]
+            isOneToOne: false
+            referencedRelation: "cs_bris_raw_pages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cs_business_places: {
         Row: {
           address: string | null
@@ -248,6 +342,7 @@ export type Database = {
           phone: string | null
           place_id: string | null
           position: string | null
+          source_raw_record_id: string | null
           survey_count_6m: number | null
           updated_at: string | null
         }
@@ -264,6 +359,7 @@ export type Database = {
           phone?: string | null
           place_id?: string | null
           position?: string | null
+          source_raw_record_id?: string | null
           survey_count_6m?: number | null
           updated_at?: string | null
         }
@@ -280,6 +376,7 @@ export type Database = {
           phone?: string | null
           place_id?: string | null
           position?: string | null
+          source_raw_record_id?: string | null
           survey_count_6m?: number | null
           updated_at?: string | null
         }
@@ -298,6 +395,13 @@ export type Database = {
             referencedRelation: "v_cs_target_candidates"
             referencedColumns: ["place_id"]
           },
+          {
+            foreignKeyName: "cs_contacts_source_raw_record_id_fkey"
+            columns: ["source_raw_record_id"]
+            isOneToOne: false
+            referencedRelation: "cs_bris_raw_records"
+            referencedColumns: ["id"]
+          },
         ]
       }
       cs_courses: {
@@ -307,6 +411,7 @@ export type Database = {
           contact_id: string | null
           course_name: string
           created_at: string | null
+          echo_exclude_reason: string | null
           echo_id: string | null
           echo_status: string | null
           education_type: string | null
@@ -321,6 +426,7 @@ export type Database = {
           revenue: number | null
           session_number: number | null
           sort_order: number | null
+          source_raw_record_id: string | null
           start_date: string | null
           updated_at: string | null
         }
@@ -330,6 +436,7 @@ export type Database = {
           contact_id?: string | null
           course_name: string
           created_at?: string | null
+          echo_exclude_reason?: string | null
           echo_id?: string | null
           echo_status?: string | null
           education_type?: string | null
@@ -344,6 +451,7 @@ export type Database = {
           revenue?: number | null
           session_number?: number | null
           sort_order?: number | null
+          source_raw_record_id?: string | null
           start_date?: string | null
           updated_at?: string | null
         }
@@ -353,6 +461,7 @@ export type Database = {
           contact_id?: string | null
           course_name?: string
           created_at?: string | null
+          echo_exclude_reason?: string | null
           echo_id?: string | null
           echo_status?: string | null
           education_type?: string | null
@@ -367,6 +476,7 @@ export type Database = {
           revenue?: number | null
           session_number?: number | null
           sort_order?: number | null
+          source_raw_record_id?: string | null
           start_date?: string | null
           updated_at?: string | null
         }
@@ -405,6 +515,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "v_cs_target_candidates"
             referencedColumns: ["project_uuid"]
+          },
+          {
+            foreignKeyName: "cs_courses_source_raw_record_id_fkey"
+            columns: ["source_raw_record_id"]
+            isOneToOne: false
+            referencedRelation: "cs_bris_raw_records"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -537,6 +654,7 @@ export type Database = {
           created_at: string
           id: string
           missing_fields: string[]
+          raw_record_id: string | null
           raw_row: Json
           reason: string | null
           sync_id: string | null
@@ -546,6 +664,7 @@ export type Database = {
           created_at?: string
           id?: string
           missing_fields?: string[]
+          raw_record_id?: string | null
           raw_row: Json
           reason?: string | null
           sync_id?: string | null
@@ -555,11 +674,20 @@ export type Database = {
           created_at?: string
           id?: string
           missing_fields?: string[]
+          raw_record_id?: string | null
           raw_row?: Json
           reason?: string | null
           sync_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "cs_import_errors_raw_record_id_fkey"
+            columns: ["raw_record_id"]
+            isOneToOne: false
+            referencedRelation: "cs_bris_raw_records"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       cs_project_members: {
         Row: {
@@ -630,6 +758,7 @@ export type Database = {
           project_name: string
           project_type: string | null
           registration_date: string | null
+          source_raw_record_id: string | null
           status: string | null
           total_amount: number | null
           updated_at: string | null
@@ -653,6 +782,7 @@ export type Database = {
           project_name: string
           project_type?: string | null
           registration_date?: string | null
+          source_raw_record_id?: string | null
           status?: string | null
           total_amount?: number | null
           updated_at?: string | null
@@ -676,11 +806,20 @@ export type Database = {
           project_name?: string
           project_type?: string | null
           registration_date?: string | null
+          source_raw_record_id?: string | null
           status?: string | null
           total_amount?: number | null
           updated_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "cs_projects_source_raw_record_id_fkey"
+            columns: ["source_raw_record_id"]
+            isOneToOne: false
+            referencedRelation: "cs_bris_raw_records"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       cs_survey_participation: {
         Row: {
@@ -3749,6 +3888,49 @@ export type Database = {
         }
         Relationships: []
       }
+      v_cs_bris_lineage_health: {
+        Row: {
+          contacts_orphan: number | null
+          contacts_with_lineage: number | null
+          courses_orphan: number | null
+          courses_with_lineage: number | null
+          projects_orphan: number | null
+          projects_with_lineage: number | null
+          raw_pages_total: number | null
+          raw_records_total: number | null
+        }
+        Relationships: []
+      }
+      v_cs_cron_status: {
+        Row: {
+          active: boolean | null
+          command: string | null
+          jobname: string | null
+          last_message: string | null
+          last_run_at: string | null
+          last_status: string | null
+          schedule: string | null
+        }
+        Insert: {
+          active?: boolean | null
+          command?: string | null
+          jobname?: string | null
+          last_message?: never
+          last_run_at?: never
+          last_status?: never
+          schedule?: string | null
+        }
+        Update: {
+          active?: boolean | null
+          command?: string | null
+          jobname?: string | null
+          last_message?: never
+          last_run_at?: never
+          last_status?: never
+          schedule?: string | null
+        }
+        Relationships: []
+      }
       v_cs_dispatch_summary: {
         Row: {
           batch_id: string | null
@@ -4023,6 +4205,12 @@ export type Database = {
           candidates_added: number
         }[]
       }
+      fn_cs_cron_lineage_audit: { Args: never; Returns: Json }
+      fn_cs_cron_raw_retention: {
+        Args: { p_keep_days?: number }
+        Returns: Json
+      }
+      fn_cs_cron_step4_recheck: { Args: never; Returns: Json }
       fn_cs_dispatch_batch: {
         Args: {
           p_batch_id: string
