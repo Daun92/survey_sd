@@ -1,0 +1,2433 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CS 사후 설문 대상자 관리</title>
+<style>
+:root {
+  --primary: #2c6e8a;
+  --primary-light: #e8f4f8;
+  --primary-dark: #1a4a5e;
+  --success: #2e7d32;
+  --warning: #f57c00;
+  --danger: #c62828;
+  --gray-50: #fafafa;
+  --gray-100: #f5f5f5;
+  --gray-200: #eeeeee;
+  --gray-300: #e0e0e0;
+  --gray-400: #bdbdbd;
+  --gray-500: #9e9e9e;
+  --gray-600: #757575;
+  --gray-700: #616161;
+  --gray-800: #424242;
+  --shadow: 0 2px 8px rgba(0,0,0,0.1);
+  --radius: 8px;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif;
+  background: var(--gray-100);
+  color: var(--gray-800);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.container { max-width: 1200px; margin: 0 auto; padding: 16px; }
+
+h1 {
+  font-size: 20px;
+  color: var(--primary-dark);
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Dashboard */
+.dashboard {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.dash-card {
+  background: white;
+  border-radius: var(--radius);
+  padding: 16px;
+  box-shadow: var(--shadow);
+  text-align: center;
+  border-top: 3px solid var(--primary);
+}
+
+.dash-card .label { font-size: 11px; color: var(--gray-600); margin-bottom: 4px; }
+.dash-card .value { font-size: 28px; font-weight: 700; color: var(--primary-dark); }
+.dash-card.highlight { border-top-color: var(--success); }
+.dash-card.highlight .value { color: var(--success); }
+
+/* Tabs */
+.tabs {
+  display: flex;
+  gap: 2px;
+  margin-bottom: 0;
+  background: var(--gray-300);
+  border-radius: var(--radius) var(--radius) 0 0;
+  overflow: hidden;
+}
+
+.tab-btn {
+  padding: 10px 20px;
+  border: none;
+  background: var(--gray-200);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--gray-600);
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.tab-btn:hover { background: var(--gray-100); }
+.tab-btn.active { background: white; color: var(--primary-dark); }
+
+.tab-content {
+  display: none;
+  background: white;
+  border-radius: 0 0 var(--radius) var(--radius);
+  box-shadow: var(--shadow);
+  padding: 20px;
+}
+
+.tab-content.active { display: block; }
+
+/* Buttons */
+.btn {
+  padding: 6px 14px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  transition: opacity 0.2s;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.btn:hover { opacity: 0.85; }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn-primary { background: var(--primary); color: white; }
+.btn-success { background: var(--success); color: white; }
+.btn-warning { background: var(--warning); color: white; }
+.btn-danger { background: var(--danger); color: white; }
+.btn-outline {
+  background: white;
+  color: var(--primary);
+  border: 1px solid var(--primary);
+}
+.btn-sm { padding: 4px 10px; font-size: 11px; }
+
+/* Tables */
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.data-table th {
+  background: var(--primary-light);
+  padding: 8px 6px;
+  text-align: center;
+  font-weight: 600;
+  border-bottom: 2px solid var(--primary);
+  white-space: nowrap;
+}
+
+.data-table td {
+  padding: 6px;
+  border-bottom: 1px solid var(--gray-200);
+  text-align: center;
+}
+
+.data-table tr:hover { background: var(--gray-50); }
+
+.data-table td.left { text-align: left; }
+
+/* Forms */
+.form-group {
+  margin-bottom: 12px;
+}
+
+.form-group label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 4px;
+  font-size: 12px;
+  color: var(--gray-700);
+}
+
+.form-control {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--gray-300);
+  border-radius: 4px;
+  font-size: 13px;
+  font-family: inherit;
+}
+
+.form-control:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px rgba(44,110,138,0.15);
+}
+
+textarea.form-control {
+  min-height: 120px;
+  resize: vertical;
+}
+
+select.form-control {
+  cursor: pointer;
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+}
+
+/* Parse Section */
+.parse-section {
+  border: 2px dashed var(--gray-300);
+  border-radius: var(--radius);
+  padding: 16px;
+  margin-bottom: 16px;
+  background: var(--gray-50);
+}
+
+.parse-section h3 {
+  font-size: 14px;
+  color: var(--primary);
+  margin-bottom: 8px;
+}
+
+.parse-section .desc {
+  font-size: 11px;
+  color: var(--gray-500);
+  margin-bottom: 8px;
+}
+
+/* Pipeline */
+.pipeline {
+  display: flex;
+  gap: 0;
+  margin-bottom: 20px;
+  align-items: stretch;
+}
+
+.pipeline-step {
+  flex: 1;
+  text-align: center;
+  padding: 12px 8px;
+  background: var(--gray-200);
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
+.pipeline-step:first-child { border-radius: var(--radius) 0 0 var(--radius); }
+.pipeline-step:last-child { border-radius: 0 var(--radius) var(--radius) 0; }
+
+.pipeline-step .step-label { font-size: 11px; color: var(--gray-600); margin-bottom: 4px; }
+.pipeline-step .step-count { font-size: 22px; font-weight: 700; }
+.pipeline-step .step-detail { font-size: 10px; color: var(--gray-500); }
+
+.pipeline-step.pass { background: #e8f5e9; }
+.pipeline-step.pass .step-count { color: var(--success); }
+.pipeline-step.fail { background: #ffebee; }
+.pipeline-step.fail .step-count { color: var(--danger); }
+.pipeline-step.final { background: #e3f2fd; border: 2px solid #1976d2; }
+.pipeline-step.final .step-count { color: #1976d2; }
+
+.pipeline-arrow {
+  display: flex;
+  align-items: center;
+  font-size: 18px;
+  color: var(--gray-400);
+  padding: 0 4px;
+}
+
+/* Badge */
+.badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.badge-success { background: #e8f5e9; color: var(--success); }
+.badge-warning { background: #fff3e0; color: var(--warning); }
+.badge-danger { background: #ffebee; color: var(--danger); }
+.badge-info { background: #e3f2fd; color: #1565c0; }
+.badge-gray { background: var(--gray-200); color: var(--gray-600); }
+
+/* Alert */
+.alert {
+  padding: 10px 14px;
+  border-radius: 4px;
+  margin-bottom: 12px;
+  font-size: 12px;
+}
+
+.alert-info { background: #e3f2fd; color: #1565c0; border-left: 4px solid #1976d2; }
+.alert-success { background: #e8f5e9; color: var(--success); border-left: 4px solid var(--success); }
+.alert-warning { background: #fff3e0; color: #e65100; border-left: 4px solid var(--warning); }
+
+/* Section title */
+.section-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--primary-dark);
+  margin: 16px 0 8px;
+  padding-bottom: 4px;
+  border-bottom: 2px solid var(--primary-light);
+}
+
+/* Toolbar */
+.toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* Overflow table wrapper */
+.table-wrap {
+  overflow-x: auto;
+}
+
+/* Modal */
+.modal-overlay {
+  display: none;
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.4);
+  z-index: 1000;
+  justify-content: center;
+  align-items: center;
+}
+
+.modal-overlay.active { display: flex; }
+
+.modal {
+  background: white;
+  border-radius: var(--radius);
+  padding: 24px;
+  max-width: 600px;
+  width: 90%;
+  max-height: 80vh;
+  overflow-y: auto;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+}
+
+.modal h3 { margin-bottom: 16px; color: var(--primary-dark); }
+
+/* Checkbox list in filter */
+.check-list label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-right: 12px;
+  font-weight: normal;
+  cursor: pointer;
+}
+
+/* Search */
+.search-box {
+  padding: 6px 10px;
+  border: 1px solid var(--gray-300);
+  border-radius: 4px;
+  font-size: 12px;
+  width: 200px;
+}
+
+/* Toast notification */
+.toast {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  background: var(--gray-800);
+  color: white;
+  padding: 12px 20px;
+  border-radius: var(--radius);
+  font-size: 13px;
+  z-index: 2000;
+  opacity: 0;
+  transform: translateY(20px);
+  transition: all 0.3s;
+}
+
+.toast.show { opacity: 1; transform: translateY(0); }
+
+/* Empty state */
+.empty-state {
+  text-align: center;
+  padding: 40px 20px;
+  color: var(--gray-500);
+}
+
+/* === NEW: Mode toggle === */
+.mode-toggle {
+  display: flex;
+  gap: 4px;
+  background: var(--gray-200);
+  border-radius: 6px;
+  padding: 3px;
+  display: inline-flex;
+}
+.mode-toggle button {
+  padding: 6px 16px;
+  border: none;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  background: transparent;
+  color: var(--gray-600);
+  transition: all 0.2s;
+}
+.mode-toggle button.active {
+  background: white;
+  color: var(--primary-dark);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.12);
+}
+
+/* === NEW: Progress bar === */
+.progress-bar {
+  width: 100%;
+  height: 8px;
+  background: var(--gray-200);
+  border-radius: 4px;
+  overflow: hidden;
+  margin: 8px 0;
+}
+.progress-bar-fill {
+  height: 100%;
+  background: var(--primary);
+  border-radius: 4px;
+  transition: width 0.3s ease;
+}
+.progress-text {
+  font-size: 12px;
+  color: var(--gray-600);
+  margin-bottom: 4px;
+}
+
+/* === NEW: Collection status table === */
+.collect-status-table td {
+  font-size: 11px;
+  padding: 4px 6px;
+}
+.collect-status-table .status-icon {
+  font-size: 14px;
+  width: 20px;
+  display: inline-block;
+  text-align: center;
+}
+.status-done { color: var(--success); }
+.status-pending { color: var(--gray-400); }
+.status-loading { color: var(--warning); }
+.status-error { color: var(--danger); }
+
+/* === NEW: Bookmarklet drag target === */
+.bookmarklet-link {
+  display: inline-block;
+  padding: 8px 16px;
+  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+  color: white;
+  border-radius: 6px;
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 13px;
+  cursor: grab;
+  user-select: none;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+}
+.bookmarklet-link:hover {
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+}
+
+/* === NEW: Step card === */
+.step-card {
+  border: 1px solid var(--gray-300);
+  border-radius: var(--radius);
+  padding: 16px;
+  margin-bottom: 16px;
+  background: white;
+}
+.step-card h4 {
+  font-size: 13px;
+  color: var(--primary-dark);
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.step-card h4 .step-num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--primary);
+  color: white;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .dashboard { grid-template-columns: repeat(3, 1fr); }
+  .pipeline { flex-direction: column; }
+  .pipeline-arrow { transform: rotate(90deg); justify-content: center; }
+  .form-row { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>CS 사후 설문 대상자 관리 시스템</h1>
+
+  <!-- Dashboard -->
+  <div class="dashboard">
+    <div class="dash-card"><div class="label">전체 과정 수</div><div class="value" id="dashTotal">0</div></div>
+    <div class="dash-card"><div class="label">차수 종료 완료</div><div class="value" id="dashSessionDone">0</div></div>
+    <div class="dash-card"><div class="label">프로젝트 마감</div><div class="value" id="dashProjectClosed">0</div></div>
+    <div class="dash-card"><div class="label">운영 완료(에코)</div><div class="value" id="dashOpDone">0</div></div>
+    <div class="dash-card highlight"><div class="label">최종 발송 대상</div><div class="value" id="dashFinal">0</div></div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="tabs">
+    <button class="tab-btn active" data-tab="tab1">데이터 수집</button>
+    <button class="tab-btn" data-tab="tab2">수동 입력/보완</button>
+    <button class="tab-btn" data-tab="tab3">발송대상 필터링</button>
+    <button class="tab-btn" data-tab="tab4">발송 이력</button>
+    <button class="tab-btn" data-tab="tab5">내보내기/백업</button>
+  </div>
+
+  <!-- Tab 1: 데이터 수집 (재설계) -->
+  <div class="tab-content active" id="tab1">
+    <!-- 수집 모드 선택 -->
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+      <div>
+        <span style="font-weight:600;color:var(--gray-700);margin-right:8px;">수집 모드:</span>
+        <div class="mode-toggle" id="modeToggle">
+          <button class="active" data-mode="auto" onclick="setCollectMode('auto')">Auto-Fetch</button>
+          <button data-mode="bookmarklet" onclick="setCollectMode('bookmarklet')">Bookmarklet</button>
+        </div>
+      </div>
+      <div id="modeStatus" style="font-size:11px;color:var(--gray-500);">모드 감지중...</div>
+    </div>
+
+    <!-- Step 1: 과정리스트 입력 -->
+    <div class="step-card">
+      <h4><span class="step-num">1</span> 과정리스트 입력</h4>
+      <div class="desc" style="font-size:11px;color:var(--gray-500);margin-bottom:8px;">BRIS 과정리스트 페이지의 HTML 소스를 복사하여 붙여넣으세요.</div>
+      <textarea class="form-control" id="courseListHtml" placeholder="과정리스트 HTML을 여기에 붙여넣기..." style="min-height:100px;"></textarea>
+      <div style="margin-top:8px;display:flex;gap:8px;align-items:center;">
+        <button class="btn btn-primary" onclick="parseCourseList()">파싱하기</button>
+        <span id="courseListStatus" style="font-size:12px;color:var(--gray-600);"></span>
+      </div>
+    </div>
+
+    <!-- Step 2: 상세 데이터 수집 -->
+    <div class="step-card">
+      <h4><span class="step-num">2</span> 상세 데이터 수집</h4>
+
+      <!-- Auto 모드 UI -->
+      <div id="autoModeUI">
+        <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;">
+          <button class="btn btn-success" id="btnAutoFetch" onclick="startAutoFetch()" disabled>자동 수집 시작</button>
+          <button class="btn btn-danger btn-sm" id="btnAutoStop" onclick="stopAutoFetch()" style="display:none;">중지</button>
+        </div>
+        <div id="autoProgress" style="display:none;">
+          <div class="progress-text" id="autoProgressText">준비중...</div>
+          <div class="progress-bar"><div class="progress-bar-fill" id="autoProgressBar" style="width:0%"></div></div>
+        </div>
+      </div>
+
+      <!-- Bookmarklet 모드 UI -->
+      <div id="bookmarkletModeUI" style="display:none;">
+        <div style="margin-bottom:12px;">
+          <div style="font-size:12px;font-weight:600;margin-bottom:4px;">북마클릿을 즐겨찾기 바에 드래그하세요:</div>
+          <a class="bookmarklet-link" id="bookmarkletAnchor" href="#">BRIS 데이터 추출</a>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;">
+          <button class="btn btn-primary btn-sm" onclick="openBulkTabs()">일괄 탭 열기 (5개씩)</button>
+          <span id="bulkTabStatus" style="font-size:11px;color:var(--gray-500);"></span>
+        </div>
+        <div style="margin-top:8px;">
+          <div style="font-size:12px;font-weight:600;margin-bottom:4px;">JSON 수동 붙여넣기 (크로스 도메인 시):</div>
+          <textarea class="form-control" id="jsonPasteArea" placeholder='북마클릿에서 복사한 JSON을 붙여넣기...' style="min-height:60px;font-family:monospace;font-size:11px;"></textarea>
+          <div style="margin-top:4px;"><button class="btn btn-primary btn-sm" onclick="importJsonPaste()">JSON 가져오기</button></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 수집 현황 -->
+    <h3 class="section-title">수집 현황 (<span id="collectCount">0</span>건)</h3>
+    <div class="toolbar">
+      <input type="text" class="search-box" id="courseSearch" placeholder="검색..." oninput="renderCourses()">
+      <div style="display:flex;gap:4px;">
+        <button class="btn btn-outline btn-sm" onclick="renderCourses()">새로고침</button>
+        <button class="btn btn-danger btn-sm" onclick="clearAllCourses()">전체 삭제</button>
+      </div>
+    </div>
+    <div class="table-wrap">
+      <table class="data-table collect-status-table" id="courseTable">
+        <thead>
+          <tr>
+            <th>과정명</th><th>회사</th><th>기간</th><th>AM</th><th>BIZ_ID</th><th>수주코드</th>
+            <th title="교육세부">교육</th><th title="에코운영">에코</th><th title="프로젝트마감">마감</th><th title="DM정보">DM</th>
+            <th>상태</th><th>관리</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Tab 2: 수동 입력/보완 -->
+  <div class="tab-content" id="tab2">
+    <div class="alert alert-info">자동 수집이 어려운 경우, 아래에서 개별 페이지 HTML을 수동으로 붙여넣을 수 있습니다.</div>
+
+    <div class="parse-section">
+      <h3>교육세부 HTML 붙여넣기</h3>
+      <div class="desc">교육세부 페이지 HTML을 복사하여 붙여넣으면 수주코드, PROJECT_ID 등을 추출합니다.</div>
+      <textarea class="form-control" id="eduDetailHtml" placeholder="교육세부 HTML을 여기에 붙여넣기..."></textarea>
+      <div style="margin-top:8px"><button class="btn btn-primary" onclick="parseEduDetail()">파싱하기</button></div>
+    </div>
+
+    <div class="parse-section">
+      <h3>에코 운영현황 HTML 붙여넣기</h3>
+      <div class="desc">프로젝트 세부_운영(에코) 페이지 HTML을 붙여넣으면 다차수 일정, 고객사 담당자, 설문사용 여부 등을 추출합니다.</div>
+      <textarea class="form-control" id="echoHtml" placeholder="에코 운영현황 HTML을 여기에 붙여넣기..."></textarea>
+      <div style="margin-top:8px">
+        <button class="btn btn-primary" onclick="parseEchoOperation()">파싱하기</button>
+      </div>
+    </div>
+
+    <div class="parse-section">
+      <h3>프로젝트 세부 HTML 붙여넣기</h3>
+      <div class="desc">프로젝트 세부 페이지 HTML을 붙여넣으면 프로젝트 마감 상태를 추출합니다.</div>
+      <textarea class="form-control" id="projectDetailHtml" placeholder="프로젝트 세부 HTML을 여기에 붙여넣기..."></textarea>
+      <div style="margin-top:8px"><button class="btn btn-primary" onclick="parseProjectDetail()">파싱하기</button></div>
+    </div>
+
+    <div class="parse-section">
+      <h3>고객정보(DM) HTML 붙여넣기</h3>
+      <div class="desc">고객정보상세(DM) 페이지 HTML을 붙여넣으면 담당자 이메일, 연락처 등을 추출합니다.</div>
+      <textarea class="form-control" id="dmHtml" placeholder="고객정보(DM) HTML을 여기에 붙여넣기..."></textarea>
+      <div style="margin-top:8px"><button class="btn btn-primary" onclick="parseDmInfo()">파싱하기</button></div>
+    </div>
+
+    <h3 class="section-title">수동 과정 입력</h3>
+    <div id="manualCourseForm">
+      <div class="form-row">
+        <div class="form-group"><label>과정유형</label><select class="form-control" id="mcType"><option value="사내">사내</option><option value="공개">공개</option></select></div>
+        <div class="form-group"><label>BUSINESS_ID</label><input class="form-control" id="mcBusinessId"></div>
+        <div class="form-group"><label>수주코드</label><input class="form-control" id="mcOrderCode"></div>
+        <div class="form-group"><label>PROJECT_ID</label><input class="form-control" id="mcProjectId"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>과정명</label><input class="form-control" id="mcCourseName"></div>
+        <div class="form-group"><label>프로그램명</label><input class="form-control" id="mcProgramName"></div>
+        <div class="form-group"><label>회사</label><input class="form-control" id="mcCompany"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>시작일</label><input class="form-control" type="date" id="mcStartDate"></div>
+        <div class="form-group"><label>종료일</label><input class="form-control" type="date" id="mcEndDate"></div>
+        <div class="form-group"><label>시간</label><input class="form-control" type="number" id="mcHours"></div>
+        <div class="form-group"><label>인원</label><input class="form-control" type="number" id="mcParticipants"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>AM</label><input class="form-control" id="mcAm"></div>
+        <div class="form-group"><label>내부담당자</label><input class="form-control" id="mcInternalManager"></div>
+        <div class="form-group"><label>팀</label><input class="form-control" id="mcTeam"></div>
+      </div>
+      <button class="btn btn-success" onclick="addManualCourse()">과정 추가</button>
+    </div>
+
+    <h3 class="section-title">차수별 교육일정 (<span id="scheduleCount">0</span>건)</h3>
+    <div class="table-wrap">
+      <table class="data-table" id="scheduleTable">
+        <thead>
+          <tr><th>수주코드</th><th>회사</th><th>차수</th><th>시작일</th><th>종료일</th><th>박/일</th><th>인원</th><th>상태</th><th>관리</th></tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
+    <h3 class="section-title">운영 현황 (<span id="opCount">0</span>건)</h3>
+    <div class="table-wrap">
+      <table class="data-table" id="opTable">
+        <thead>
+          <tr><th>수주코드</th><th>회사</th><th>교육유형</th><th>인원</th><th>운영IM</th><th>AM</th>
+            <th>고객담당자</th><th>CUST_ID</th><th>설문</th><th>운영요청서</th><th>에코</th><th>관리</th></tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
+    <h3 class="section-title">교육담당자(DM) (<span id="dmCount">0</span>건)</h3>
+    <div class="table-wrap">
+      <table class="data-table" id="dmTable">
+        <thead>
+          <tr><th>CUST_ID</th><th>회사</th><th>성명</th><th>직급</th><th>부서</th><th>전화</th><th>휴대폰</th><th>이메일</th><th>관리</th></tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Tab 3: 발송대상 필터링 -->
+  <div class="tab-content" id="tab3">
+    <div class="toolbar">
+      <div>
+        <label>기준일: <input type="date" class="form-control" id="filterDate" style="width:auto;display:inline-block"></label>
+      </div>
+      <button class="btn btn-primary" onclick="runFilterPipeline()">필터링 실행</button>
+    </div>
+
+    <div class="pipeline" id="pipelineView">
+      <div class="pipeline-step"><div class="step-label">전체 차수</div><div class="step-count" id="pStep0">-</div></div>
+      <div class="pipeline-arrow">&rarr;</div>
+      <div class="pipeline-step"><div class="step-label">Step 1: 종료일</div><div class="step-count" id="pStep1">-</div><div class="step-detail">종료된 차수</div></div>
+      <div class="pipeline-arrow">&rarr;</div>
+      <div class="pipeline-step"><div class="step-label">Step 2: 프로젝트 마감</div><div class="step-count" id="pStep2">-</div><div class="step-detail">마감 완료</div></div>
+      <div class="pipeline-arrow">&rarr;</div>
+      <div class="pipeline-step"><div class="step-label">Step 3: 운영 상태</div><div class="step-count" id="pStep3">-</div><div class="step-detail">설문사용+운영완료</div></div>
+      <div class="pipeline-arrow">&rarr;</div>
+      <div class="pipeline-step final"><div class="step-label">Step 4: 6개월 룰</div><div class="step-count" id="pStep4">-</div><div class="step-detail">최종 대상</div></div>
+    </div>
+
+    <h3 class="section-title">최종 발송 대상</h3>
+    <div class="toolbar">
+      <div class="check-list">
+        <label><input type="checkbox" id="selectAll" onchange="toggleSelectAll()"> 전체 선택</label>
+      </div>
+      <button class="btn btn-success" onclick="markAsSent()">발송 완료 처리</button>
+    </div>
+    <div class="table-wrap">
+      <table class="data-table" id="filterResultTable">
+        <thead>
+          <tr><th><input type="checkbox" id="selectAllHead" onchange="toggleSelectAll()"></th>
+            <th>회사</th><th>과정명</th><th>차수</th><th>차수 종료일</th>
+            <th>담당자</th><th>이메일</th><th>전화</th><th>AM</th><th>운영IM</th>
+            <th>탈락사유/비고</th></tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    <div class="empty-state" id="filterEmpty">필터링을 실행하면 결과가 여기에 표시됩니다.</div>
+  </div>
+
+  <!-- Tab 4: 발송 이력 -->
+  <div class="tab-content" id="tab4">
+    <div class="toolbar">
+      <input type="text" class="search-box" id="historySearch" placeholder="검색 (회사, 과정명, 담당자)..." oninput="renderHistory()">
+      <div>
+        <button class="btn btn-outline btn-sm" onclick="exportHistoryCSV()">CSV 내보내기</button>
+      </div>
+    </div>
+    <div class="table-wrap">
+      <table class="data-table" id="historyTable">
+        <thead>
+          <tr><th>발송일</th><th>회사</th><th>과정명</th><th>차수</th><th>차수종료일</th>
+            <th>담당자</th><th>이메일</th><th>AM</th><th>운영IM</th>
+            <th>6개월 만료</th><th>비고</th><th>관리</th></tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    <div class="empty-state" id="historyEmpty">발송 이력이 없습니다.</div>
+  </div>
+
+  <!-- Tab 5: 내보내기/백업 -->
+  <div class="tab-content" id="tab5">
+    <h3 class="section-title">최종 대상 CSV 내보내기</h3>
+    <p style="margin-bottom:12px;color:var(--gray-600);">필터링 결과(Tab 3)의 최종 대상을 CSV 파일로 내보냅니다. UTF-8 BOM으로 저장되어 엑셀에서 한글이 정상 표시됩니다.</p>
+    <button class="btn btn-primary" onclick="exportTargetCSV()">최종 대상 CSV 내보내기</button>
+
+    <h3 class="section-title" style="margin-top:24px;">전체 데이터 백업</h3>
+    <p style="margin-bottom:12px;color:var(--gray-600);">localStorage의 전체 데이터를 JSON 파일로 백업하거나 복원합니다.</p>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn btn-success" onclick="backupData()">JSON 백업 다운로드</button>
+      <button class="btn btn-warning" onclick="document.getElementById('restoreFile').click()">JSON 복원</button>
+      <input type="file" id="restoreFile" accept=".json" style="display:none" onchange="restoreData(event)">
+    </div>
+
+    <h3 class="section-title" style="margin-top:24px;">데이터 초기화</h3>
+    <div class="alert alert-warning">모든 데이터(과정, 운영현황, 발송이력 등)를 삭제합니다. 복원할 수 없으니 먼저 백업하세요.</div>
+    <button class="btn btn-danger" onclick="resetAllData()">전체 데이터 초기화</button>
+  </div>
+</div>
+
+<!-- Modal: 과정 수정 -->
+<div class="modal-overlay" id="editCourseModal">
+  <div class="modal">
+    <h3>과정 정보 수정</h3>
+    <div id="editCourseFormContent"></div>
+    <div style="margin-top:16px;text-align:right">
+      <button class="btn btn-outline" onclick="closeModal('editCourseModal')">취소</button>
+      <button class="btn btn-primary" onclick="saveEditCourse()">저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ==================== DATA STORE ====================
+const BRIS_BASE = 'https://bris.exc.co.kr';
+
+const STORE_KEYS = {
+  courses: 'cs_courses',
+  schedules: 'cs_schedules',
+  operations: 'cs_operations',
+  managers: 'cs_managers',
+  history: 'cs_history'
+};
+
+function loadData(key) {
+  try { return JSON.parse(localStorage.getItem(key)) || []; }
+  catch { return []; }
+}
+
+function saveData(key, data) {
+  localStorage.setItem(key, JSON.stringify(data));
+}
+
+function genId() {
+  return Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
+}
+
+// ==================== TOAST ====================
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+// ==================== TAB NAVIGATION ====================
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById(btn.dataset.tab).classList.add('active');
+  });
+});
+
+// ==================== MODAL ====================
+function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+
+// ==================== UTILITY ====================
+function esc(str) {
+  if (!str) return '';
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+function parseBrisDate(str) {
+  str = str.trim();
+  const arrowMatch = str.match(/(\d{4})\/(\d{2})\/(\d{2})[→~](\d{2})\/(\d{2})/);
+  if (arrowMatch) {
+    const startDate = `${arrowMatch[1]}-${arrowMatch[2]}-${arrowMatch[3]}`;
+    const endDate = `${arrowMatch[1]}-${arrowMatch[4]}-${arrowMatch[5]}`;
+    return { startDate, endDate };
+  }
+  const singleMatch = str.match(/(\d{4})\/(\d{2})\/(\d{2})/);
+  if (singleMatch) {
+    const d = `${singleMatch[1]}-${singleMatch[2]}-${singleMatch[3]}`;
+    return { startDate: d, endDate: d };
+  }
+  return { startDate: '', endDate: '' };
+}
+
+// ==================== DASHBOARD ====================
+function updateDashboard() {
+  const courses = loadData(STORE_KEYS.courses);
+  const schedules = loadData(STORE_KEYS.schedules);
+  const operations = loadData(STORE_KEYS.operations);
+  const today = new Date().toISOString().split('T')[0];
+
+  document.getElementById('dashTotal').textContent = courses.length;
+
+  const doneSessions = schedules.filter(s => s.endDate && s.endDate <= today).length;
+  document.getElementById('dashSessionDone').textContent = doneSessions;
+
+  const closedProjects = courses.filter(c => c.projectClosed && c.projectClosed !== '미적용').length;
+  document.getElementById('dashProjectClosed').textContent = closedProjects;
+
+  const opDone = operations.filter(o => o.sheetState === 'Y' && o.surveyUsed === '사용' && !o.echoStatus).length;
+  document.getElementById('dashOpDone').textContent = opDone;
+
+  const lastFilter = window._lastFilterResult || [];
+  document.getElementById('dashFinal').textContent = lastFilter.length;
+}
+
+// ======================================================================
+// PHASE 1: 순수 추출 함수 (Pure Extract Functions)
+// ======================================================================
+
+/** 교육세부 HTML → 데이터 추출 */
+function extractEduDetailData(html) {
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(html, 'text/html');
+
+  const bizInput = doc.querySelector('input[id="businessId"], input[name="businessId"], input[name="business_id"]');
+  const businessId = bizInput ? bizInput.value : '';
+
+  let orderCode = '', projectId = '';
+  const projectLink = doc.querySelector('a[href*="project_view.asp"]');
+  if (projectLink) {
+    orderCode = projectLink.textContent.trim();
+    const pidMatch = (projectLink.getAttribute('href') || '').match(/PROJECT_ID=(\d+)/);
+    projectId = pidMatch ? pidMatch[1] : '';
+  }
+
+  const tdHeaders = doc.querySelectorAll('td[bgcolor="#DDECB4"]');
+  let company = '', internalManager = '', courseName = '', programName = '';
+
+  for (const th of tdHeaders) {
+    const text = th.textContent.trim().replace(/\*/g, '');
+    const nextTd = th.nextElementSibling;
+    if (!nextTd) continue;
+    const val = nextTd.textContent.trim();
+    if (text === '회사명') company = val;
+    else if (text === '담당자') internalManager = val;
+    else if (text === '과정명') courseName = val;
+    else if (text === '프로그램명') programName = val;
+  }
+
+  return { businessId, orderCode, projectId, company, internalManager, courseName, programName };
+}
+
+/** 에코 운영현황 HTML → 데이터 추출 */
+function extractEchoData(html) {
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(html, 'text/html');
+
+  let projectId = '';
+  const pidInput = doc.querySelector('input[name="project_id"]');
+  if (pidInput) projectId = pidInput.value;
+  if (!projectId) {
+    const scriptMatch = html.match(/const\s+project_id\s*=\s*"(\d+)"/);
+    if (scriptMatch) projectId = scriptMatch[1];
+  }
+
+  let orderCode = '';
+  const codeSpans = doc.querySelectorAll('.cont span');
+  for (const s of codeSpans) {
+    const txt = s.textContent.trim();
+    if (/^\d{4}-\d{3}$/.test(txt)) { orderCode = txt; break; }
+  }
+
+  let company = '';
+  const titleTds = doc.querySelectorAll('td.title');
+  for (const td of titleTds) {
+    if (td.textContent.includes('고객사')) {
+      const next = td.nextElementSibling;
+      if (next) company = next.textContent.trim().replace(/\s+/g, ' ');
+      break;
+    }
+  }
+
+  let educationType = '';
+  const valSpans = doc.querySelectorAll('span.val');
+  for (const s of valSpans) {
+    const t = s.textContent.trim();
+    if (t.includes('대면') || t.includes('비대면') || t.includes('혼합')) { educationType = t; break; }
+  }
+
+  let totalParticipants = '';
+  for (const s of valSpans) {
+    const parent = s.parentElement;
+    if (parent && parent.textContent.includes('총') && parent.textContent.includes('명')) {
+      totalParticipants = s.textContent.trim(); break;
+    }
+  }
+
+  let venue = '', venueAddress = '';
+  for (const td of titleTds) {
+    if (td.textContent.includes('연수원명')) {
+      const next = td.nextElementSibling;
+      if (next) { const v = next.querySelector('span.val'); venue = v ? v.textContent.trim() : next.textContent.trim(); }
+    }
+    if (td.textContent.includes('주소')) {
+      const next = td.nextElementSibling;
+      if (next) { const v = next.querySelector('span.val'); venueAddress = v ? v.textContent.trim() : next.textContent.trim(); }
+    }
+  }
+
+  let operationIM = '';
+  const imSelect = doc.querySelector('select[name="im_no"]');
+  if (imSelect) {
+    const selected = imSelect.querySelector('option[selected]');
+    if (selected) operationIM = selected.textContent.trim().replace(/\u00a0/g, ' ');
+  }
+
+  let amName = '', amPhone = '';
+  for (const td of titleTds) {
+    if (td.textContent.includes('담당AM')) {
+      const next = td.nextElementSibling;
+      if (next) {
+        const b = next.querySelector('b');
+        amName = b ? b.textContent.trim() : '';
+        const tel = next.querySelector('span.contactTel');
+        amPhone = tel ? tel.textContent.trim() : '';
+      }
+      break;
+    }
+  }
+
+  let clientContact = '', clientContactId = '', clientContactPosition = '', clientContactDept = '';
+  const contactSelect = doc.querySelector('select[name="im_contactor"]');
+  if (contactSelect) {
+    const selected = contactSelect.querySelector('option[selected]');
+    if (selected) {
+      clientContactId = selected.value;
+      const raw = selected.textContent.trim().replace(/\u00a0/g, ' ');
+      const contactMatch = raw.match(/^(.+?)\s+(.*?)\((.*?)\)$/);
+      if (contactMatch) {
+        clientContact = contactMatch[1];
+        clientContactPosition = contactMatch[2];
+        clientContactDept = contactMatch[3];
+      } else {
+        clientContact = raw;
+      }
+    }
+  }
+
+  let clientContactPhone = '', clientContactMobile = '';
+  const contactTels = doc.querySelectorAll('span.contactTel');
+  const telArr = Array.from(contactTels).map(t => t.textContent.trim());
+  if (telArr.length >= 3) {
+    clientContactPhone = telArr[1] || '';
+    clientContactMobile = telArr[2] || '';
+  }
+
+  let echoStatus = '';
+  const alertSpans = doc.querySelectorAll('span.alert');
+  for (const s of alertSpans) {
+    if (s.textContent.includes('에코 제외')) { echoStatus = '에코 제외'; break; }
+  }
+
+  let sheetState = '';
+  const sheetMatch = html.match(/const\s+sheetState\s*=\s*"([^"]+)"/);
+  if (sheetMatch) sheetState = sheetMatch[1];
+
+  let surveyUsed = '';
+  const surveyChecks = doc.querySelectorAll('input[name="survey"]');
+  for (const chk of surveyChecks) {
+    if (chk.checked || chk.hasAttribute('checked')) { surveyUsed = chk.value; break; }
+  }
+  if (!surveyUsed) {
+    for (const td of titleTds) {
+      if (td.textContent.includes('설문지')) {
+        const next = td.nextElementSibling;
+        if (next) { const v = next.querySelector('span.val'); surveyUsed = v ? v.textContent.trim() : next.textContent.trim(); }
+        break;
+      }
+    }
+  }
+
+  // 다차수 교육일정
+  const courseDateDivs = doc.querySelectorAll('div[sDate]');
+  const schedules = [];
+  courseDateDivs.forEach((div, idx) => {
+    schedules.push({
+      sessionIndex: idx + 1,
+      startDate: div.getAttribute('sDate'),
+      endDate: div.getAttribute('eDate'),
+      days: div.getAttribute('courseDay_d1') || '',
+      nights: div.getAttribute('courseDay_d2') || '',
+      participants: div.getAttribute('courseDay_person') || '0',
+      isOvernight: parseInt(div.getAttribute('courseDay_d1') || '0') > 0
+    });
+  });
+
+  return {
+    projectId, orderCode, company, educationType, totalParticipants,
+    venue, venueAddress, operationIM, amName, amPhone,
+    clientContact, clientContactId, clientContactPosition, clientContactDept,
+    clientContactPhone, clientContactMobile,
+    echoStatus, sheetState, surveyUsed, schedules
+  };
+}
+
+/** 프로젝트 세부 HTML → 데이터 추출 */
+function extractProjectDetailData(html) {
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(html, 'text/html');
+
+  let projectId = '';
+  const pidInput = doc.querySelector('input[name="PROJECT_ID"]');
+  if (pidInput) projectId = pidInput.value;
+  if (!projectId) {
+    const scriptMatch = html.match(/var\s+project_id\s*=\s*"(\d+)"/);
+    if (scriptMatch) projectId = scriptMatch[1];
+  }
+
+  let orderCode = '';
+  const codeInput = doc.querySelector('input[name="successCode"]');
+  if (codeInput) orderCode = codeInput.value;
+  if (!orderCode) {
+    const tdHeaders = doc.querySelectorAll('td.bris_tb_title, td[bgcolor="#dee8ef"]');
+    for (const td of tdHeaders) {
+      if (td.textContent.includes('수주코드')) {
+        const next = td.nextElementSibling;
+        if (next) { const match = next.textContent.trim().match(/\d{4}-\d{3}/); if (match) orderCode = match[0]; }
+        break;
+      }
+    }
+  }
+
+  let projectClosed = '미적용';
+  const allTds = doc.querySelectorAll('td');
+  for (let i = 0; i < allTds.length; i++) {
+    const td = allTds[i];
+    if (td.textContent.includes('프로젝트 마감') && td.querySelector('b')) {
+      const next = td.nextElementSibling;
+      if (next) { const val = next.textContent.trim(); projectClosed = val || '미적용'; }
+      break;
+    }
+  }
+
+  let projectName = '', company = '', am = '', team = '';
+  const infoTds = doc.querySelectorAll('td.bris_tb_title, td[bgcolor="#dee8ef"]');
+  for (const td of infoTds) {
+    const text = td.textContent.trim().replace(/\*/g, '');
+    const next = td.nextElementSibling;
+    if (!next) continue;
+    const val = next.textContent.trim();
+    if (text.includes('프로젝트명')) projectName = val;
+    else if (text.includes('고객사')) company = val;
+    else if (text.includes('AM') && text.includes('Account')) am = val.split(/\s/)[0];
+    else if (text.includes('수행팀')) team = val;
+  }
+
+  return { projectId, orderCode, projectClosed, projectName, company, am, team };
+}
+
+/** 고객정보(DM) HTML → 데이터 추출 */
+function extractDmData(html) {
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(html, 'text/html');
+
+  let customerId = '';
+  const custInput = doc.querySelector('input[name="CUSTOMER_ID"]');
+  if (custInput) customerId = custInput.value;
+
+  let company = '', companyGrade = '';
+  const placeLink = doc.querySelector('a[href*="place_view.asp"]');
+  if (placeLink) company = placeLink.textContent.trim();
+
+  const tdHeaders = doc.querySelectorAll('td[bgcolor="#DDECB4"]');
+  for (const td of tdHeaders) {
+    if (td.textContent.includes('사업장등급')) {
+      const next = td.nextElementSibling;
+      if (next) companyGrade = next.textContent.trim();
+    }
+  }
+
+  let name = '', position = '';
+  for (const td of tdHeaders) {
+    if (td.textContent.trim() === '성명') {
+      const next = td.nextElementSibling;
+      if (next) { const parts = next.textContent.trim().split(/\s+/); name = parts[0] || ''; position = parts[1] || ''; }
+      break;
+    }
+  }
+
+  let phone = '', mobile = '';
+  for (const td of tdHeaders) {
+    if (td.textContent.includes('전화') && td.textContent.includes('휴대')) {
+      const next = td.nextElementSibling;
+      if (next) {
+        const allNumbers = next.textContent.match(/[\d\-]+/g) || [];
+        if (allNumbers.length >= 1) phone = allNumbers[0];
+        if (allNumbers.length >= 2) mobile = allNumbers[1];
+      }
+      break;
+    }
+  }
+
+  let department = '';
+  for (const td of tdHeaders) {
+    if (td.textContent.trim() === '부서') {
+      const next = td.nextElementSibling;
+      if (next) department = next.textContent.trim();
+      break;
+    }
+  }
+
+  let email = '';
+  const mailLink = doc.querySelector('a[href^="mailto:"]');
+  if (mailLink) email = mailLink.textContent.trim();
+
+  let dmSubscription = '';
+  for (const td of tdHeaders) {
+    if (td.textContent.includes('DM수신여부')) {
+      const next = td.nextElementSibling;
+      if (next) dmSubscription = next.textContent.trim();
+      break;
+    }
+  }
+
+  let customerLevel = '';
+  for (const td of tdHeaders) {
+    if (td.textContent.includes('고객레벨')) {
+      const next = td.nextElementSibling;
+      if (next) customerLevel = next.textContent.trim();
+      break;
+    }
+  }
+
+  return { customerId, company, companyGrade, name, position, department, phone, mobile, email, dmSubscription, customerLevel };
+}
+
+// ======================================================================
+// PHASE 1b: 데이터 적용 함수 (applyExtractedData)
+// ======================================================================
+
+/** 교육세부 추출 데이터 → localStorage 적용 */
+function applyEduDetailData(data) {
+  const courses = loadData(STORE_KEYS.courses);
+  let updated = false;
+  for (const c of courses) {
+    if (c.businessId === data.businessId || (!c.businessId && c.courseName === data.courseName && c.company === data.company)) {
+      c.businessId = data.businessId || c.businessId;
+      c.orderCode = data.orderCode || c.orderCode;
+      c.projectId = data.projectId || c.projectId;
+      c.internalManager = data.internalManager || c.internalManager;
+      if (!c.programName && data.programName) c.programName = data.programName;
+      c._fetchedEdu = true;
+      updated = true;
+      break;
+    }
+  }
+  if (!updated && data.businessId) {
+    courses.push({
+      id: genId(), businessId: data.businessId, orderCode: data.orderCode, projectId: data.projectId,
+      type: '사내', courseName: data.courseName, programName: data.programName, company: data.company,
+      startDate: '', endDate: '', hours: '', participants: '',
+      am: '', internalManager: data.internalManager, projectName: '', projectClosed: '미적용', team: '',
+      _fetchedEdu: true
+    });
+  }
+  saveData(STORE_KEYS.courses, courses);
+  return updated;
+}
+
+/** 에코 운영 추출 데이터 → localStorage 적용 */
+function applyEchoData(data, matchOrderCode, matchProjectId) {
+  const courses = loadData(STORE_KEYS.courses);
+  const schedules = loadData(STORE_KEYS.schedules);
+  const operations = loadData(STORE_KEYS.operations);
+
+  const pid = data.projectId || matchProjectId;
+  const oc = data.orderCode || matchOrderCode;
+
+  let matchedCourseId = '';
+  for (const c of courses) {
+    if ((pid && c.projectId === pid) || (oc && c.orderCode === oc)) {
+      matchedCourseId = c.id;
+      if (!c.projectId) c.projectId = pid;
+      if (!c.orderCode) c.orderCode = oc;
+      c._fetchedEcho = true;
+      break;
+    }
+  }
+
+  // 스케줄 교체
+  const filteredSchedules = schedules.filter(s => s.projectId !== pid);
+  for (const sch of data.schedules) {
+    filteredSchedules.push({
+      id: genId(), courseId: matchedCourseId, orderCode: oc, projectId: pid,
+      company: data.company, sessionIndex: sch.sessionIndex,
+      startDate: sch.startDate, endDate: sch.endDate,
+      days: sch.days, nights: sch.nights, participants: sch.participants, isOvernight: sch.isOvernight
+    });
+  }
+  saveData(STORE_KEYS.schedules, filteredSchedules);
+
+  // 운영정보 교체
+  const filteredOps = operations.filter(o => o.projectId !== pid);
+  filteredOps.push({
+    id: genId(), courseId: matchedCourseId, orderCode: oc, projectId: pid,
+    company: data.company, educationType: data.educationType, totalParticipants: data.totalParticipants,
+    venue: data.venue, venueAddress: data.venueAddress, operationIM: data.operationIM,
+    amName: data.amName, amPhone: data.amPhone,
+    clientContact: data.clientContact, clientContactId: data.clientContactId,
+    clientContactPosition: data.clientContactPosition, clientContactDept: data.clientContactDept,
+    clientContactPhone: data.clientContactPhone, clientContactMobile: data.clientContactMobile,
+    echoStatus: data.echoStatus, sheetState: data.sheetState, surveyUsed: data.surveyUsed,
+    createdDate: new Date().toISOString().split('T')[0]
+  });
+  saveData(STORE_KEYS.operations, filteredOps);
+  saveData(STORE_KEYS.courses, courses);
+
+  return { sessionCount: data.schedules.length, customerId: data.clientContactId };
+}
+
+/** 프로젝트 세부 추출 데이터 → localStorage 적용 */
+function applyProjectDetailData(data) {
+  const courses = loadData(STORE_KEYS.courses);
+  let updated = false;
+  for (const c of courses) {
+    if ((data.projectId && c.projectId === data.projectId) || (data.orderCode && c.orderCode === data.orderCode)) {
+      c.projectClosed = data.projectClosed;
+      c.projectName = data.projectName || c.projectName;
+      if (!c.projectId) c.projectId = data.projectId;
+      if (!c.orderCode) c.orderCode = data.orderCode;
+      if (!c.team) c.team = data.team;
+      c._fetchedProject = true;
+      updated = true;
+    }
+  }
+  saveData(STORE_KEYS.courses, courses);
+  return updated;
+}
+
+/** DM 추출 데이터 → localStorage 적용 */
+function applyDmData(data) {
+  const managers = loadData(STORE_KEYS.managers);
+  const existing = managers.findIndex(m => m.customerId === data.customerId);
+  const mgr = {
+    id: existing >= 0 ? managers[existing].id : genId(),
+    customerId: data.customerId, company: data.company, companyGrade: data.companyGrade,
+    name: data.name, position: data.position, department: data.department,
+    phone: data.phone, mobile: data.mobile, email: data.email,
+    dmSubscription: data.dmSubscription, responsibilityArea: '', customerLevel: data.customerLevel
+  };
+  if (existing >= 0) managers[existing] = mgr;
+  else managers.push(mgr);
+  saveData(STORE_KEYS.managers, managers);
+
+  // 운영정보 연결
+  const operations = loadData(STORE_KEYS.operations);
+  let linkedCourseId = '';
+  for (const op of operations) {
+    if (op.clientContactId === data.customerId) {
+      op.clientContact = data.name;
+      op.clientContactPosition = data.position;
+      op.clientContactDept = data.department;
+      linkedCourseId = op.courseId;
+    }
+  }
+  saveData(STORE_KEYS.operations, operations);
+
+  // 과정에 DM 수집 마크
+  if (linkedCourseId) {
+    const courses = loadData(STORE_KEYS.courses);
+    const c = courses.find(x => x.id === linkedCourseId);
+    if (c) { c._fetchedDm = true; saveData(STORE_KEYS.courses, courses); }
+  }
+
+  return data;
+}
+
+// ======================================================================
+// 기존 parseXxx → 래퍼로 전환 (Tab 2 수동 입력 지원)
+// ======================================================================
+
+function parseCourseList() {
+  const html = document.getElementById('courseListHtml').value;
+  if (!html.trim()) { showToast('HTML을 붙여넣으세요'); return; }
+
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(html, 'text/html');
+  const courses = loadData(STORE_KEYS.courses);
+  let count = 0;
+
+  let dataTable = doc.querySelector('table.copyTable');
+  if (!dataTable) {
+    const tables = doc.querySelectorAll('table');
+    for (const t of tables) {
+      if (t.getAttribute('bgcolor') === '#f6f6f6') { dataTable = t; break; }
+    }
+    if (!dataTable) {
+      for (const t of tables) {
+        if (t.querySelector(':scope > tr > td.mixTitle, :scope > tbody > tr > td.mixTitle')) {
+          dataTable = t; break;
+        }
+      }
+    }
+  }
+  if (!dataTable) { showToast('과정리스트 테이블을 찾을 수 없습니다'); return; }
+
+  const rows = dataTable.querySelectorAll(':scope > tr, :scope > tbody > tr');
+  for (const row of rows) {
+    const tds = row.querySelectorAll('td');
+    if (tds.length < 7) continue;
+    const mixTitle = row.querySelector('td.mixTitle');
+    if (!mixTitle) continue;
+    const link = mixTitle.querySelector('a');
+    if (!link) continue;
+
+    const type = tds[0].textContent.trim();
+    const dateStr = tds[1].textContent.trim();
+    const courseName = link.textContent.trim();
+    const programName = mixTitle.textContent.replace(courseName, '').trim();
+    const company = tds[3].textContent.trim();
+    const hours = tds[4].textContent.trim();
+    const participants = tds[5].textContent.trim();
+    const am = tds[6].textContent.trim();
+
+    const href = link.getAttribute('href') || '';
+    const bizMatch = href.match(/BUSINESS_ID=(\d+)/);
+    const businessId = bizMatch ? bizMatch[1] : '';
+
+    const { startDate, endDate } = parseBrisDate(dateStr);
+
+    if (businessId && courses.some(c => c.businessId === businessId)) continue;
+
+    courses.push({
+      id: genId(), businessId, orderCode: '', projectId: '',
+      type, courseName, programName, company, startDate, endDate, hours, participants, am,
+      internalManager: '', projectName: '', projectClosed: '미적용', team: '',
+      _fetchedEdu: false, _fetchedEcho: false, _fetchedProject: false, _fetchedDm: false
+    });
+    count++;
+  }
+
+  saveData(STORE_KEYS.courses, courses);
+  renderCourses();
+  updateDashboard();
+  updateAutoFetchButton();
+  document.getElementById('courseListStatus').textContent = `${count}건 과정 감지됨`;
+  showToast(`${count}개 과정 파싱 완료`);
+}
+
+function parseEduDetail() {
+  const html = document.getElementById('eduDetailHtml').value;
+  if (!html.trim()) { showToast('HTML을 붙여넣으세요'); return; }
+  const data = extractEduDetailData(html);
+  applyEduDetailData(data);
+  renderCourses(); updateDashboard();
+  showToast('교육세부 파싱 완료');
+}
+
+function parseEchoOperation() {
+  const html = document.getElementById('echoHtml').value;
+  if (!html.trim()) { showToast('HTML을 붙여넣으세요'); return; }
+  const data = extractEchoData(html);
+  const result = applyEchoData(data);
+  renderSchedules(); renderOperations(); renderCourses(); updateDashboard();
+  showToast(`에코 파싱 완료: ${result.sessionCount}개 차수, 운영정보 저장`);
+}
+
+function parseProjectDetail() {
+  const html = document.getElementById('projectDetailHtml').value;
+  if (!html.trim()) { showToast('HTML을 붙여넣으세요'); return; }
+  const data = extractProjectDetailData(html);
+  const updated = applyProjectDetailData(data);
+  renderCourses(); updateDashboard();
+  showToast(updated ? `프로젝트 마감 상태: ${data.projectClosed}` : '매칭되는 과정을 찾을 수 없습니다');
+}
+
+function parseDmInfo() {
+  const html = document.getElementById('dmHtml').value;
+  if (!html.trim()) { showToast('HTML을 붙여넣으세요'); return; }
+  const data = extractDmData(html);
+  applyDmData(data);
+  renderManagers(); renderCourses(); updateDashboard();
+  showToast(`DM 파싱 완료: ${data.name} ${data.position} (${data.company})`);
+}
+
+// ======================================================================
+// PHASE 2: 모드 감지 + Auto-Fetch
+// ======================================================================
+
+let currentMode = 'auto'; // 'auto' or 'bookmarklet'
+let autoFetchRunning = false;
+let autoFetchAbort = false;
+
+async function detectMode() {
+  const statusEl = document.getElementById('modeStatus');
+
+  // ASP 프록시 경유 (같은 도메인: onepage.exc.co.kr)
+  try {
+    const proxyUrl = '/default.asp?bris_proxy='
+                   + encodeURIComponent('/business/index.asp')
+                   + '&SD=20260316&ED=20260316';
+    const resp = await fetch(proxyUrl);
+    if (resp.ok) {
+      const buf = await resp.arrayBuffer();
+      const text = new TextDecoder('euc-kr').decode(buf);
+      if (text.includes('BUSINESS_ID=')) {
+        statusEl.textContent = 'Auto-Fetch 사용 가능 (프록시 모드)';
+        statusEl.style.color = 'var(--success)';
+        setCollectMode('auto');
+        return 'auto';
+      }
+    }
+  } catch (e) { /* proxy unreachable */ }
+
+  // Fallback
+  statusEl.textContent = 'Bookmarklet 모드 (프록시 연결 실패)';
+  statusEl.style.color = 'var(--warning)';
+  setCollectMode('bookmarklet');
+  return 'bookmarklet';
+}
+
+function setCollectMode(mode) {
+  currentMode = mode;
+  document.querySelectorAll('#modeToggle button').forEach(b => {
+    b.classList.toggle('active', b.dataset.mode === mode);
+  });
+  document.getElementById('autoModeUI').style.display = mode === 'auto' ? 'block' : 'none';
+  document.getElementById('bookmarkletModeUI').style.display = mode === 'bookmarklet' ? 'block' : 'none';
+}
+
+function updateAutoFetchButton() {
+  const courses = loadData(STORE_KEYS.courses);
+  const unfetched = courses.filter(c => c.businessId && !c._fetchedEcho);
+  const btn = document.getElementById('btnAutoFetch');
+  if (unfetched.length > 0) {
+    btn.disabled = false;
+    btn.textContent = `자동 수집 시작 (${unfetched.length}건)`;
+  } else {
+    btn.disabled = true;
+    btn.textContent = '자동 수집 시작 (0건)';
+  }
+}
+
+async function fetchHtml(url) {
+  // BRIS 상대경로 → 같은 도메인 ASP 프록시 경유
+  const qIdx = url.indexOf('?');
+  const path = qIdx >= 0 ? url.substring(0, qIdx) : url;
+  const query = qIdx >= 0 ? url.substring(qIdx + 1) : '';
+  const fullUrl = '/default.asp?bris_proxy=' + encodeURIComponent(path)
+                + (query ? '&' + query : '');
+  const resp = await fetch(fullUrl);
+  if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+  const buf = await resp.arrayBuffer();
+  const decoder = new TextDecoder('euc-kr');
+  return decoder.decode(buf);
+}
+
+function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+/** 1건 과정 자동 수집 체인 */
+async function autoFetchCourse(course, progressCallback) {
+  const bizId = course.businessId;
+  if (!bizId) throw new Error('BUSINESS_ID 없음');
+
+  // Step a: 교육세부 fetch → PROJECT_ID, orderCode
+  progressCallback('교육세부 수집중...');
+  const eduUrl = `/business/program_mng.asp?DIVISION=1&BUSINESS_ID=${bizId}`;
+  const eduHtml = await fetchHtml(eduUrl);
+  const eduData = extractEduDetailData(eduHtml);
+  applyEduDetailData(eduData);
+  await delay(200);
+
+  const projectId = eduData.projectId || course.projectId;
+  if (!projectId) throw new Error('PROJECT_ID를 추출할 수 없습니다');
+
+  // Step b: 에코 운영 fetch → 차수, 담당자, 설문 등
+  progressCallback('에코 운영 수집중...');
+  const echoUrl = `/business/echo/operate/main.asp?project_id=${projectId}`;
+  const echoHtml = await fetchHtml(echoUrl);
+  const echoData = extractEchoData(echoHtml);
+  const echoResult = applyEchoData(echoData, eduData.orderCode, projectId);
+  await delay(200);
+
+  // Step c: 프로젝트 세부 fetch → 마감 상태
+  progressCallback('프로젝트 세부 수집중...');
+  const projUrl = `/business/success/project_view.asp?PROJECT_ID=${projectId}`;
+  const projHtml = await fetchHtml(projUrl);
+  const projData = extractProjectDetailData(projHtml);
+  applyProjectDetailData(projData);
+  await delay(200);
+
+  // Step d: DM fetch → 이메일, 전화
+  const customerId = echoResult.customerId || echoData.clientContactId;
+  if (customerId) {
+    progressCallback('DM 정보 수집중...');
+    const dmUrl = `/dm/dm_view.asp?CUSTOMER_ID=${customerId}`;
+    const dmHtml = await fetchHtml(dmUrl);
+    const dmData = extractDmData(dmHtml);
+    applyDmData(dmData);
+    await delay(200);
+  }
+
+  return { eduData, echoData, projData, customerId };
+}
+
+/** 전체 과정 순차 자동 수집 */
+async function startAutoFetch() {
+  if (autoFetchRunning) return;
+  autoFetchRunning = true;
+  autoFetchAbort = false;
+
+  const courses = loadData(STORE_KEYS.courses);
+  const targets = courses.filter(c => c.businessId && !c._fetchedEcho);
+  const total = targets.length;
+
+  if (total === 0) { showToast('수집 대상이 없습니다'); autoFetchRunning = false; return; }
+
+  document.getElementById('btnAutoFetch').disabled = true;
+  document.getElementById('btnAutoStop').style.display = 'inline-flex';
+  document.getElementById('autoProgress').style.display = 'block';
+
+  let done = 0;
+
+  for (const course of targets) {
+    if (autoFetchAbort) break;
+
+    const progressText = `${done + 1}/${total} - ${course.company || ''}: `;
+    try {
+      await autoFetchCourse(course, (step) => {
+        document.getElementById('autoProgressText').textContent = progressText + step;
+      });
+      done++;
+    } catch (err) {
+      console.error(`수집 실패: ${course.courseName}`, err);
+      document.getElementById('autoProgressText').textContent = progressText + `오류: ${err.message}`;
+      done++;
+      await delay(500);
+    }
+
+    const pct = Math.round((done / total) * 100);
+    document.getElementById('autoProgressBar').style.width = pct + '%';
+    renderCourses();
+    updateDashboard();
+  }
+
+  autoFetchRunning = false;
+  document.getElementById('btnAutoStop').style.display = 'none';
+  document.getElementById('autoProgressText').textContent = autoFetchAbort
+    ? `중지됨 (${done}/${total} 완료)`
+    : `완료! ${done}건 수집됨`;
+  updateAutoFetchButton();
+  renderSchedules();
+  renderOperations();
+  renderManagers();
+  showToast(autoFetchAbort ? `수집 중지 (${done}건 완료)` : `${done}건 자동 수집 완료`);
+}
+
+function stopAutoFetch() {
+  autoFetchAbort = true;
+  document.getElementById('autoProgressText').textContent = '중지 요청중...';
+}
+
+// ======================================================================
+// PHASE 4: 유니버설 북마클릿
+// ======================================================================
+
+function generateBookmarkletCode() {
+  // 유니버설 북마클릿: URL 패턴으로 페이지 자동 감지 후 데이터 추출
+  const code = `(function(){
+    var loc=location.href,data={_page:'unknown',_url:loc,_ts:Date.now()};
+    function g(s){var e=document.querySelector(s);return e?e.value||e.textContent.trim():'';}
+    function ga(s){return Array.from(document.querySelectorAll(s));}
+
+    if(loc.includes('program_mng.asp')){
+      data._page='eduDetail';
+      data.businessId=g('input[name="businessId"],input[id="businessId"],input[name="business_id"]');
+      var pl=document.querySelector('a[href*="project_view.asp"]');
+      if(pl){data.orderCode=pl.textContent.trim();var m=(pl.href||'').match(/PROJECT_ID=(\\d+)/);if(m)data.projectId=m[1];}
+      ga('td[bgcolor="#DDECB4"]').forEach(function(td){
+        var t=td.textContent.trim().replace(/\\*/g,''),n=td.nextElementSibling;if(!n)return;var v=n.textContent.trim();
+        if(t==='회사명')data.company=v;else if(t==='담당자')data.internalManager=v;
+        else if(t==='과정명')data.courseName=v;else if(t==='프로그램명')data.programName=v;
+      });
+    }
+    else if(loc.includes('echo/operate/main.asp')){
+      data._page='echo';
+      data.projectId=g('input[name="project_id"]');
+      if(!data.projectId){var m2=document.body.innerHTML.match(/const\\s+project_id\\s*=\\s*"(\\d+)"/);if(m2)data.projectId=m2[1];}
+      ga('.cont span').forEach(function(s){if(/^\\d{4}-\\d{3}$/.test(s.textContent.trim()))data.orderCode=s.textContent.trim();});
+      var cs=document.querySelector('select[name="im_contactor"]');
+      if(cs){var so=cs.querySelector('option[selected]');if(so){data.clientContactId=so.value;data.clientContactRaw=so.textContent.trim();}}
+      var im=document.querySelector('select[name="im_no"]');
+      if(im){var io=im.querySelector('option[selected]');if(io)data.operationIM=io.textContent.trim();}
+      var sm=document.body.innerHTML.match(/const\\s+sheetState\\s*=\\s*"([^"]+)"/);if(sm)data.sheetState=sm[1];
+      ga('input[name="survey"]').forEach(function(c){if(c.checked||c.hasAttribute('checked'))data.surveyUsed=c.value;});
+      ga('span.alert').forEach(function(s){if(s.textContent.includes('에코 제외'))data.echoStatus='에코 제외';});
+      var scheds=[];ga('div[sDate]').forEach(function(d,i){
+        scheds.push({si:i+1,s:d.getAttribute('sDate'),e:d.getAttribute('eDate'),
+          d1:d.getAttribute('courseDay_d1')||'',d2:d.getAttribute('courseDay_d2')||'',p:d.getAttribute('courseDay_person')||'0'});
+      });data.schedules=scheds;
+    }
+    else if(loc.includes('project_view.asp')){
+      data._page='projectDetail';
+      data.projectId=g('input[name="PROJECT_ID"]');
+      if(!data.projectId){var m3=document.body.innerHTML.match(/var\\s+project_id\\s*=\\s*"(\\d+)"/);if(m3)data.projectId=m3[1];}
+      ga('td').forEach(function(td){
+        if(td.textContent.includes('프로젝트 마감')&&td.querySelector('b')){var n=td.nextElementSibling;if(n)data.projectClosed=n.textContent.trim()||'미적용';}
+      });
+      ga('td.bris_tb_title,td[bgcolor="#dee8ef"]').forEach(function(td){
+        var t=td.textContent.trim().replace(/\\*/g,''),n=td.nextElementSibling;if(!n)return;var v=n.textContent.trim();
+        if(t.includes('수주코드')){var mc=v.match(/\\d{4}-\\d{3}/);if(mc)data.orderCode=mc[0];}
+      });
+    }
+    else if(loc.includes('dm_view.asp')){
+      data._page='dm';
+      data.customerId=g('input[name="CUSTOMER_ID"]');
+      var pl2=document.querySelector('a[href*="place_view.asp"]');if(pl2)data.company=pl2.textContent.trim();
+      ga('td[bgcolor="#DDECB4"]').forEach(function(td){
+        var t=td.textContent.trim(),n=td.nextElementSibling;if(!n)return;var v=n.textContent.trim();
+        if(t==='성명'){var p=v.split(/\\s+/);data.name=p[0]||'';data.position=p[1]||'';}
+        else if(t==='부서')data.department=v;
+        else if(t.includes('전화')&&t.includes('휴대')){var nums=v.match(/[\\d\\-]+/g)||[];data.phone=nums[0]||'';data.mobile=nums[1]||'';}
+      });
+      var ml=document.querySelector('a[href^="mailto:"]');if(ml)data.email=ml.textContent.trim();
+    }
+
+    var json=JSON.stringify(data);
+    try{localStorage.setItem('bris_extract_data',json);localStorage.setItem('bris_extract_ts',''+Date.now());}catch(e){}
+    try{navigator.clipboard.writeText(json).then(function(){});}catch(e){}
+
+    var d=document.createElement('div');d.style.cssText='position:fixed;top:10px;right:10px;background:#2e7d32;color:#fff;padding:12px 20px;border-radius:8px;z-index:99999;font-size:14px;box-shadow:0 4px 12px rgba(0,0,0,0.3);';
+    d.textContent='['+data._page+'] 데이터 추출 완료 (클립보드 복사됨)';
+    document.body.appendChild(d);setTimeout(function(){d.remove();},2500);
+  })();`;
+
+  return 'javascript:' + encodeURIComponent(code);
+}
+
+function initBookmarklet() {
+  const anchor = document.getElementById('bookmarkletAnchor');
+  anchor.href = generateBookmarkletCode();
+  anchor.addEventListener('click', function(e) { e.preventDefault(); showToast('즐겨찾기 바에 드래그하세요!'); });
+}
+
+/** 일괄 탭 열기: 교육세부 페이지를 5개씩 */
+function openBulkTabs() {
+  const courses = loadData(STORE_KEYS.courses);
+  const targets = courses.filter(c => c.businessId && !c._fetchedEcho);
+  if (targets.length === 0) { showToast('수집 대상이 없습니다'); return; }
+
+  const batchSize = 5;
+  const batch = targets.slice(0, batchSize);
+  batch.forEach(c => {
+    window.open(`${BRIS_BASE}/business/program_mng.asp?DIVISION=1&BUSINESS_ID=${c.businessId}`, '_blank');
+  });
+  document.getElementById('bulkTabStatus').textContent =
+    `${batch.length}개 탭 열림 (전체 ${targets.length}건 중 ${Math.min(batchSize, targets.length)}건)`;
+}
+
+// ======================================================================
+// PHASE 5: 데이터 수신 + 동기화
+// ======================================================================
+
+/** localStorage storage 이벤트 리스너 (북마클릿 → index.html) */
+window.addEventListener('storage', function(e) {
+  if (e.key === 'bris_extract_ts' && e.newValue) {
+    try {
+      const raw = localStorage.getItem('bris_extract_data');
+      if (raw) processExtractedJson(JSON.parse(raw));
+    } catch (err) { console.error('storage event parse error:', err); }
+  }
+});
+
+/** JSON 수동 붙여넣기 */
+function importJsonPaste() {
+  const area = document.getElementById('jsonPasteArea');
+  const text = area.value.trim();
+  if (!text) { showToast('JSON을 붙여넣으세요'); return; }
+
+  // 여러 JSON 객체가 줄바꿈으로 구분되어 있을 수 있음
+  const lines = text.split('\n').filter(l => l.trim().startsWith('{'));
+  let count = 0;
+  for (const line of lines) {
+    try {
+      const data = JSON.parse(line.trim());
+      processExtractedJson(data);
+      count++;
+    } catch (e) { /* skip invalid lines */ }
+  }
+
+  // 단일 JSON 시도
+  if (count === 0) {
+    try {
+      const data = JSON.parse(text);
+      processExtractedJson(data);
+      count = 1;
+    } catch(e) { showToast('유효한 JSON이 아닙니다'); return; }
+  }
+
+  area.value = '';
+  showToast(`${count}건 데이터 가져오기 완료`);
+}
+
+/** 추출된 JSON 데이터를 페이지 유형에 따라 적용 */
+function processExtractedJson(data) {
+  if (!data || !data._page) return;
+
+  switch (data._page) {
+    case 'eduDetail':
+      applyEduDetailData(data);
+      break;
+    case 'echo': {
+      // 에코 데이터를 extractEchoData 형식에 맞게 변환
+      const echoFormatted = {
+        projectId: data.projectId, orderCode: data.orderCode, company: data.company || '',
+        educationType: '', totalParticipants: '', venue: '', venueAddress: '',
+        operationIM: data.operationIM || '', amName: '', amPhone: '',
+        clientContact: '', clientContactId: data.clientContactId || '',
+        clientContactPosition: '', clientContactDept: '',
+        clientContactPhone: '', clientContactMobile: '',
+        echoStatus: data.echoStatus || '', sheetState: data.sheetState || '',
+        surveyUsed: data.surveyUsed || '',
+        schedules: (data.schedules || []).map(s => ({
+          sessionIndex: s.si, startDate: s.s, endDate: s.e,
+          days: s.d1, nights: s.d2, participants: s.p, isOvernight: parseInt(s.d1) > 0
+        }))
+      };
+      // clientContact 파싱
+      if (data.clientContactRaw) {
+        const m = data.clientContactRaw.replace(/\u00a0/g, ' ').match(/^(.+?)\s+(.*?)\((.*?)\)$/);
+        if (m) {
+          echoFormatted.clientContact = m[1];
+          echoFormatted.clientContactPosition = m[2];
+          echoFormatted.clientContactDept = m[3];
+        } else {
+          echoFormatted.clientContact = data.clientContactRaw;
+        }
+      }
+      applyEchoData(echoFormatted, data.orderCode, data.projectId);
+      break;
+    }
+    case 'projectDetail':
+      applyProjectDetailData({
+        projectId: data.projectId, orderCode: data.orderCode || '',
+        projectClosed: data.projectClosed || '미적용',
+        projectName: '', company: '', am: '', team: ''
+      });
+      break;
+    case 'dm':
+      applyDmData({
+        customerId: data.customerId, company: data.company || '', companyGrade: '',
+        name: data.name || '', position: data.position || '', department: data.department || '',
+        phone: data.phone || '', mobile: data.mobile || '', email: data.email || '',
+        dmSubscription: '', customerLevel: ''
+      });
+      break;
+  }
+
+  renderCourses();
+  renderSchedules();
+  renderOperations();
+  renderManagers();
+  updateDashboard();
+  updateAutoFetchButton();
+}
+
+// ======================================================================
+// MANUAL COURSE INPUT
+// ======================================================================
+
+function addManualCourse() {
+  const courses = loadData(STORE_KEYS.courses);
+  const courseName = document.getElementById('mcCourseName').value.trim();
+  if (!courseName) { showToast('과정명을 입력하세요'); return; }
+
+  courses.push({
+    id: genId(),
+    businessId: document.getElementById('mcBusinessId').value.trim(),
+    orderCode: document.getElementById('mcOrderCode').value.trim(),
+    projectId: document.getElementById('mcProjectId').value.trim(),
+    type: document.getElementById('mcType').value,
+    courseName,
+    programName: document.getElementById('mcProgramName').value.trim(),
+    company: document.getElementById('mcCompany').value.trim(),
+    startDate: document.getElementById('mcStartDate').value,
+    endDate: document.getElementById('mcEndDate').value,
+    hours: document.getElementById('mcHours').value,
+    participants: document.getElementById('mcParticipants').value,
+    am: document.getElementById('mcAm').value.trim(),
+    internalManager: document.getElementById('mcInternalManager').value.trim(),
+    projectName: '',
+    projectClosed: '미적용',
+    team: document.getElementById('mcTeam').value.trim(),
+    _fetchedEdu: false, _fetchedEcho: false, _fetchedProject: false, _fetchedDm: false
+  });
+
+  saveData(STORE_KEYS.courses, courses);
+  ['mcBusinessId','mcOrderCode','mcProjectId','mcCourseName','mcProgramName','mcCompany',
+   'mcStartDate','mcEndDate','mcHours','mcParticipants','mcAm','mcInternalManager','mcTeam'
+  ].forEach(id => document.getElementById(id).value = '');
+
+  renderCourses(); updateDashboard(); updateAutoFetchButton();
+  showToast('과정 추가 완료');
+}
+
+// ======================================================================
+// RENDER FUNCTIONS
+// ======================================================================
+
+function getCollectStatusIcon(status) {
+  if (status === true) return '<span class="status-icon status-done">&#10003;</span>';
+  if (status === false) return '<span class="status-icon status-error">&#10007;</span>';
+  if (status === 'loading') return '<span class="status-icon status-loading">&#9203;</span>';
+  return '<span class="status-icon status-pending">-</span>';  // null = 미수집
+}
+
+function getCourseOverallStatus(eduStatus, echoStatus, closeStatus, dmStatus) {
+  const statuses = [eduStatus, echoStatus, closeStatus, dmStatus];
+  if (statuses.every(s => s === true))
+    return '<span class="badge badge-success">완료</span>';
+  if (statuses.some(s => s !== null))
+    return '<span class="badge badge-warning">수집중</span>';
+  return '<span class="badge badge-gray">대기</span>';
+}
+
+function renderCourses() {
+  const courses = loadData(STORE_KEYS.courses);
+  const search = (document.getElementById('courseSearch').value || '').toLowerCase();
+  const filtered = courses.filter(c =>
+    !search || [c.courseName, c.company, c.am, c.orderCode, c.programName].join(' ').toLowerCase().includes(search)
+  );
+
+  document.getElementById('collectCount').textContent = courses.length;
+  const tbody = document.querySelector('#courseTable tbody');
+  tbody.innerHTML = filtered.map(c => `
+    <tr>
+      <td class="left">${esc(c.courseName)}</td>
+      <td>${esc(c.company)}</td>
+      <td>${c.startDate || '-'}${c.endDate && c.endDate !== c.startDate ? '~' + c.endDate : ''}</td>
+      <td>${esc(c.am)}</td>
+      <td>${c.businessId || '-'}</td>
+      <td>${c.orderCode || '-'}${c.projectClosed !== '미적용' ? ' <span class="badge badge-success">마감</span>' : ''}</td>
+      <td>${getCollectStatusIcon(c._fetchedEdu)}</td>
+      <td>${getCollectStatusIcon(c._fetchedEcho)}</td>
+      <td>${getCollectStatusIcon(c._fetchedProject)}</td>
+      <td>${getCollectStatusIcon(c._fetchedDm)}</td>
+      <td>${getCourseOverallStatus(c)}</td>
+      <td>
+        <button class="btn btn-outline btn-sm" onclick="editCourse('${c.id}')">수정</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteCourse('${c.id}')">삭제</button>
+      </td>
+    </tr>
+  `).join('');
+}
+
+function renderSchedules() {
+  const schedules = loadData(STORE_KEYS.schedules);
+  document.getElementById('scheduleCount').textContent = schedules.length;
+  const today = new Date().toISOString().split('T')[0];
+  const tbody = document.querySelector('#scheduleTable tbody');
+  tbody.innerHTML = schedules.map(s => {
+    const ended = s.endDate && s.endDate <= today;
+    return `<tr>
+      <td>${s.orderCode || '-'}</td>
+      <td>${esc(s.company || '-')}</td>
+      <td>${s.sessionIndex}차</td>
+      <td>${s.startDate}</td>
+      <td>${s.endDate}</td>
+      <td>${s.days}박${s.nights}일</td>
+      <td>${s.participants}</td>
+      <td>${ended ? '<span class="badge badge-success">종료</span>' : '<span class="badge badge-warning">진행중</span>'}</td>
+      <td><button class="btn btn-danger btn-sm" onclick="deleteSchedule('${s.id}')">삭제</button></td>
+    </tr>`;
+  }).join('');
+}
+
+function renderOperations() {
+  const ops = loadData(STORE_KEYS.operations);
+  document.getElementById('opCount').textContent = ops.length;
+  const tbody = document.querySelector('#opTable tbody');
+  tbody.innerHTML = ops.map(o => `
+    <tr>
+      <td>${o.orderCode || '-'}</td>
+      <td>${esc(o.company || '-')}</td>
+      <td>${o.educationType || '-'}</td>
+      <td>${o.totalParticipants || '-'}</td>
+      <td>${esc(o.operationIM || '-')}</td>
+      <td>${esc(o.amName || '-')}</td>
+      <td>${esc(o.clientContact || '-')} ${esc(o.clientContactPosition || '')}</td>
+      <td>${o.clientContactId || '-'}</td>
+      <td>${o.surveyUsed ? '<span class="badge badge-success">' + esc(o.surveyUsed) + '</span>' : '<span class="badge badge-gray">미설정</span>'}</td>
+      <td>${o.sheetState === 'Y' ? '<span class="badge badge-success">완료</span>' : '<span class="badge badge-warning">' + (o.sheetState || '-') + '</span>'}</td>
+      <td>${o.echoStatus ? '<span class="badge badge-danger">' + esc(o.echoStatus) + '</span>' : '<span class="badge badge-info">정상</span>'}</td>
+      <td><button class="btn btn-danger btn-sm" onclick="deleteOperation('${o.id}')">삭제</button></td>
+    </tr>
+  `).join('');
+}
+
+function renderManagers() {
+  const mgrs = loadData(STORE_KEYS.managers);
+  document.getElementById('dmCount').textContent = mgrs.length;
+  const tbody = document.querySelector('#dmTable tbody');
+  tbody.innerHTML = mgrs.map(m => `
+    <tr>
+      <td>${m.customerId}</td>
+      <td>${esc(m.company)}</td>
+      <td>${esc(m.name)}</td>
+      <td>${esc(m.position)}</td>
+      <td>${esc(m.department)}</td>
+      <td>${m.phone || '-'}</td>
+      <td>${m.mobile || '-'}</td>
+      <td>${m.email || '-'}</td>
+      <td><button class="btn btn-danger btn-sm" onclick="deleteManager('${m.id}')">삭제</button></td>
+    </tr>
+  `).join('');
+}
+
+function renderHistory() {
+  const history = loadData(STORE_KEYS.history);
+  const search = (document.getElementById('historySearch').value || '').toLowerCase();
+  const filtered = history.filter(h =>
+    !search || [h.company, h.courseName, h.managerName, h.managerEmail, h.am].join(' ').toLowerCase().includes(search)
+  );
+
+  document.getElementById('historyEmpty').style.display = filtered.length ? 'none' : 'block';
+  const today = new Date();
+  const tbody = document.querySelector('#historyTable tbody');
+  tbody.innerHTML = filtered.map(h => {
+    const sentDate = new Date(h.sentDate);
+    const expireDate = new Date(sentDate);
+    expireDate.setMonth(expireDate.getMonth() + 6);
+    const daysLeft = Math.ceil((expireDate - today) / (1000 * 60 * 60 * 24));
+    const expBadge = daysLeft > 30 ? 'badge-info' : daysLeft > 0 ? 'badge-warning' : 'badge-danger';
+    const expText = daysLeft > 0 ? `${daysLeft}일 남음` : '만료';
+
+    return `<tr>
+      <td>${h.sentDate}</td>
+      <td>${esc(h.company)}</td>
+      <td class="left">${esc(h.courseName)}</td>
+      <td>${h.sessionIndex || '-'}차</td>
+      <td>${h.sessionEndDate || '-'}</td>
+      <td>${esc(h.managerName)}</td>
+      <td>${h.managerEmail || '-'}</td>
+      <td>${esc(h.am || '-')}</td>
+      <td>${esc(h.operationIM || '-')}</td>
+      <td><span class="badge ${expBadge}">${expText}</span></td>
+      <td>${esc(h.notes || '')}</td>
+      <td><button class="btn btn-danger btn-sm" onclick="deleteHistory('${h.id}')">삭제</button></td>
+    </tr>`;
+  }).join('');
+}
+
+// ======================================================================
+// DELETE FUNCTIONS
+// ======================================================================
+
+function deleteCourse(id) {
+  if (!confirm('이 과정을 삭제하시겠습니까?')) return;
+  const data = loadData(STORE_KEYS.courses).filter(c => c.id !== id);
+  saveData(STORE_KEYS.courses, data);
+  renderCourses(); updateDashboard(); updateAutoFetchButton();
+}
+
+function deleteSchedule(id) {
+  if (!confirm('이 일정을 삭제하시겠습니까?')) return;
+  const data = loadData(STORE_KEYS.schedules).filter(s => s.id !== id);
+  saveData(STORE_KEYS.schedules, data);
+  renderSchedules(); updateDashboard();
+}
+
+function deleteOperation(id) {
+  if (!confirm('이 운영정보를 삭제하시겠습니까?')) return;
+  const data = loadData(STORE_KEYS.operations).filter(o => o.id !== id);
+  saveData(STORE_KEYS.operations, data);
+  renderOperations(); updateDashboard();
+}
+
+function deleteManager(id) {
+  if (!confirm('이 담당자 정보를 삭제하시겠습니까?')) return;
+  const data = loadData(STORE_KEYS.managers).filter(m => m.id !== id);
+  saveData(STORE_KEYS.managers, data);
+  renderManagers();
+}
+
+function deleteHistory(id) {
+  if (!confirm('이 발송 이력을 삭제하시겠습니까?')) return;
+  const data = loadData(STORE_KEYS.history).filter(h => h.id !== id);
+  saveData(STORE_KEYS.history, data);
+  renderHistory(); updateDashboard();
+}
+
+function clearAllCourses() {
+  if (!confirm('모든 과정 데이터를 삭제하시겠습니까?')) return;
+  saveData(STORE_KEYS.courses, []);
+  renderCourses(); updateDashboard(); updateAutoFetchButton();
+}
+
+// ======================================================================
+// EDIT COURSE
+// ======================================================================
+
+let editingCourseId = null;
+
+function editCourse(id) {
+  const courses = loadData(STORE_KEYS.courses);
+  const c = courses.find(x => x.id === id);
+  if (!c) return;
+  editingCourseId = id;
+
+  const fields = [
+    { key: 'type', label: '유형', type: 'select', options: ['사내', '공개'] },
+    { key: 'businessId', label: 'BUSINESS_ID' },
+    { key: 'orderCode', label: '수주코드' },
+    { key: 'projectId', label: 'PROJECT_ID' },
+    { key: 'courseName', label: '과정명' },
+    { key: 'programName', label: '프로그램명' },
+    { key: 'company', label: '회사' },
+    { key: 'startDate', label: '시작일', type: 'date' },
+    { key: 'endDate', label: '종료일', type: 'date' },
+    { key: 'hours', label: '시간' },
+    { key: 'participants', label: '인원' },
+    { key: 'am', label: 'AM' },
+    { key: 'internalManager', label: '내부담당자' },
+    { key: 'projectClosed', label: '프로젝트 마감' },
+    { key: 'team', label: '팀' }
+  ];
+
+  document.getElementById('editCourseFormContent').innerHTML = '<div class="form-row">' + fields.map(f => {
+    if (f.type === 'select') {
+      return `<div class="form-group"><label>${f.label}</label><select class="form-control" id="edit_${f.key}">${f.options.map(o => `<option ${c[f.key] === o ? 'selected' : ''}>${o}</option>`).join('')}</select></div>`;
+    }
+    return `<div class="form-group"><label>${f.label}</label><input class="form-control" id="edit_${f.key}" type="${f.type || 'text'}" value="${esc(c[f.key] || '')}"></div>`;
+  }).join('') + '</div>';
+
+  document.getElementById('editCourseModal').classList.add('active');
+}
+
+function saveEditCourse() {
+  const courses = loadData(STORE_KEYS.courses);
+  const c = courses.find(x => x.id === editingCourseId);
+  if (!c) return;
+
+  const keys = ['type','businessId','orderCode','projectId','courseName','programName','company',
+    'startDate','endDate','hours','participants','am','internalManager','projectClosed','team'];
+  keys.forEach(k => {
+    const el = document.getElementById('edit_' + k);
+    if (el) c[k] = el.value;
+  });
+
+  saveData(STORE_KEYS.courses, courses);
+  closeModal('editCourseModal');
+  renderCourses(); updateDashboard();
+  showToast('과정 정보 수정 완료');
+}
+
+// ======================================================================
+// FILTER PIPELINE
+// ======================================================================
+
+window._lastFilterResult = [];
+
+function runFilterPipeline() {
+  const courses = loadData(STORE_KEYS.courses);
+  const schedules = loadData(STORE_KEYS.schedules);
+  const operations = loadData(STORE_KEYS.operations);
+  const managers = loadData(STORE_KEYS.managers);
+  const history = loadData(STORE_KEYS.history);
+
+  const filterDateEl = document.getElementById('filterDate');
+  const today = filterDateEl.value || new Date().toISOString().split('T')[0];
+  if (!filterDateEl.value) filterDateEl.value = today;
+
+  let candidates = [];
+  for (const course of courses) {
+    const courseSchedules = schedules.filter(s =>
+      s.projectId === course.projectId || s.orderCode === course.orderCode
+    );
+    const op = operations.find(o =>
+      o.projectId === course.projectId || o.orderCode === course.orderCode
+    );
+
+    if (courseSchedules.length > 0) {
+      for (const sch of courseSchedules) {
+        candidates.push({
+          course, schedule: sch, operation: op,
+          sessionIndex: sch.sessionIndex, sessionEndDate: sch.endDate,
+          company: course.company || sch.company, orderCode: course.orderCode || sch.orderCode
+        });
+      }
+    } else {
+      candidates.push({
+        course, schedule: null, operation: op,
+        sessionIndex: 1, sessionEndDate: course.endDate,
+        company: course.company, orderCode: course.orderCode
+      });
+    }
+  }
+
+  const totalCount = candidates.length;
+  document.getElementById('pStep0').textContent = totalCount;
+
+  const step1 = candidates.filter(c => c.sessionEndDate && c.sessionEndDate <= today);
+  document.getElementById('pStep1').textContent = step1.length;
+
+  const step2 = step1.filter(c => {
+    const closed = c.course.projectClosed;
+    return closed && closed !== '미적용';
+  });
+  document.getElementById('pStep2').textContent = step2.length;
+
+  const step3 = step2.filter(c => {
+    if (!c.operation) return false;
+    const op = c.operation;
+    if (op.surveyUsed !== '사용') return false;
+    if (op.sheetState !== 'Y') return false;
+    if (op.echoStatus && op.echoStatus.includes('제외')) return false;
+    return true;
+  });
+  document.getElementById('pStep3').textContent = step3.length;
+
+  const sixMonthsAgo = new Date(today);
+  sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+  const sixMonthsAgoStr = sixMonthsAgo.toISOString().split('T')[0];
+
+  const step4 = step3.filter(c => {
+    const op = c.operation || {};
+    const managerId = op.clientContactId || '';
+    const managerName = op.clientContact || '';
+    const managerCompany = c.company;
+    const mgr = managers.find(m =>
+      m.customerId === managerId || (m.name === managerName && m.company === managerCompany)
+    );
+    const email = mgr ? mgr.email : '';
+
+    const recentSent = history.some(h => {
+      if (h.sentDate < sixMonthsAgoStr) return false;
+      if (email && h.managerEmail === email) return true;
+      if (h.managerName === managerName && h.company === managerCompany) return true;
+      return false;
+    });
+    return !recentSent;
+  });
+  document.getElementById('pStep4').textContent = step4.length;
+
+  document.querySelectorAll('.pipeline-step').forEach(el => el.classList.remove('pass', 'fail', 'final'));
+  const steps = document.querySelectorAll('.pipeline-step');
+  if (steps.length >= 5) {
+    steps[1].classList.add(step1.length > 0 ? 'pass' : 'fail');
+    steps[2].classList.add(step2.length > 0 ? 'pass' : 'fail');
+    steps[3].classList.add(step3.length > 0 ? 'pass' : 'fail');
+    steps[4].classList.add('final');
+  }
+
+  window._lastFilterResult = step4;
+  renderFilterResults(step4, managers);
+  document.getElementById('filterEmpty').style.display = step4.length ? 'none' : 'block';
+  updateDashboard();
+  showToast(`필터링 완료: ${step4.length}건 최종 대상`);
+}
+
+function renderFilterResults(results, managers) {
+  const tbody = document.querySelector('#filterResultTable tbody');
+  tbody.innerHTML = results.map(r => {
+    const op = r.operation || {};
+    const mgr = (managers || loadData(STORE_KEYS.managers)).find(m =>
+      m.customerId === (op.clientContactId || '') ||
+      (m.name === (op.clientContact || '') && m.company === r.company)
+    );
+    const email = mgr ? mgr.email : '';
+    const phone = mgr ? (mgr.mobile || mgr.phone) : (op.clientContactMobile || op.clientContactPhone || '');
+
+    return `<tr>
+      <td><input type="checkbox" class="target-check" data-id="${r.course.id}_${r.sessionIndex}"></td>
+      <td>${esc(r.company)}</td>
+      <td class="left">${esc(r.course.courseName)}</td>
+      <td>${r.sessionIndex}차</td>
+      <td>${r.sessionEndDate}</td>
+      <td>${esc(op.clientContact || '-')} ${esc(op.clientContactPosition || '')}</td>
+      <td>${email || '-'}</td>
+      <td>${phone || '-'}</td>
+      <td>${esc(r.course.am || op.amName || '-')}</td>
+      <td>${esc(op.operationIM || '-')}</td>
+      <td>-</td>
+    </tr>`;
+  }).join('');
+}
+
+function toggleSelectAll() {
+  const checked = document.getElementById('selectAll').checked || document.getElementById('selectAllHead').checked;
+  document.getElementById('selectAll').checked = checked;
+  document.getElementById('selectAllHead').checked = checked;
+  document.querySelectorAll('.target-check').forEach(cb => cb.checked = checked);
+}
+
+function markAsSent() {
+  const results = window._lastFilterResult;
+  const managers = loadData(STORE_KEYS.managers);
+  const history = loadData(STORE_KEYS.history);
+  const checked = document.querySelectorAll('.target-check:checked');
+
+  if (checked.length === 0) { showToast('발송 대상을 선택하세요'); return; }
+  if (!confirm(`${checked.length}건을 발송 완료 처리하시겠습니까?`)) return;
+
+  const today = new Date().toISOString().split('T')[0];
+  checked.forEach(cb => {
+    const [courseId, sessionIdx] = cb.dataset.id.split('_');
+    const r = results.find(x => x.course.id === courseId && x.sessionIndex === parseInt(sessionIdx));
+    if (!r) return;
+
+    const op = r.operation || {};
+    const mgr = managers.find(m =>
+      m.customerId === (op.clientContactId || '') ||
+      (m.name === (op.clientContact || '') && m.company === r.company)
+    );
+
+    history.push({
+      id: genId(), courseId: r.course.id, orderCode: r.orderCode, company: r.company,
+      courseName: r.course.courseName, sessionIndex: r.sessionIndex, sessionEndDate: r.sessionEndDate,
+      managerName: op.clientContact || '', managerEmail: mgr ? mgr.email : '',
+      managerPhone: mgr ? (mgr.mobile || mgr.phone) : '',
+      sentDate: today, am: r.course.am || op.amName || '', operationIM: op.operationIM || '',
+      surveyType: 'CS 사후 설문', notes: ''
+    });
+  });
+
+  saveData(STORE_KEYS.history, history);
+  renderHistory();
+  runFilterPipeline();
+  showToast(`${checked.length}건 발송 완료 처리됨`);
+}
+
+// ======================================================================
+// EXPORT / BACKUP
+// ======================================================================
+
+function exportTargetCSV() {
+  const results = window._lastFilterResult;
+  if (!results || !results.length) { showToast('먼저 필터링을 실행하세요'); return; }
+
+  const managers = loadData(STORE_KEYS.managers);
+  const headers = ['회사', '과정명', '차수', '차수종료일', '담당자', '직급', '부서', '이메일', '전화', 'AM', '운영IM'];
+  const rows = results.map(r => {
+    const op = r.operation || {};
+    const mgr = managers.find(m =>
+      m.customerId === (op.clientContactId || '') ||
+      (m.name === (op.clientContact || '') && m.company === r.company)
+    );
+    return [
+      r.company, r.course.courseName, r.sessionIndex + '차', r.sessionEndDate,
+      op.clientContact || '', op.clientContactPosition || '', op.clientContactDept || '',
+      mgr ? mgr.email : '', mgr ? (mgr.mobile || mgr.phone) : '',
+      r.course.am || op.amName || '', op.operationIM || ''
+    ];
+  });
+  downloadCSV('CS_설문대상_' + new Date().toISOString().split('T')[0] + '.csv', headers, rows);
+}
+
+function exportHistoryCSV() {
+  const history = loadData(STORE_KEYS.history);
+  if (!history.length) { showToast('발송 이력이 없습니다'); return; }
+
+  const headers = ['발송일', '회사', '과정명', '차수', '차수종료일', '담당자', '이메일', '전화', 'AM', '운영IM', '비고'];
+  const rows = history.map(h => [
+    h.sentDate, h.company, h.courseName, h.sessionIndex + '차', h.sessionEndDate,
+    h.managerName, h.managerEmail, h.managerPhone, h.am, h.operationIM, h.notes
+  ]);
+  downloadCSV('발송이력_' + new Date().toISOString().split('T')[0] + '.csv', headers, rows);
+}
+
+function downloadCSV(filename, headers, rows) {
+  const BOM = '\uFEFF';
+  const csvContent = [headers.join(','), ...rows.map(r =>
+    r.map(v => '"' + String(v || '').replace(/"/g, '""') + '"').join(',')
+  )].join('\n');
+
+  const blob = new Blob([BOM + csvContent], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('CSV 다운로드 완료');
+}
+
+function backupData() {
+  const data = {};
+  Object.entries(STORE_KEYS).forEach(([key, storeKey]) => {
+    data[key] = loadData(storeKey);
+  });
+  data.exportDate = new Date().toISOString();
+
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'CS_설문관리_백업_' + new Date().toISOString().split('T')[0] + '.json';
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('백업 다운로드 완료');
+}
+
+function restoreData(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  if (!confirm('현재 데이터를 덮어쓰게 됩니다. 계속하시겠습니까?')) { event.target.value = ''; return; }
+
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const data = JSON.parse(e.target.result);
+      Object.entries(STORE_KEYS).forEach(([key, storeKey]) => {
+        if (data[key]) saveData(storeKey, data[key]);
+      });
+      renderAll();
+      showToast('데이터 복원 완료');
+    } catch (err) {
+      showToast('복원 실패: 잘못된 JSON 파일');
+    }
+  };
+  reader.readAsText(file);
+  event.target.value = '';
+}
+
+function resetAllData() {
+  if (!confirm('정말 모든 데이터를 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.')) return;
+  if (!confirm('최종 확인: 모든 과정, 운영, 발송 이력이 삭제됩니다.')) return;
+
+  Object.values(STORE_KEYS).forEach(key => localStorage.removeItem(key));
+  window._lastFilterResult = [];
+  renderAll();
+  showToast('전체 데이터 초기화 완료');
+}
+
+// ======================================================================
+// INIT
+// ======================================================================
+
+function renderAll() {
+  renderCourses();
+  renderSchedules();
+  renderOperations();
+  renderManagers();
+  renderHistory();
+  updateDashboard();
+  updateAutoFetchButton();
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('filterDate').value = new Date().toISOString().split('T')[0];
+  renderAll();
+  initBookmarklet();
+  detectMode();
+});
+</script>
+</body>
+</html>
