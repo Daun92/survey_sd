@@ -2,6 +2,11 @@
   "name": "cs-survey-app",
   "version": "0.1.0",
   "private": true,
+  "packageManager": "npm@11.8.0",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -57,6 +62,7 @@
     "supabase": "^2.40.7",
     "tailwindcss": "^4",
     "tsx": "^4.21.0",
+    "turbo": "^2.9.6",
     "typescript": "^5",
     "vitest": "^2.1.9"
   }
