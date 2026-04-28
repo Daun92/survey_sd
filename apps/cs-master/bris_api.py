@@ -1,6 +1,12 @@
 """
 BRIS 컴플레인참조 데이터 API 래퍼
 =============================================
+
+⚠️ 실행 환경: 사내 Docker (BRIS 사내망 접근 필요). Vercel 환경 X.
+⚠️ 본 파일의 진실원: survey_sd/apps/cs-master/bris_api.py
+            (옛 cs/target/bris_api.py 는 archive — 편집 금지)
+⚠️ FastAPI 게이트웨이 형태로 노출하려면 lib/bris-api/ 사용 (Phase 3 산출물).
+
 BRIS HTML 페이지를 스크래핑하여 JSON API처럼 사용할 수 있게 해주는 모듈.
 
 사용 방법:

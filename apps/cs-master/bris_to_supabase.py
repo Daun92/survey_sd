@@ -1,6 +1,14 @@
 """
 BRIS → Supabase 동기화 파이프라인
 ================================
+
+⚠️ 실행 환경: 사내 Docker 호스트 또는 cron (BRIS 사내망 접근 필요).
+              Vercel 환경에서 실행되지 않음.
+⚠️ DB SSOT: monorepo root 의 supabase/migrations/. 이 파일이 참조하는
+            cs_* 테이블/뷰/RPC 의 정의는 거기서만 추가/수정.
+⚠️ 본 파일의 진실원: survey_sd/apps/cs-master/bris_to_supabase.py
+            (옛 cs/target/bris_to_supabase.py 는 archive — 편집 금지)
+
 bris_api.py로 파싱한 데이터를 cs-survey Supabase DB에 적재.
 
 사용법:
