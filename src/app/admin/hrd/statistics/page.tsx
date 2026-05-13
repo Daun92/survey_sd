@@ -5,6 +5,8 @@ import {
   Hash,
   TrendingUp,
 } from "lucide-react";
+import { ItemPicker } from "./item-picker";
+import { DistributionCard } from "./distribution-card";
 
 type RoundSummaryRow = {
   total_responses: number | string;
@@ -22,10 +24,28 @@ type PartStatRow = {
   avg_score: number | string | null;
 };
 
+type PickerItemRow = {
+  id: string;
+  part_id: string;
+  item_code: string;
+  sub_item_text: string | null;
+  question_text: string;
+  question_group: string | null;
+  answer_type: string;
+  sort_order: number;
+};
+
+type PickerPartRow = {
+  id: string;
+  part_code: string;
+  part_name: string;
+  sort_order: number;
+};
+
 const formatScore = (v: number | string | null | undefined) =>
   v === null || v === undefined ? "-" : Number(v).toFixed(2);
 
-async function getData() {
+async function getData(selectedItemId: string | null) {
   const supabase = await createClient();
   const { data: rounds } = await supabase
     .from("hrd_survey_rounds")
@@ -34,14 +54,27 @@ async function getData() {
     .limit(1);
 
   const currentRound = rounds?.[0] ?? null;
-  if (!currentRound) return { currentRound: null, summary: null, parts: [] };
+  if (!currentRound)
+    return { currentRound: null, summary: null, parts: [], picker: [], distribution: null };
 
-  const [summaryRes, partsRes] = await Promise.all([
+  // 기존 요약 RPC
+  const [summaryRes, partsRes, pickerPartsRes, pickerItemsRes] = await Promise.all([
     supabase.rpc("get_hrd_round_statistics", { p_round_id: currentRound.id }),
     supabase.rpc("get_hrd_part_statistics", { p_round_id: currentRound.id }),
+    supabase
+      .from("hrd_survey_parts")
+      .select("id, part_code, part_name, sort_order")
+      .eq("round_id", currentRound.id)
+      .order("sort_order"),
+    supabase
+      .from("hrd_survey_items")
+      .select(
+        "id, part_id, item_code, sub_item_text, question_text, question_group, answer_type, sort_order"
+      )
+      .eq("round_id", currentRound.id)
+      .order("sort_order"),
   ]);
 
-  // RPC 는 SETOF 반환 → 배열. 요약은 1행.
   const summaryRows = (summaryRes.data ?? []) as unknown as RoundSummaryRow[];
   const partRows = (partsRes.data ?? []) as unknown as PartStatRow[];
   const summaryRow = summaryRows[0];
@@ -64,11 +97,59 @@ async function getData() {
     avgScore: formatScore(row.avg_score),
   }));
 
-  return { currentRound, summary, parts };
+  // picker (좌측 트리): part > items 그룹화
+  const pickerPartRows = (pickerPartsRes.data ?? []) as PickerPartRow[];
+  const pickerItemRows = (pickerItemsRes.data ?? []) as PickerItemRow[];
+  const itemsByPart = new Map<string, PickerItemRow[]>();
+  for (const it of pickerItemRows) {
+    const arr = itemsByPart.get(it.part_id) ?? [];
+    arr.push(it);
+    itemsByPart.set(it.part_id, arr);
+  }
+  const picker = pickerPartRows.map((p) => ({
+    id: p.id,
+    part_code: p.part_code,
+    part_name: p.part_name,
+    sort_order: p.sort_order,
+    items: itemsByPart.get(p.id) ?? [],
+  }));
+
+  // 선택된 item 의 distribution + 라벨
+  let distribution: {
+    label: string;
+    code: string;
+    result: unknown;
+  } | null = null;
+  if (selectedItemId) {
+    const selected = pickerItemRows.find((i) => i.id === selectedItemId);
+    if (selected) {
+      const { data: distData, error } = await supabase.rpc(
+        "get_hrd_item_distribution",
+        { p_round_id: currentRound.id, p_item_id: selectedItemId }
+      );
+      if (!error && distData) {
+        distribution = {
+          label: selected.sub_item_text || selected.question_text || selected.item_code,
+          code: selected.item_code,
+          result: distData,
+        };
+      }
+    }
+  }
+
+  return { currentRound, summary, parts, picker, distribution };
 }
 
-export default async function StatisticsPage() {
-  const { currentRound, summary, parts } = await getData();
+export default async function StatisticsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ item?: string }>;
+}) {
+  const sp = await searchParams;
+  const selectedItemId = sp.item ?? null;
+  const { currentRound, summary, parts, picker, distribution } = await getData(
+    selectedItemId
+  );
 
   if (!currentRound || !summary) {
     return (
@@ -207,6 +288,38 @@ export default async function StatisticsPage() {
             ))}
           </div>
         )}
+      </div>
+
+      {/* 항목별 응답 분포 — 좌측 트리 + 우측 distribution */}
+      <div className="mt-8 rounded-xl border border-stone-200 bg-white shadow-sm overflow-hidden">
+        <div className="px-5 py-3 border-b border-stone-100">
+          <h3 className="text-base font-semibold text-stone-900">
+            항목별 응답 분포
+          </h3>
+          <p className="text-sm text-stone-500">
+            좌측에서 문항을 선택하면 우측에 분포가 표시됩니다. (완료 응답자 기준)
+          </p>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-[280px_1fr] min-h-[400px]">
+          <div className="border-b md:border-b-0 md:border-r border-stone-100 bg-stone-50/30 py-3">
+            <ItemPicker parts={picker} selectedItemId={selectedItemId} />
+          </div>
+          <div className="p-5">
+            {distribution ? (
+              <DistributionCard
+                result={
+                  distribution.result as Parameters<typeof DistributionCard>[0]["result"]
+                }
+                itemLabel={distribution.label}
+                itemCode={distribution.code}
+              />
+            ) : (
+              <div className="flex h-full items-center justify-center text-sm text-stone-400">
+                좌측에서 문항을 선택하세요.
+              </div>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );
