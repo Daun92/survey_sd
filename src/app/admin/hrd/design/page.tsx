@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { PenTool, Layers, Hash, CheckCircle, XCircle } from "lucide-react";
 import { DesignActions } from "./design-actions";
+import { PartItemsPanel } from "./part-items-panel";
 
 async function getData() {
   const supabase = await createClient();
@@ -23,7 +24,9 @@ async function getData() {
 
   const { data: items } = await supabase
     .from("hrd_survey_items")
-    .select("id, part_id, item_code, question_text, answer_type, is_required, sort_order, conditional_logic")
+    .select(
+      "id, part_id, item_code, question_text, sub_item_text, question_group, answer_type, answer_options, unit, placeholder, help_text, is_required, is_benchmark_item, sort_order, conditional_logic"
+    )
     .in("part_id", partIds)
     .order("sort_order", { ascending: true });
 
@@ -114,46 +117,8 @@ export default async function DesignPage() {
                 </div>
               </div>
 
-              {/* 문항 목록 */}
-              {part.items.length > 0 && (
-                <div className="mt-4 pt-3 border-t border-stone-100">
-                  <div className="space-y-1.5">
-                    {part.items.map((item) => (
-                      <div
-                        key={item.id}
-                        className="flex items-center justify-between rounded-lg px-3 py-2 hover:bg-stone-50"
-                      >
-                        <div className="flex items-center gap-3 min-w-0">
-                          <span className="text-xs font-mono text-stone-400 shrink-0">
-                            {item.item_code}
-                          </span>
-                          <span className="text-sm text-stone-700 truncate">
-                            {item.question_text}
-                          </span>
-                          {item.conditional_logic && (
-                            <span className="text-[10px] rounded-full bg-amber-100 text-amber-700 px-1.5 py-0.5 shrink-0">
-                              조건부
-                            </span>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-2 shrink-0">
-                          <span className="text-xs text-stone-400">
-                            {item.answer_type}
-                          </span>
-                          {item.is_required && (
-                            <span className="text-[10px] text-rose-500">필수</span>
-                          )}
-                          <DesignActions
-                            item={item}
-                            allItems={part.items}
-                            mode="item"
-                          />
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
+              {/* 문항 목록 — 인벤토리 + 응답자 시점 미리보기 */}
+              <PartItemsPanel items={part.items} />
 
               <div className="mt-3 pt-3 border-t border-stone-100 flex items-center justify-between">
                 <div className="flex items-center gap-4">
