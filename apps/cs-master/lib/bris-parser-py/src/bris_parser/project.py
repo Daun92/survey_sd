@@ -7,6 +7,29 @@ import re
 from bs4 import BeautifulSoup
 
 
+def _split_am_team(val: str) -> tuple:
+    """AM 셀에서 (이름, 팀) 분리.
+
+    - 공백 분리 우선 ("정용호 경기팀")
+    - 공백 없으면 한국 이름 표준 길이(3자 우선, 4자·2자)로 시도하고
+      그 뒤가 [가-힣\\d]{2,5}팀|파트 패턴이면 매칭
+      ("정용호경기팀" → "정용호" / "경기팀")
+    """
+    if not val:
+        return '', ''
+    val = val.strip()
+    parts = val.split()
+    if len(parts) >= 2:
+        return parts[0], ' '.join(parts[1:])
+    for name_len in (3, 4, 2):
+        if name_len >= len(val):
+            continue
+        cand_team = val[name_len:].strip()
+        if re.match(r'^[가-힣\d]{2,5}(?:팀|파트)$', cand_team):
+            return val[:name_len], cand_team
+    return val, ''
+
+
 def extract_project_detail_data(html: str) -> dict:
     soup = BeautifulSoup(html, 'html.parser')
 
@@ -47,6 +70,7 @@ def extract_project_detail_data(html: str) -> dict:
     project_name = ''
     company = ''
     am = ''
+    am_team = ''
     team = ''
     info_tds = soup.select('td.bris_tb_title, td[bgcolor="#dee8ef"]')
     for td in info_tds:
@@ -60,7 +84,7 @@ def extract_project_detail_data(html: str) -> dict:
         elif '고객사' in text:
             company = val
         elif 'AM' in text and 'Account' in text:
-            am = re.split(r'\s', val)[0] if val else ''
+            am, am_team = _split_am_team(val)
         elif '수행팀' in text:
             team = val
 
@@ -83,7 +107,8 @@ def extract_project_detail_data(html: str) -> dict:
         'projectName': project_name,
         'company': company,
         'am': am,
-        'team': team,
+        'amTeam': am_team,   # AM 의 수주팀 (별도)
+        'team': team,        # 수행팀
         'echoActive': echo_active,
     }
 
