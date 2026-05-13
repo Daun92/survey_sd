@@ -545,6 +545,240 @@ class BrisSyncPipeline:
             raise
 
     # ========================================
+    # 단건 PROJECT_ID 풀 컨텍스트 백필 (T2 트랙)
+    # ========================================
+    # 통합페이지에 노출되지 않는 원격교육 등 — BRIS 4페이지 직접 조회 후
+    # 통합 record 형태로 변환하여 _sync_project_group 재사용.
+
+    def _fetch_pid_with_relogin(self, fetcher):
+        """단일 페이지 fetcher 호출. 세션 만료 시 ID/PW 1회 재로그인 후 재시도."""
+        try:
+            return fetcher()
+        except BrisSessionExpired as e:
+            uid = os.environ.get('BRIS_USER_ID', '').strip()
+            pwd = os.environ.get('BRIS_PASSWORD', '').strip()
+            if not (uid and pwd):
+                raise
+            print(f'[auth] 세션 만료: {e}. 재로그인 시도 ({uid})')
+            if not self.bris.login(uid, pwd):
+                raise BrisSessionExpired('재로그인 실패') from e
+            print('[auth] 재로그인 성공 — 1회 retry')
+            return fetcher()
+
+    def _build_records_from_pages(self, pv: dict, bl: dict,
+                                   dm: Optional[dict],
+                                   eo: Optional[dict]) -> list[dict]:
+        """4페이지 결과 → 통합페이지 record list (한국어 키, _sync_project_group 호환)"""
+        sessions = (bl or {}).get('sessions', [])
+        if not sessions:
+            sessions = [{}]  # 차수 0 이어도 프로젝트 자체는 등록되도록 더미 1건
+
+        records = []
+        # 사업장명 우선순위: dm.company > pv.company
+        place_name = (dm or {}).get('company', '') or pv.get('company', '')
+        company_name = pv.get('company', '') or (dm or {}).get('company', '')
+        # 마감일 정규화 — '미적용' 은 빈 값 처리
+        deadline = pv.get('projectClosed', '')
+        if deadline == '미적용':
+            deadline = ''
+        # 에코 상태 — echo_data 우선, 없으면 project_view 의 echoActive 변환
+        echo_status_raw = (eo or {}).get('echoStatus', '') if eo else ''
+        if not echo_status_raw and pv.get('echoActive'):
+            mapping = {'현황': '에코 현황', '등록': '에코 등록', '제외': '에코 제외'}
+            echo_status_raw = mapping.get(pv['echoActive'], '')
+
+        for sess in sessions:
+            face_to_face = not sess.get('nonFaceToFace', False)
+            rec = {
+                'business_id': sess.get('businessId', ''),
+                'project_id': pv.get('projectId', ''),
+                'customer_id': (dm or {}).get('customerId', '')
+                                or (eo or {}).get('clientContactId', ''),
+                # 과정 (차수 단위)
+                '과정명': sess.get('courseName', ''),
+                '프로그램명': '',
+                '과정_총매출': sess.get('revenue', '0') or '0',
+                '시작일': sess.get('startDate', ''),
+                '종료일': sess.get('endDate', ''),
+                '대면_비대면': '대면' if face_to_face else '비대면',
+                # 프로젝트 (모든 record 공통)
+                '수주코드': pv.get('orderCode', ''),
+                '수주_프로젝트명': pv.get('projectName', ''),
+                '수주_프로젝트_등록일': '',
+                '수주일': '',
+                '수주_프로젝트_마감일': deadline,
+                # 에코
+                '에코_상태': echo_status_raw,
+                '에코_제외_사유': '',
+                # 담당자(AM) — amTeam(수주팀, AM 소속) vs team(수행팀, 별도)
+                '수주_담당자': pv.get('am', ''),
+                '수주팀': pv.get('amTeam', ''),
+                '수행_담당자': '',
+                '수행팀': pv.get('team', ''),
+                # 강사 — 4페이지에선 직접 추출 안 됨 (echo_data 의 강사 정보 별도 형식)
+                '사내강사': '',
+                '외부강사': '',
+                # 회사
+                '회사명': company_name,
+                '사업자번호': '',
+                '사업장명': place_name,
+                # 고객 담당자(dm_view)
+                '고객_담당자': (dm or {}).get('name', ''),
+                '고객_부서': (dm or {}).get('department', ''),
+                '고객_이메일': (dm or {}).get('email', ''),
+                '고객_전화': (dm or {}).get('phone', ''),
+                '고객_휴대폰': (dm or {}).get('mobile', ''),
+            }
+            records.append(rec)
+        return records
+
+    def refresh_project_id(self, project_id: str) -> dict:
+        """단일 BRIS PROJECT_ID 직접 수집 (project_view + biz_list + echo + dm).
+
+        통합페이지(complain_reference_list.asp) 미노출 케이스 — 원격교육 등.
+        4페이지 fetch → 통합 record 변환 → _sync_project_group 재사용.
+
+        Returns: stats dict (sync_id, bris_code, project_id, projects/courses/contacts/members 카운트, errors).
+        """
+        if not self.bris:
+            raise ValueError("BRIS 클라이언트가 설정되지 않았습니다")
+
+        sync_id = self._sync_start(None, None)
+        stats = {
+            'total_records': 0, 'companies': 0, 'places': 0, 'contacts': 0,
+            'projects': 0, 'courses': 0, 'members': 0,
+            'quarantined': 0, 'hash_skipped_courses': 0, 'hash_skipped_projects': 0,
+            'errors': [], 'pages_fetched': 0,
+        }
+
+        try:
+            print(f'[refresh-pid] PROJECT_ID={project_id} — 4페이지 수집 시작')
+
+            # (1) project_view — 필수 (수주코드 추출)
+            try:
+                html_pv, rec_pv = self._fetch_pid_with_relogin(
+                    lambda: self.bris.get_project_view_with_raw(project_id))
+                self._insert_raw_page(
+                    html=html_pv, page_kind='project_view',
+                    bris_url=self.bris.PROJECT_VIEW_URL,
+                    fetch_params={'PROJECT_ID': project_id},
+                    sync_id=sync_id,
+                    fetched_by=os.environ.get('BRIS_SYNC_TRIGGER', 'manual:project-id'))
+                stats['pages_fetched'] += 1
+                print(f'[refresh-pid] project_view OK — orderCode={rec_pv.get("orderCode")} '
+                      f'projectName={rec_pv.get("projectName")[:30] if rec_pv.get("projectName") else ""}')
+            except Exception as e:
+                stats['errors'].append(f'project_view: {e}')
+                self._sync_finish(sync_id, 'error', stats, str(e))
+                return {'sync_id': sync_id, 'project_id': project_id, **stats}
+
+            bris_code = rec_pv.get('orderCode', '')
+            if not bris_code:
+                msg = f'project_view 에서 수주코드(orderCode) 추출 실패. PROJECT_ID={project_id}'
+                stats['errors'].append(msg)
+                self._sync_finish(sync_id, 'error', stats, msg)
+                return {'sync_id': sync_id, 'project_id': project_id, **stats}
+
+            # (2) project_biz_list — 차수 (수주코드 함께 보내야 PROJECT_ID 필터 동작)
+            rec_bl = {'sessions': [], 'totalCount': 0}
+            try:
+                html_bl, rec_bl = self._fetch_pid_with_relogin(
+                    lambda: self.bris.get_project_biz_list_with_raw(project_id, success_code=bris_code))
+                self._insert_raw_page(
+                    html=html_bl, page_kind='project_biz_list',
+                    bris_url=self.bris.PROJECT_BIZ_URL,
+                    fetch_params={'PROJECT_ID': project_id},
+                    sync_id=sync_id,
+                    fetched_by=os.environ.get('BRIS_SYNC_TRIGGER', 'manual:project-id'))
+                stats['pages_fetched'] += 1
+                print(f'[refresh-pid] biz_list OK — sessions={rec_bl.get("totalCount", 0)}')
+            except Exception as e:
+                stats['errors'].append(f'project_biz_list: {e}')
+                print(f'[refresh-pid] biz_list FAIL: {e}')
+
+            # (3) echo_operate — 에코 활성 시만 (실패 허용)
+            rec_eo = None
+            if rec_pv.get('echoActive'):
+                try:
+                    html_eo, rec_eo = self._fetch_pid_with_relogin(
+                        lambda: self.bris.get_echo_operate_with_raw(project_id))
+                    self._insert_raw_page(
+                        html=html_eo, page_kind='echo_operate',
+                        bris_url=self.bris.ECHO_OPERATE_URL,
+                        fetch_params={'project_id': project_id},
+                        sync_id=sync_id,
+                        fetched_by=os.environ.get('BRIS_SYNC_TRIGGER', 'manual:project-id'))
+                    stats['pages_fetched'] += 1
+                    print(f'[refresh-pid] echo_operate OK — IM={rec_eo.get("operationIM", "")[:20]} '
+                          f'clientContactId={rec_eo.get("clientContactId")}')
+                except Exception as e:
+                    stats['errors'].append(f'echo_operate: {e}')
+                    print(f'[refresh-pid] echo_operate FAIL: {e}')
+
+            # (4) dm_view — customer_id 있으면 (실패 허용)
+            rec_dm = None
+            customer_id = (rec_eo or {}).get('clientContactId') if rec_eo else None
+            if customer_id:
+                try:
+                    html_dm, rec_dm = self._fetch_pid_with_relogin(
+                        lambda: self.bris.get_dm_view_with_raw(customer_id))
+                    self._insert_raw_page(
+                        html=html_dm, page_kind='dm_view',
+                        bris_url=self.bris.DM_VIEW_URL,
+                        fetch_params={'CUSTOMER_ID': customer_id},
+                        sync_id=sync_id,
+                        fetched_by=os.environ.get('BRIS_SYNC_TRIGGER', 'manual:project-id'))
+                    stats['pages_fetched'] += 1
+                    print(f'[refresh-pid] dm_view OK — name={rec_dm.get("name")} '
+                          f'email={rec_dm.get("email")}')
+                except Exception as e:
+                    stats['errors'].append(f'dm_view: {e}')
+                    print(f'[refresh-pid] dm_view FAIL: {e}')
+            else:
+                print(f'[refresh-pid] dm_view skip — customer_id 없음 (echo_operate 미접속 또는 빈 값)')
+
+            # (5) 통합 record 변환 + 기존 _sync_project_group 재사용
+            records = self._build_records_from_pages(rec_pv, rec_bl, rec_dm, rec_eo)
+            stats['total_records'] = len(records)
+            print(f'[refresh-pid] 통합 record {len(records)}건 생성 → _sync_project_group({bris_code})')
+
+            if records:
+                self._sync_project_group(bris_code, records, stats)
+
+            # (6) sessions=0 케이스: _sync_project_group 이 만든 빈 cs_courses 정리
+            #     (course_name=NULL AND start_date=NULL 인 더미 행만 삭제)
+            if not (rec_bl or {}).get('sessions'):
+                try:
+                    proj_q = self.sb.table('cs_projects') \
+                        .select('id').eq('bris_code', bris_code).limit(1).execute()
+                    if proj_q.data:
+                        proj_uuid = proj_q.data[0]['id']
+                        self.sb.table('cs_courses').delete() \
+                            .eq('project_id', proj_uuid) \
+                            .is_('course_name', 'null') \
+                            .is_('start_date', 'null') \
+                            .execute()
+                        print(f'[refresh-pid] sessions=0 — 빈 cs_courses 정리')
+                except Exception as e:
+                    stats['errors'].append(f'empty_course_cleanup: {e}')
+
+            # (7) sync 종료
+            self._sync_finish(sync_id, 'success', stats)
+            print(f'[refresh-pid] 완료 — projects={stats.get("projects",0)} '
+                  f'courses={stats.get("courses",0)} contacts={stats.get("contacts",0)} '
+                  f'members={stats.get("members",0)} pages={stats["pages_fetched"]}')
+            return {
+                'sync_id': sync_id,
+                'project_id': project_id,
+                'bris_code': bris_code,
+                **stats,
+            }
+        except Exception as e:
+            stats['errors'].append(f'pipeline: {e}')
+            self._sync_finish(sync_id, 'error', stats, str(e))
+            raise
+
+    # ========================================
     # 내부 동기화 로직
     # ========================================
 
@@ -1122,6 +1356,9 @@ BRIS → Supabase 동기화 파이프라인
   # 단일 수주코드 재수집 (운영자 수동 백필)
   python bris_to_supabase.py refresh 2604-063 [--date-hint 2026-04-03]
 
+  # 단일 BRIS PROJECT_ID 풀 컨텍스트 수집 (T2 — 통합페이지 미노출 케이스)
+  python bris_to_supabase.py project-id 34619
+
 환경변수:
   SUPABASE_URL=https://gdwhbacuzhynvegkfoga.supabase.co
   SUPABASE_SERVICE_KEY=your_key
@@ -1143,7 +1380,7 @@ BRIS → Supabase 동기화 파이프라인
         result = pipeline.sync_from_html(html, auto_batch=auto)
         print(json.dumps(result, ensure_ascii=False, indent=2))
 
-    elif mode in ('fetch', 'cron', 'refresh'):
+    elif mode in ('fetch', 'cron', 'refresh', 'project-id'):
         if mode == 'fetch':
             start = sys.argv[2]
             end = sys.argv[3]
@@ -1157,6 +1394,13 @@ BRIS → Supabase 동기화 파이프라인
                 if i + 1 < len(sys.argv):
                     date_hint = sys.argv[i + 1]
             start, end, auto = None, None, False  # refresh 는 auto_batch 강제 off
+        elif mode == 'project-id':
+            # project-id <BRIS_PROJECT_ID>
+            if len(sys.argv) < 3:
+                print("Usage: project-id <BRIS_PROJECT_ID> (예: project-id 34619)")
+                sys.exit(1)
+            project_id_arg = sys.argv[2]
+            start, end, auto = None, None, False  # 마스터만 등록, batch 자동 생성 안 함
         else:  # cron
             today = date.today()
             last_monday = today - timedelta(days=today.weekday() + 7)
@@ -1194,9 +1438,11 @@ BRIS → Supabase 동기화 파이프라인
         try:
             if mode == 'refresh':
                 result = pipeline.refresh_bris_code(bris_code_arg, date_hint=date_hint)
+            elif mode == 'project-id':
+                result = pipeline.refresh_project_id(project_id_arg)
             else:
                 result = pipeline.sync(start, end, auto_batch=auto)
-            print(json.dumps(result, ensure_ascii=False, indent=2))
+            print(json.dumps(result, ensure_ascii=False, indent=2, default=str))
         except Exception as exc:
             # cron 모드는 무인 실행 — 실패 시 운영자 알림 큐 적재 후 재발생.
             # fetch/refresh 는 운영자가 손으로 돌리는 명령이라 알림 불필요.
