@@ -68,8 +68,61 @@ const UNIT_BY_TYPE: Record<string, string> = {
   likert_importance_performance: '점',
 }
 
-const fmt = (v: number | null | undefined, digits = 2) =>
-  v === null || v === undefined ? '-' : Number(v).toFixed(digits)
+/**
+ * 큰 숫자를 사람이 읽기 쉬운 한국식 표기로 변환.
+ *
+ * - currency: 만/억/조 자동 축약 + 원본 정확값을 보조로 동봉.
+ *   예) 1214863520.84 → ['12.15억', '1,214,863,521원']
+ * - number  : 정수 천단위 콤마. 큰 숫자는 만/억 축약.
+ *   예) 1234 → ['1,234', '']  / 12345678 → ['1,234.57만', '12,345,678']
+ * - percent : 100 이내 가정. 소수 1자리.
+ * - likert  : 1~5 가정. 소수 2자리.
+ *
+ * 반환: [표시문자, 보조문자(빈 문자열이면 미표시)]
+ */
+function formatNumeric(
+  v: number | null | undefined,
+  type: string
+): { display: string; aux: string } {
+  if (v === null || v === undefined || Number.isNaN(v)) {
+    return { display: '-', aux: '' }
+  }
+  if (type === 'percent') {
+    return { display: Number(v).toFixed(1), aux: '' }
+  }
+  if (type === 'likert_5' || type === 'likert_importance_performance') {
+    return { display: Number(v).toFixed(2), aux: '' }
+  }
+
+  const abs = Math.abs(v)
+  const exact = Math.round(v).toLocaleString('ko-KR')
+
+  if (type === 'currency') {
+    if (abs >= 1e12) return { display: `${(v / 1e12).toFixed(2)}조`, aux: exact }
+    if (abs >= 1e8)  return { display: `${(v / 1e8).toFixed(2)}억`,  aux: exact }
+    if (abs >= 1e4)  return { display: `${(v / 1e4).toFixed(1)}만`,  aux: exact }
+    return { display: exact, aux: '' }
+  }
+
+  // number (명/시간 등) — 정수 콤마. 1억 이상이면 축약 + 원본 보조.
+  if (abs >= 1e8) return { display: `${(v / 1e8).toFixed(2)}억`, aux: exact }
+  if (abs >= 1e4) return { display: `${(v / 1e4).toFixed(1)}만`, aux: exact }
+  return { display: exact, aux: '' }
+}
+
+/** 두 값 페어 (min/max, q1/q3) — 동일 type 으로 둘 다 포맷. */
+function formatNumericPair(
+  a: number | null | undefined,
+  b: number | null | undefined,
+  type: string
+): { display: string; aux: string } {
+  const fa = formatNumeric(a, type)
+  const fb = formatNumeric(b, type)
+  const aux = fa.aux || fb.aux
+    ? `${fa.aux || fa.display} / ${fb.aux || fb.display}`
+    : ''
+  return { display: `${fa.display} / ${fb.display}`, aux }
+}
 
 export function DistributionCard({ result, itemLabel, itemCode }: Props) {
   const { answer_type, answer_options, data } = result
@@ -137,13 +190,38 @@ function DistBody({
 
 function NumericStats({ data, type }: { data: NumericDist; type: string }) {
   const unit = UNIT_BY_TYPE[type] ?? ''
-  const tiles = [
-    { label: '응답 수', value: data.response_count, suffix: '명' },
-    { label: '평균', value: fmt(data.mean), suffix: unit },
-    { label: '중앙값', value: fmt(data.median), suffix: unit },
-    { label: '표준편차', value: fmt(data.stddev), suffix: unit },
-    { label: '최소 / 최대', value: `${fmt(data.min)} / ${fmt(data.max)}`, suffix: unit },
-    { label: 'Q1 / Q3', value: `${fmt(data.q1)} / ${fmt(data.q3)}`, suffix: unit },
+  const tiles: {
+    label: string
+    main: string
+    aux: string
+    suffix: string
+  }[] = [
+    {
+      label: '응답 수',
+      main: data.response_count.toLocaleString('ko-KR'),
+      aux: '',
+      suffix: '명',
+    },
+    {
+      label: '평균',
+      ...withSuffix(formatNumeric(data.mean, type), unit),
+    },
+    {
+      label: '중앙값',
+      ...withSuffix(formatNumeric(data.median, type), unit),
+    },
+    {
+      label: '표준편차',
+      ...withSuffix(formatNumeric(data.stddev, type), unit),
+    },
+    {
+      label: '최소 / 최대',
+      ...withSuffix(formatNumericPair(data.min, data.max, type), unit),
+    },
+    {
+      label: 'Q1 / Q3',
+      ...withSuffix(formatNumericPair(data.q1, data.q3, type), unit),
+    },
   ]
   return (
     <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
@@ -151,17 +229,33 @@ function NumericStats({ data, type }: { data: NumericDist; type: string }) {
         <div key={t.label} className="rounded-lg border border-stone-100 bg-stone-50/40 p-3">
           <p className="text-[11px] text-stone-500">{t.label}</p>
           <p className="mt-1 text-base font-semibold text-stone-800">
-            {String(t.value)}
+            {t.main}
             {t.suffix && (
               <span className="ml-1 text-[11px] font-normal text-stone-400">
                 {t.suffix}
               </span>
             )}
           </p>
+          {t.aux && (
+            <p className="mt-0.5 text-[10px] text-stone-400 tabular-nums">
+              {t.aux}
+              {t.suffix && (
+                <span className="ml-0.5">{t.suffix}</span>
+              )}
+            </p>
+          )}
         </div>
       ))}
     </div>
   )
+}
+
+/** `formatNumeric` 결과 + 단위 suffix 를 tile 모양으로 변환. */
+function withSuffix(
+  fmt: { display: string; aux: string },
+  unit: string
+): { main: string; aux: string; suffix: string } {
+  return { main: fmt.display, aux: fmt.aux, suffix: unit }
 }
 
 function OptionBars({
