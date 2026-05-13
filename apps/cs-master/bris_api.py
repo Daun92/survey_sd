@@ -53,7 +53,13 @@ _pkg_src = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'lib', 'bris
 if _pkg_src not in sys.path:
     sys.path.insert(0, _pkg_src)
 
-from bris_parser import BrisParser  # noqa: E402,F401  (재노출)
+from bris_parser import (  # noqa: E402,F401  (재노출)
+    BrisParser,
+    extract_project_detail_data,
+    extract_project_biz_list,
+    extract_dm_data,
+    extract_echo_data,
+)
 
 
 class BrisSessionExpired(Exception):
@@ -95,6 +101,11 @@ class BrisClient:
 
     BASE_URL = "https://bris.exc.co.kr/business/complain_reference_list.asp"
     LOGIN_URL = "https://bris.exc.co.kr/login.asp"
+    # 단건 PROJECT_ID 기반 풀 컨텍스트 수집 (T2 트랙 — 통합페이지 미노출 케이스용)
+    PROJECT_VIEW_URL = "https://bris.exc.co.kr/business/success/project_view.asp"
+    PROJECT_BIZ_URL  = "https://bris.exc.co.kr/business/success/project_biz_list.asp"
+    DM_VIEW_URL      = "https://bris.exc.co.kr/dm/dm_view.asp"
+    ECHO_OPERATE_URL = "https://bris.exc.co.kr/business/echo/operate/main_2024.asp"
 
     def __init__(self, session: Optional['requests.Session'] = None,
                  cookies: Optional[dict] = None):
@@ -238,6 +249,83 @@ class BrisClient:
             )
 
         return resp.text, BrisParser.parse(resp.text)
+
+    # ------------------------------------------------------------
+    # 단건 PROJECT_ID 풀 컨텍스트 (T2 트랙)
+    # ------------------------------------------------------------
+    # 통합페이지에 노출되지 않는 원격교육 등을 PROJECT_ID 만으로 직접 가져온다.
+    # 각각 (raw_html, parsed_dict) 튜플 반환 — Layer 0 적재용.
+
+    def _check_session_html(self, html: str, page_label: str) -> None:
+        """간이 세션 만료 판별 — 짧은 응답 + 명시적 login redirect 모두 만족 시만.
+
+        BRIS 의 정상 페이지는 보통 5KB 이상. login redirect 응답은 1KB 미만이고
+        '/login.asp' 또는 'top.location' 같은 명시 marker 포함. 이 두 조건을 모두
+        만족할 때만 만료로 판정한다 (false positive 방지).
+        """
+        if len(html) < 1500:
+            head = html[:800]
+            if ('login.asp' in head.lower()) or ('top.location' in head) or ('location.href' in head and 'login' in head.lower()):
+                raise BrisSessionExpired(
+                    f'{page_label} 응답에서 세션 만료 추정 (len={len(html)}B)'
+                )
+
+    def get_project_view_with_raw(self, project_id: str) -> tuple:
+        """project_view.asp?PROJECT_ID= → (html, dict 8키)"""
+        resp = self.session.get(
+            self.PROJECT_VIEW_URL,
+            params={'PROJECT_ID': project_id},
+            timeout=30,
+        )
+        resp.encoding = 'utf-8'
+        if resp.status_code != 200:
+            raise Exception(f'project_view 요청 실패: HTTP {resp.status_code}')
+        self._check_session_html(resp.text, 'project_view')
+        return resp.text, extract_project_detail_data(resp.text)
+
+    def get_project_biz_list_with_raw(self, project_id: str,
+                                       success_code: str = '') -> tuple:
+        """project_biz_list.asp?successCode=&PROJECT_ID= → (html, {sessions:[], totalCount}).
+
+        successCode(수주코드) 미전달 시 BRIS 가 PROJECT_ID 필터를 무시하고 전체 차수
+        반환하는 사고 — 반드시 success_code 도 같이 보낸다.
+        """
+        resp = self.session.get(
+            self.PROJECT_BIZ_URL,
+            params={'successCode': success_code, 'PROJECT_ID': project_id},
+            timeout=30,
+        )
+        resp.encoding = 'utf-8'
+        if resp.status_code != 200:
+            raise Exception(f'project_biz_list 요청 실패: HTTP {resp.status_code}')
+        self._check_session_html(resp.text, 'project_biz_list')
+        return resp.text, extract_project_biz_list(resp.text)
+
+    def get_dm_view_with_raw(self, customer_id: str) -> tuple:
+        """dm_view.asp?CUSTOMER_ID= → (html, dict 11키)"""
+        resp = self.session.get(
+            self.DM_VIEW_URL,
+            params={'CUSTOMER_ID': customer_id},
+            timeout=30,
+        )
+        resp.encoding = 'utf-8'
+        if resp.status_code != 200:
+            raise Exception(f'dm_view 요청 실패: HTTP {resp.status_code}')
+        self._check_session_html(resp.text, 'dm_view')
+        return resp.text, extract_dm_data(resp.text)
+
+    def get_echo_operate_with_raw(self, project_id: str) -> tuple:
+        """echo/operate/main_2024.asp?project_id= → (html, dict — operationIM, schedules, clientContactId 등)"""
+        resp = self.session.get(
+            self.ECHO_OPERATE_URL,
+            params={'project_id': project_id},
+            timeout=30,
+        )
+        resp.encoding = 'utf-8'
+        if resp.status_code != 200:
+            raise Exception(f'echo_operate 요청 실패: HTTP {resp.status_code}')
+        self._check_session_html(resp.text, 'echo_operate')
+        return resp.text, extract_echo_data(resp.text)
 
     def get_this_month(self) -> list[dict]:
         """이번 달 데이터 조회"""
