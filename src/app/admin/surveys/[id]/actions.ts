@@ -195,7 +195,7 @@ export async function addQuestion(surveyId: string, data: AddQuestionInput) {
     section: parsed.data.section || "일반",
     is_required: parsed.data.is_required ?? true,
     sort_order: sortOrder,
-    options: parsed.data.options ? JSON.stringify(parsed.data.options) : null,
+    options: parsed.data.options ?? null,
   };
   const skipLogic = (data as Record<string, unknown>).skip_logic;
   if (skipLogic) insertData.skip_logic = skipLogic;
@@ -240,7 +240,7 @@ export async function bulkAddQuestions(
       is_required: data.is_required ?? true,
       sort_order:
         data.sort_order && data.sort_order > 0 ? data.sort_order : base + idx * 10,
-      options: data.options ? JSON.stringify(data.options) : null,
+      options: data.options ?? null,
     };
     const skipLogic = (raw as Record<string, unknown>).skip_logic;
     if (skipLogic) row.skip_logic = skipLogic;
@@ -277,7 +277,7 @@ export async function updateQuestion(
   if (data.is_required !== undefined) updateData.is_required = data.is_required;
   if (data.sort_order !== undefined) updateData.sort_order = data.sort_order;
   if (data.options !== undefined) {
-    updateData.options = data.options ? JSON.stringify(data.options) : null;
+    updateData.options = data.options ?? null;
   }
   const skipLogicVal = (data as Record<string, unknown>).skip_logic;
   if (skipLogicVal !== undefined) {
