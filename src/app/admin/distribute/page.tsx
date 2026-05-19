@@ -1,4 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { unstable_cache } from "next/cache";
 import Link from "next/link";
 import { MessageSquare } from "lucide-react";
 import DistributeTabs from "./distribute-tabs";
@@ -92,46 +94,54 @@ async function getPersonalLinkBatches(supabase: Awaited<ReturnType<typeof create
   });
 }
 
-async function getRespondentPickerList(supabase: Awaited<ReturnType<typeof createClient>>) {
-  const { data } = await supabase
-    .from("respondents")
-    .select("id, name, email, phone, department, position, last_cs_survey_sent_at, customer_id, customers:customer_id(id, company_name)")
-    .eq("is_active", true)
-    .order("updated_at", { ascending: false })
-    .limit(500);
-  type RespondentRow = {
-    id: string;
-    name: string;
-    email: string | null;
-    phone: string | null;
-    department: string | null;
-    position: string | null;
-    customer_id: number | null;
-    last_cs_survey_sent_at: string | null;
-    customers: { id: number; company_name: string } | { id: number; company_name: string }[] | null;
-  };
-  return (data as RespondentRow[] | null ?? []).map((r) => {
-    const customer = Array.isArray(r.customers) ? r.customers[0] : r.customers;
-    return {
-      id: r.id,
-      name: r.name,
-      email: r.email ?? null,
-      phone: r.phone ?? null,
-      department: r.department ?? null,
-      position: r.position ?? null,
-      customerId: r.customer_id ?? null,
-      companyName: customer?.company_name ?? null,
-      lastSentAt: r.last_cs_survey_sent_at ?? null,
+// respondents picker 목록은 admin 모두 동일 + 변동 적음 → 30초 캐시.
+// 응답자 추가/수정 server action 에서 revalidateTag("admin-respondent-picker") 호출 시 즉시 무효화.
+// cookies 의존 없는 createAdminClient (service role) 사용. 집계가 아닌 raw 데이터지만 admin role 만 접근하는 경로라 누설 우려 없음.
+const getCachedRespondentPickerList = unstable_cache(
+  async () => {
+    const supabase = createAdminClient();
+    const { data } = await supabase
+      .from("respondents")
+      .select("id, name, email, phone, department, position, last_cs_survey_sent_at, customer_id, customers:customer_id(id, company_name)")
+      .eq("is_active", true)
+      .order("updated_at", { ascending: false })
+      .limit(500);
+    type RespondentRow = {
+      id: string;
+      name: string;
+      email: string | null;
+      phone: string | null;
+      department: string | null;
+      position: string | null;
+      customer_id: number | null;
+      last_cs_survey_sent_at: string | null;
+      customers: { id: number; company_name: string } | { id: number; company_name: string }[] | null;
     };
-  });
-}
+    return (data as RespondentRow[] | null ?? []).map((r) => {
+      const customer = Array.isArray(r.customers) ? r.customers[0] : r.customers;
+      return {
+        id: r.id,
+        name: r.name,
+        email: r.email ?? null,
+        phone: r.phone ?? null,
+        department: r.department ?? null,
+        position: r.position ?? null,
+        customerId: r.customer_id ?? null,
+        companyName: customer?.company_name ?? null,
+        lastSentAt: r.last_cs_survey_sent_at ?? null,
+      };
+    });
+  },
+  ["admin-respondent-picker"],
+  { revalidate: 30, tags: ["admin-respondent-picker"] }
+);
 
 export default async function DistributePage() {
   const supabase = await createClient();
   const [surveys, batches, respondents] = await Promise.all([
     getSurveyData(supabase),
     getPersonalLinkBatches(supabase),
-    getRespondentPickerList(supabase),
+    getCachedRespondentPickerList(),
   ]);
 
   return (
