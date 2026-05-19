@@ -538,6 +538,13 @@ export type Database = {
             referencedColumns: ["contact_id"]
           },
           {
+            foreignKeyName: "cs_courses_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "v_cs_target_profile"
+            referencedColumns: ["contact_id"]
+          },
+          {
             foreignKeyName: "cs_courses_project_id_fkey"
             columns: ["project_id"]
             isOneToOne: false
@@ -556,6 +563,20 @@ export type Database = {
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "v_cs_target_candidates"
+            referencedColumns: ["project_uuid"]
+          },
+          {
+            foreignKeyName: "cs_courses_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "v_cs_target_detail"
+            referencedColumns: ["project_uuid"]
+          },
+          {
+            foreignKeyName: "cs_courses_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "v_cs_target_profile"
             referencedColumns: ["project_uuid"]
           },
           {
@@ -764,6 +785,13 @@ export type Database = {
             referencedRelation: "v_cs_target_detail"
             referencedColumns: ["target_id"]
           },
+          {
+            foreignKeyName: "cs_dispatch_records_target_id_fkey"
+            columns: ["target_id"]
+            isOneToOne: false
+            referencedRelation: "v_cs_target_profile"
+            referencedColumns: ["target_id"]
+          },
         ]
       }
       cs_external_send_history: {
@@ -890,6 +918,20 @@ export type Database = {
             referencedRelation: "v_cs_target_candidates"
             referencedColumns: ["project_uuid"]
           },
+          {
+            foreignKeyName: "cs_project_members_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "v_cs_target_detail"
+            referencedColumns: ["project_uuid"]
+          },
+          {
+            foreignKeyName: "cs_project_members_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "v_cs_target_profile"
+            referencedColumns: ["project_uuid"]
+          },
         ]
       }
       cs_projects: {
@@ -908,6 +950,9 @@ export type Database = {
           id: string
           last_content_hash: string | null
           order_date: string | null
+          pre_selected: boolean
+          pre_selected_at: string | null
+          pre_selected_by: string | null
           project_id: string | null
           project_name: string
           project_type: string | null
@@ -932,6 +977,9 @@ export type Database = {
           id?: string
           last_content_hash?: string | null
           order_date?: string | null
+          pre_selected?: boolean
+          pre_selected_at?: string | null
+          pre_selected_by?: string | null
           project_id?: string | null
           project_name: string
           project_type?: string | null
@@ -956,6 +1004,9 @@ export type Database = {
           id?: string
           last_content_hash?: string | null
           order_date?: string | null
+          pre_selected?: boolean
+          pre_selected_at?: string | null
+          pre_selected_by?: string | null
           project_id?: string | null
           project_name?: string
           project_type?: string | null
@@ -1028,6 +1079,13 @@ export type Database = {
             referencedColumns: ["contact_id"]
           },
           {
+            foreignKeyName: "cs_survey_participation_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "v_cs_target_profile"
+            referencedColumns: ["contact_id"]
+          },
+          {
             foreignKeyName: "cs_survey_participation_project_id_fkey"
             columns: ["project_id"]
             isOneToOne: false
@@ -1046,6 +1104,20 @@ export type Database = {
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "v_cs_target_candidates"
+            referencedColumns: ["project_uuid"]
+          },
+          {
+            foreignKeyName: "cs_survey_participation_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "v_cs_target_detail"
+            referencedColumns: ["project_uuid"]
+          },
+          {
+            foreignKeyName: "cs_survey_participation_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "v_cs_target_profile"
             referencedColumns: ["project_uuid"]
           },
         ]
@@ -1168,6 +1240,13 @@ export type Database = {
             referencedColumns: ["contact_id"]
           },
           {
+            foreignKeyName: "cs_survey_results_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "v_cs_target_profile"
+            referencedColumns: ["contact_id"]
+          },
+          {
             foreignKeyName: "cs_survey_results_dispatch_id_fkey"
             columns: ["dispatch_id"]
             isOneToOne: false
@@ -1196,6 +1275,20 @@ export type Database = {
             referencedColumns: ["project_uuid"]
           },
           {
+            foreignKeyName: "cs_survey_results_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "v_cs_target_detail"
+            referencedColumns: ["project_uuid"]
+          },
+          {
+            foreignKeyName: "cs_survey_results_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "v_cs_target_profile"
+            referencedColumns: ["project_uuid"]
+          },
+          {
             foreignKeyName: "cs_survey_results_target_id_fkey"
             columns: ["target_id"]
             isOneToOne: false
@@ -1207,6 +1300,13 @@ export type Database = {
             columns: ["target_id"]
             isOneToOne: false
             referencedRelation: "v_cs_target_detail"
+            referencedColumns: ["target_id"]
+          },
+          {
+            foreignKeyName: "cs_survey_results_target_id_fkey"
+            columns: ["target_id"]
+            isOneToOne: false
+            referencedRelation: "v_cs_target_profile"
             referencedColumns: ["target_id"]
           },
         ]
@@ -1366,6 +1466,13 @@ export type Database = {
             referencedColumns: ["contact_id"]
           },
           {
+            foreignKeyName: "cs_survey_targets_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "v_cs_target_profile"
+            referencedColumns: ["contact_id"]
+          },
+          {
             foreignKeyName: "cs_survey_targets_course_id_fkey"
             columns: ["course_id"]
             isOneToOne: false
@@ -1377,6 +1484,13 @@ export type Database = {
             columns: ["course_id"]
             isOneToOne: false
             referencedRelation: "v_cs_target_candidates"
+            referencedColumns: ["course_id"]
+          },
+          {
+            foreignKeyName: "cs_survey_targets_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "v_cs_target_profile"
             referencedColumns: ["course_id"]
           },
           {
@@ -1405,6 +1519,20 @@ export type Database = {
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "v_cs_target_candidates"
+            referencedColumns: ["project_uuid"]
+          },
+          {
+            foreignKeyName: "cs_survey_targets_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "v_cs_target_detail"
+            referencedColumns: ["project_uuid"]
+          },
+          {
+            foreignKeyName: "cs_survey_targets_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "v_cs_target_profile"
             referencedColumns: ["project_uuid"]
           },
         ]
@@ -1500,9 +1628,12 @@ export type Database = {
       }
       cs_sync_logs: {
         Row: {
+          enriched_courses: number | null
+          enriched_projects: number | null
           error_message: string | null
           finished_at: string | null
           id: string
+          integrity_violations: Json | null
           new_companies: number | null
           new_contacts: number | null
           new_courses: number | null
@@ -1514,13 +1645,17 @@ export type Database = {
           rows_upserted: number | null
           started_at: string | null
           status: string | null
+          step2_recheck_excluded: number | null
           sync_type: string | null
           triggered_batch_id: string | null
         }
         Insert: {
+          enriched_courses?: number | null
+          enriched_projects?: number | null
           error_message?: string | null
           finished_at?: string | null
           id?: string
+          integrity_violations?: Json | null
           new_companies?: number | null
           new_contacts?: number | null
           new_courses?: number | null
@@ -1532,13 +1667,17 @@ export type Database = {
           rows_upserted?: number | null
           started_at?: string | null
           status?: string | null
+          step2_recheck_excluded?: number | null
           sync_type?: string | null
           triggered_batch_id?: string | null
         }
         Update: {
+          enriched_courses?: number | null
+          enriched_projects?: number | null
           error_message?: string | null
           finished_at?: string | null
           id?: string
+          integrity_violations?: Json | null
           new_companies?: number | null
           new_contacts?: number | null
           new_courses?: number | null
@@ -1550,6 +1689,7 @@ export type Database = {
           rows_upserted?: number | null
           started_at?: string | null
           status?: string | null
+          step2_recheck_excluded?: number | null
           sync_type?: string | null
           triggered_batch_id?: string | null
         }
@@ -1714,6 +1854,20 @@ export type Database = {
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "v_cs_target_candidates"
+            referencedColumns: ["project_uuid"]
+          },
+          {
+            foreignKeyName: "cs_trade_history_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "v_cs_target_detail"
+            referencedColumns: ["project_uuid"]
+          },
+          {
+            foreignKeyName: "cs_trade_history_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "v_cs_target_profile"
             referencedColumns: ["project_uuid"]
           },
         ]
@@ -4161,6 +4315,28 @@ export type Database = {
         }
         Relationships: []
       }
+      v_cs_integrity_details: {
+        Row: {
+          batch_id: string | null
+          bris_code: string | null
+          category: string | null
+          course_name: string | null
+          detail: string | null
+          label: string | null
+          project_id: string | null
+          project_name: string | null
+          target_id: string | null
+        }
+        Relationships: []
+      }
+      v_cs_integrity_summary: {
+        Row: {
+          category: string | null
+          label: string | null
+          violation_count: number | null
+        }
+        Relationships: []
+      }
       v_cs_project_overview: {
         Row: {
           actual_course_count: number | null
@@ -4254,9 +4430,12 @@ export type Database = {
           batch_id: string | null
           batch_name: string | null
           bris_code: string | null
+          bris_project_id: string | null
           company_name: string | null
+          contact_id: string | null
           contact_name: string | null
           course_end: string | null
+          course_id: string | null
           course_name: string | null
           course_start: string | null
           current_step: number | null
@@ -4272,9 +4451,13 @@ export type Database = {
           phone: string | null
           place_name: string | null
           position: string | null
+          pre_selected: boolean | null
+          pre_selected_at: string | null
+          pre_selected_by: string | null
           program_name: string | null
           project_name: string | null
           project_status: string | null
+          project_uuid: string | null
           step1_course_completed: boolean | null
           step2_last_course_confirmed: boolean | null
           step3_project_closed: boolean | null
@@ -4288,6 +4471,131 @@ export type Database = {
           target_period_start: string | null
           target_status: string | null
           total_amount: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cs_survey_targets_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "cs_target_batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cs_survey_targets_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "v_cs_batch_dashboard"
+            referencedColumns: ["batch_id"]
+          },
+          {
+            foreignKeyName: "cs_survey_targets_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "v_cs_dispatch_summary"
+            referencedColumns: ["batch_id"]
+          },
+          {
+            foreignKeyName: "cs_survey_targets_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "cs_contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cs_survey_targets_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "v_cs_target_candidates"
+            referencedColumns: ["contact_id"]
+          },
+          {
+            foreignKeyName: "cs_survey_targets_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "v_cs_target_profile"
+            referencedColumns: ["contact_id"]
+          },
+          {
+            foreignKeyName: "cs_survey_targets_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "cs_courses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cs_survey_targets_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "v_cs_target_candidates"
+            referencedColumns: ["course_id"]
+          },
+          {
+            foreignKeyName: "cs_survey_targets_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "v_cs_target_profile"
+            referencedColumns: ["course_id"]
+          },
+        ]
+      }
+      v_cs_target_profile: {
+        Row: {
+          am_name: string | null
+          am_team: string | null
+          assignee: string | null
+          batch_id: string | null
+          batch_name: string | null
+          bris_code: string | null
+          bris_project_id: string | null
+          business_type: string | null
+          company_name: string | null
+          consultants: string | null
+          contact_id: string | null
+          contact_name: string | null
+          course_end: string | null
+          course_id: string | null
+          course_is_completed: boolean | null
+          course_is_last: boolean | null
+          course_name: string | null
+          course_session: number | null
+          course_start: string | null
+          department: string | null
+          dispatch_channel: string | null
+          dispatch_completed_at: string | null
+          dispatch_opened_at: string | null
+          dispatch_sent_at: string | null
+          dispatch_status: string | null
+          dispatch_token: string | null
+          division: string | null
+          echo_enabled: boolean | null
+          echo_exclude_reason: string | null
+          echo_status: string | null
+          education_type: string | null
+          email: string | null
+          exclusion_reason: string | null
+          execution_team: string | null
+          im_name: string | null
+          instructors: string | null
+          is_b2c: boolean | null
+          is_eligible: boolean | null
+          mobile: string | null
+          note: string | null
+          phone: string | null
+          place_name: string | null
+          position: string | null
+          program_name: string | null
+          project_closed_at: string | null
+          project_deadline_date: string | null
+          project_name: string | null
+          project_status: string | null
+          project_uuid: string | null
+          step4_last_survey_date: string | null
+          step4_within_6months: boolean | null
+          target_id: string | null
+          target_period_end: string | null
+          target_period_start: string | null
+          target_status: string | null
+          within_batch_dup_count: number | null
         }
         Relationships: [
           {
@@ -4456,6 +4764,41 @@ export type Database = {
         }
         Returns: string
       }
+      fn_cs_batch_confirm: {
+        Args: { p_batch_id: string }
+        Returns: {
+          auto_dispatch_mode: string
+          batch_name: string
+          confirmed_at: string | null
+          created_at: string | null
+          created_by: string | null
+          criteria: Json | null
+          dispatched_at: string | null
+          dispatched_count: number | null
+          eligible_count: number | null
+          excluded_count: number | null
+          id: string
+          status: string | null
+          survey_id: string | null
+          target_period_end: string | null
+          target_period_start: string | null
+          total_candidates: number | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "cs_target_batches"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      fn_cs_business_type: {
+        Args: { p_execution_team: string }
+        Returns: string
+      }
+      fn_cs_check_bris_freshness: {
+        Args: { p_threshold_days?: number }
+        Returns: Json
+      }
       fn_cs_create_batch_and_scan: {
         Args: {
           p_batch_name: string
@@ -4467,6 +4810,10 @@ export type Database = {
           batch_id: string
           candidates_added: number
         }[]
+      }
+      fn_cs_create_round_batch: {
+        Args: { p_created_by?: string; p_round: number; p_year_month: string }
+        Returns: Json
       }
       fn_cs_cron_lineage_audit: { Args: never; Returns: Json }
       fn_cs_cron_monthly_batch: { Args: never; Returns: Json }
@@ -4491,6 +4838,14 @@ export type Database = {
         Args: { p_dispatch_id: string; p_event: string; p_score?: number }
         Returns: undefined
       }
+      fn_cs_distributions_backfill_target: {
+        Args: { p_dry_run?: boolean }
+        Returns: Json
+      }
+      fn_cs_external_history_import: {
+        Args: { p_file_name?: string; p_rows: Json; p_source?: string }
+        Returns: Json
+      }
       fn_cs_generate_survey_token: {
         Args: { p_target_id: string }
         Returns: string
@@ -4505,6 +4860,42 @@ export type Database = {
           batch_id: string
           candidates: number
         }[]
+      }
+      fn_cs_project_toggle_pre_selected: {
+        Args: { p_on: boolean; p_project_id: string }
+        Returns: {
+          am_name: string | null
+          am_team: string | null
+          bris_code: string | null
+          bris_synced_at: string | null
+          closed_at: string | null
+          course_count: number | null
+          created_at: string | null
+          deadline_date: string | null
+          echo_enabled: boolean | null
+          echo_exclude_reason: string | null
+          execution_team: string | null
+          id: string
+          last_content_hash: string | null
+          order_date: string | null
+          pre_selected: boolean
+          pre_selected_at: string | null
+          pre_selected_by: string | null
+          project_id: string | null
+          project_name: string
+          project_type: string | null
+          registration_date: string | null
+          source_raw_record_id: string | null
+          status: string | null
+          total_amount: number | null
+          updated_at: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "cs_projects"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       fn_cs_run_auto_screening: {
         Args: { p_batch_id: string }
@@ -4521,6 +4912,12 @@ export type Database = {
           checked: number
           excluded: number
           passed: number
+        }[]
+      }
+      fn_cs_step2_recheck_for_projects: {
+        Args: { p_bris_project_ids: string[] }
+        Returns: {
+          excluded: number
         }[]
       }
       fn_cs_step3_check_project_closed: {
@@ -4565,6 +4962,54 @@ export type Database = {
         Args: { p_end: string; p_start: string }
         Returns: string
       }
+      fn_cs_target_set_exclusion: {
+        Args: { p_reason: string; p_target_id: string }
+        Returns: {
+          batch_id: string
+          contact_id: string
+          context_snapshot: Json | null
+          course_id: string | null
+          created_at: string | null
+          current_step: number | null
+          dispatch_channel: string | null
+          dispatch_error: string | null
+          dispatched_at: string | null
+          distribution_id: string | null
+          exclusion_reason: string | null
+          id: string
+          is_eligible: boolean | null
+          project_id: string
+          status: string | null
+          step1_checked_at: string | null
+          step1_course_completed: boolean | null
+          step1_note: string | null
+          step2_checked_at: string | null
+          step2_last_course_confirmed: boolean | null
+          step2_last_course_date: string | null
+          step2_note: string | null
+          step3_checked_at: string | null
+          step3_closed_date: string | null
+          step3_note: string | null
+          step3_project_closed: boolean | null
+          step4_checked_at: string | null
+          step4_history_checked: boolean | null
+          step4_last_survey_date: string | null
+          step4_note: string | null
+          step4_within_6months: boolean | null
+          step5_confirmed: boolean | null
+          step5_confirmed_at: string | null
+          step5_confirmed_by: string | null
+          survey_token: string | null
+          survey_url: string | null
+          updated_at: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "cs_survey_targets"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       get_admin_sidebar_badges: {
         Args: never
         Returns: {
@@ -4572,6 +5017,18 @@ export type Database = {
           failed_emails: number
           recent_responses: number
         }[]
+      }
+      get_hrd_collection_kpi: { Args: { p_round_id: string }; Returns: Json }
+      get_hrd_daily_completed: {
+        Args: { p_days?: number; p_round_id: string }
+        Returns: {
+          completed: number
+          day: string
+        }[]
+      }
+      get_hrd_item_distribution: {
+        Args: { p_item_id: string; p_round_id: string }
+        Returns: Json
       }
       get_hrd_part_statistics: {
         Args: { p_round_id: string }
@@ -4591,6 +5048,10 @@ export type Database = {
           status: string
         }[]
       }
+      get_hrd_respondent_breakdown_v2: {
+        Args: { p_round_id: string }
+        Returns: Json
+      }
       get_hrd_respondent_summary: {
         Args: { p_round_id: string }
         Returns: {
@@ -4601,10 +5062,24 @@ export type Database = {
           total_count: number
         }[]
       }
+      get_hrd_response_quality: { Args: { p_round_id: string }; Returns: Json }
+      get_hrd_round_compare: {
+        Args: { p_item_codes?: string[]; p_round_a: string; p_round_b: string }
+        Returns: {
+          a_count: number
+          a_mean: number
+          b_count: number
+          b_mean: number
+          delta: number
+          item_code: string
+          question: string
+        }[]
+      }
       get_hrd_round_statistics: {
         Args: { p_round_id: string }
         Returns: {
           avg_score: number
+          likert_avg: number
           total_responses: number
           unique_items: number
           unique_respondents: number
