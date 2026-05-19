@@ -1,7 +1,14 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, updateTag } from "next/cache";
+
+// distribute 페이지의 응답자 picker 캐시 무효화 헬퍼.
+// respondents 가 추가/수정/삭제될 때 호출해 30초 캐시를 즉시 갱신한다.
+// Next.js 16: updateTag 는 server action 내부에서만 동작하며 read-your-own-writes 의미 보장.
+function invalidateRespondentPicker() {
+  updateTag("admin-respondent-picker");
+}
 
 export interface RespondentInput {
   name: string;
@@ -18,6 +25,7 @@ export async function createRespondent(data: RespondentInput) {
   const { error } = await supabase.from("respondents").insert(data);
   if (error) throw new Error("응답자 추가 실패: " + error.message);
   revalidatePath("/admin/respondents");
+  invalidateRespondentPicker();
 }
 
 export async function updateRespondent(id: string, data: Partial<RespondentInput>) {
@@ -28,6 +36,7 @@ export async function updateRespondent(id: string, data: Partial<RespondentInput
     .eq("id", id);
   if (error) throw new Error("응답자 수정 실패: " + error.message);
   revalidatePath("/admin/respondents");
+  invalidateRespondentPicker();
 }
 
 export async function deleteRespondent(id: string) {
@@ -35,6 +44,7 @@ export async function deleteRespondent(id: string) {
   const { error } = await supabase.from("respondents").delete().eq("id", id);
   if (error) throw new Error("응답자 삭제 실패: " + error.message);
   revalidatePath("/admin/respondents");
+  invalidateRespondentPicker();
 }
 
 export async function toggleRespondentActive(id: string, isActive: boolean) {
@@ -45,6 +55,7 @@ export async function toggleRespondentActive(id: string, isActive: boolean) {
     .eq("id", id);
   if (error) throw new Error("상태 변경 실패: " + error.message);
   revalidatePath("/admin/respondents");
+  invalidateRespondentPicker();
 }
 
 export interface BulkRow {
@@ -193,6 +204,7 @@ export async function bulkImportRespondents(rows: BulkRow[]): Promise<BulkImport
   }
 
   revalidatePath("/admin/respondents");
+  invalidateRespondentPicker();
   return { inserted, updated, skipped };
 }
 
@@ -577,6 +589,7 @@ export async function importResponseHistory(
   }
 
   revalidatePath("/admin/respondents");
+  invalidateRespondentPicker();
 
   return {
     ...preview,

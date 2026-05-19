@@ -109,15 +109,11 @@ export function Sidebar({ userProfile, badges = {} }: SidebarProps) {
     const active = isActive(pathname, item.href);
     const badge = badges[item.href];
     const isFailure = item.href === "/admin/distribute" && badge;
-    const handlePrefetch = () => router.prefetch(item.href);
     return (
       <Link
         key={item.href}
         href={item.href}
         prefetch={false}
-        onMouseEnter={handlePrefetch}
-        onFocus={handlePrefetch}
-        onTouchStart={handlePrefetch}
         className={`flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition-colors ${
           active
             ? "bg-teal-50/10 text-teal-300 font-medium"
@@ -208,8 +204,6 @@ export function Sidebar({ userProfile, badges = {} }: SidebarProps) {
             <Link
               href="/admin/settings"
               prefetch={false}
-              onMouseEnter={() => router.prefetch("/admin/settings")}
-              onFocus={() => router.prefetch("/admin/settings")}
               className={`flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition-colors ${
                 isActive(pathname, "/admin/settings")
                   ? "bg-teal-50/10 text-teal-300 font-medium"
@@ -252,7 +246,6 @@ export function Sidebar({ userProfile, badges = {} }: SidebarProps) {
             <Link
               href="/admin/account"
               prefetch={false}
-              onMouseEnter={() => router.prefetch("/admin/account")}
               className="rounded-md p-1.5 text-stone-500 hover:bg-stone-800 hover:text-stone-300 transition-colors"
               title="계정 설정"
             >
