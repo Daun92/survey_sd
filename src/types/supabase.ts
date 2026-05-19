@@ -4302,6 +4302,18 @@ export type Database = {
         }
         Relationships: []
       }
+      v_cs_data_completeness: {
+        Row: {
+          category: string | null
+          completeness_pct: number | null
+          label: string | null
+          missing_count: number | null
+          missing_pct: number | null
+          sort_order: number | null
+          total_count: number | null
+        }
+        Relationships: []
+      }
       v_cs_dispatch_summary: {
         Row: {
           batch_id: string | null
@@ -4848,6 +4860,16 @@ export type Database = {
           position_before: string
           position_extracted: string
           status: string
+        }[]
+      }
+      fn_cs_contact_set_position: {
+        Args: { p_customer_id: string; p_position: string }
+        Returns: {
+          out_contact_id: string
+          out_contact_name: string
+          out_customer_id: string
+          out_position: string
+          out_updated_count: number
         }[]
       }
       fn_cs_create_batch_and_scan: {
