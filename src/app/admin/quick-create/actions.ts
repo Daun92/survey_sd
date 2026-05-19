@@ -293,7 +293,7 @@ export async function quickCreateSurvey(formData: FormData): Promise<QuickCreate
             section: tq.section_label || "일반",
             sort_order: tq.sort_order,
             is_required: tq.is_required ?? true,
-            options: options ? JSON.stringify(options) : null,
+            options: options ?? null,
             metadata,
           };
         });

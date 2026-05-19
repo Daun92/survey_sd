@@ -100,6 +100,7 @@ export const statusLabels: Record<string, { label: string; className: string }> 
 
 export const questionTypeOptions = [
   { value: "likert_5", label: "리커트 5점" },
+  { value: "likert_6", label: "리커트 6점" },
   { value: "likert_7", label: "리커트 7점" },
   { value: "multiple_choice", label: "객관식 (복수)" },
   { value: "single_choice", label: "객관식 (단일)" },
@@ -111,6 +112,7 @@ export const questionTypeOptions = [
 
 export const questionTypeLabels: Record<string, string> = {
   likert_5: "리커트 5점",
+  likert_6: "리커트 6점",
   likert_7: "리커트 7점",
   text: "주관식",
   multiple_choice: "객관식 (복수)",
