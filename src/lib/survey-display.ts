@@ -44,8 +44,14 @@ export function composeSurveySubtitle(meta: SurveyDisplayMeta): string | null {
     if (!Number.isNaN(d.getTime())) parts.push(`${d.getMonth() + 1}월`);
   }
   const eduLabel = educationTypeLabel(meta.education_type);
-  if (eduLabel) parts.push(eduLabel);
-  if (meta.session_name) parts.push(meta.session_name);
-  else if (meta.session_number != null) parts.push(`${meta.session_number}차`);
+  const sessionLabel = meta.session_name
+    ?? (meta.session_number != null ? `${meta.session_number}차` : null);
+  // "원격 · 원격" 처럼 education_type 한글 라벨과 session 라벨이 동일하면 한 번만 표기.
+  if (eduLabel && sessionLabel === eduLabel) {
+    parts.push(eduLabel);
+  } else {
+    if (eduLabel) parts.push(eduLabel);
+    if (sessionLabel) parts.push(sessionLabel);
+  }
   return parts.length > 0 ? parts.join(" · ") : null;
 }
