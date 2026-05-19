@@ -14,6 +14,7 @@ import {
   type ReportSubmission,
   type ReportQuestion,
 } from "@/lib/report-aggregator";
+import { composeSurveySubtitle } from "@/lib/survey-display";
 
 async function getSurveyReport(surveyId: string): Promise<SurveyReportData | null> {
   const supabase = await createClient();
@@ -57,12 +58,16 @@ async function getSurveyList() {
   const supabase = await createClient();
   const { data: surveys } = await supabase
     .from("edu_surveys")
-    .select("id, title, status, created_at, edu_submissions(count)")
+    .select(`
+      id, title, internal_label, status, created_at, education_type,
+      edu_submissions(count),
+      sessions ( name, session_number, start_date )
+    `)
     .order("created_at", { ascending: false });
 
   if (!surveys || surveys.length === 0) return [];
 
-  return surveys.map((sv) => ({
+  return surveys.map((sv: any) => ({
     ...sv,
     submissionCount: (sv.edu_submissions as unknown as { count: number }[])?.[0]?.count ?? 0,
   }));
@@ -190,9 +195,22 @@ export default async function ReportsPage({
                     </span>
                   </div>
 
-                  <h3 className="text-sm font-semibold text-stone-800 mb-1 truncate">
+                  <h3 className="text-sm font-semibold text-stone-800 mb-0.5 truncate">
                     {survey.title}
                   </h3>
+                  {(() => {
+                    const session = (survey as any).sessions;
+                    const sub = composeSurveySubtitle({
+                      internal_label: (survey as any).internal_label,
+                      start_date: session?.start_date,
+                      education_type: (survey as any).education_type,
+                      session_name: session?.name,
+                      session_number: session?.session_number,
+                    });
+                    return sub ? (
+                      <p className="text-[11px] text-stone-400 mb-1 truncate">{sub}</p>
+                    ) : null;
+                  })()}
                   <p className="text-xs text-stone-400 mb-4">
                     {formatDate(survey.created_at)}
                   </p>

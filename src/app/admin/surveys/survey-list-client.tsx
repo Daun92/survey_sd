@@ -22,6 +22,17 @@ import {
 } from "lucide-react";
 import { toggleSurveyStatus } from "./actions";
 import { duplicateSurvey } from "./[id]/actions";
+import { composeSurveySubtitle } from "@/lib/survey-display";
+
+function surveySubtitle(s: SurveyItem): string | null {
+  return composeSurveySubtitle({
+    internal_label: s.internal_label,
+    start_date: s.session_start_date,
+    education_type: s.education_type,
+    session_name: s.session_name,
+    session_number: s.session_number,
+  });
+}
 
 export function ViewToggle({
   view,
@@ -61,6 +72,7 @@ export function ViewToggle({
 export interface SurveyItem {
   id: string;
   title: string;
+  internal_label: string | null;
   status: string;
   education_type: string | null;
   url_token: string;
@@ -70,6 +82,8 @@ export interface SurveyItem {
   project_name: string | null;
   customer_name: string | null;
   session_name: string | null;
+  session_number: number | null;
+  session_start_date: string | null;
   submission_count: number;
 }
 
@@ -282,10 +296,15 @@ function ListView({ surveys }: { surveys: SurveyItem[] }) {
                   <td className="px-5 h-12 max-w-[280px]">
                     <Link
                       href={`/admin/surveys/${survey.id}`}
-                      className="text-sm font-medium text-stone-800 hover:text-teal-600 transition-colors line-clamp-1"
+                      className="text-sm font-medium text-stone-800 hover:text-teal-600 transition-colors line-clamp-1 block"
                     >
                       {survey.title}
                     </Link>
+                    {surveySubtitle(survey) && (
+                      <p className="text-[11px] text-stone-400 line-clamp-1 mt-0.5" title={survey.internal_label ? "관리용 라벨" : "차수·운영구분 자동 표기"}>
+                        {surveySubtitle(survey)}
+                      </p>
+                    )}
                   </td>
                   <td className="px-5 h-12 whitespace-nowrap">
                     {survey.education_type && eduTypeConfig[survey.education_type] ? (
@@ -375,12 +394,19 @@ function CardView({ surveys }: { surveys: SurveyItem[] }) {
             className="group rounded-xl border border-stone-200 bg-white shadow-sm hover:shadow-md hover:border-teal-200 transition-all p-5 flex flex-col"
           >
             <div className="flex items-start justify-between gap-3 mb-3">
-              <Link
-                href={`/admin/surveys/${survey.id}`}
-                className="text-sm font-semibold text-stone-800 group-hover:text-teal-700 transition-colors line-clamp-2 flex-1"
-              >
-                {survey.title}
-              </Link>
+              <div className="flex-1 min-w-0">
+                <Link
+                  href={`/admin/surveys/${survey.id}`}
+                  className="text-sm font-semibold text-stone-800 group-hover:text-teal-700 transition-colors line-clamp-2 block"
+                >
+                  {survey.title}
+                </Link>
+                {surveySubtitle(survey) && (
+                  <p className="text-[11px] text-stone-400 line-clamp-1 mt-0.5">
+                    {surveySubtitle(survey)}
+                  </p>
+                )}
+              </div>
               <div className="shrink-0">
                 <StatusDropdown surveyId={survey.id} status={survey.status} />
               </div>

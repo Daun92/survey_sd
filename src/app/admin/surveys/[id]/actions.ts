@@ -60,7 +60,7 @@ export async function duplicateSurvey(surveyId: string) {
   // 원본 설문 조회
   const { data: original, error: fetchError } = await supabase
     .from("edu_surveys")
-    .select("title, description, survey_type, education_type, settings, session_id, project_id")
+    .select("title, internal_label, description, survey_type, education_type, settings, session_id, project_id")
     .eq("id", surveyId)
     .single();
 
@@ -69,11 +69,12 @@ export async function duplicateSurvey(surveyId: string) {
   // 새 url_token 생성
   const urlToken = nanoid(12);
 
-  // 설문 복제 (draft 상태로)
+  // 설문 복제 (draft 상태로). internal_label 은 관리용 자유 라벨이라 그대로 보존.
   const { data: newSurvey, error: createError } = await supabase
     .from("edu_surveys")
     .insert({
       title: `${original.title} (복제)`,
+      internal_label: (original as { internal_label?: string | null }).internal_label ?? null,
       description: original.description,
       survey_type: original.survey_type,
       education_type: original.education_type,

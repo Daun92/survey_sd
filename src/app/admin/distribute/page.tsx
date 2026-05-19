@@ -7,7 +7,7 @@ async function getSurveyData(supabase: Awaited<ReturnType<typeof createClient>>)
   const { data: surveys } = await supabase
     .from("edu_surveys")
     .select(`
-      id, title, status, url_token, created_at, education_type, survey_type,
+      id, title, internal_label, status, url_token, created_at, education_type, survey_type,
       sessions ( id, name, session_number,
         class_groups ( id, name, survey_url_token ),
         courses ( name,
@@ -28,6 +28,7 @@ async function getSurveyData(supabase: Awaited<ReturnType<typeof createClient>>)
     return {
       id: s.id,
       title: s.title,
+      internalLabel: s.internal_label ?? null,
       token: s.url_token,
       status: s.status,
       createdAt: s.created_at ?? null,

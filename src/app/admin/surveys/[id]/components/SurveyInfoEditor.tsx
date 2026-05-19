@@ -9,6 +9,7 @@ export function SurveyInfoEditor({ survey, onUpdated }: { survey: Survey; onUpda
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [title, setTitle] = useState(survey.title);
+  const [internalLabel, setInternalLabel] = useState(survey.internal_label ?? "");
   const [status, setStatus] = useState(survey.status);
   const [startsAt, setStartsAt] = useState(formatDateForInput(survey.starts_at));
   const [endsAt, setEndsAt] = useState(formatDateForInput(survey.ends_at));
@@ -17,7 +18,14 @@ export function SurveyInfoEditor({ survey, onUpdated }: { survey: Survey; onUpda
   const handleSave = async () => {
     setSaving(true);
     try {
-      await updateSurvey(survey.id, { title, status, starts_at: startsAt || null, ends_at: endsAt || null, description: description || null });
+      await updateSurvey(survey.id, {
+        title,
+        internal_label: internalLabel.trim() ? internalLabel.trim() : null,
+        status,
+        starts_at: startsAt || null,
+        ends_at: endsAt || null,
+        description: description || null,
+      });
       setEditing(false);
       onUpdated();
     } catch (e) {
@@ -29,6 +37,7 @@ export function SurveyInfoEditor({ survey, onUpdated }: { survey: Survey; onUpda
 
   const handleCancel = () => {
     setTitle(survey.title);
+    setInternalLabel(survey.internal_label ?? "");
     setStatus(survey.status);
     setStartsAt(formatDateForInput(survey.starts_at));
     setEndsAt(formatDateForInput(survey.ends_at));
@@ -41,11 +50,18 @@ export function SurveyInfoEditor({ survey, onUpdated }: { survey: Survey; onUpda
   if (!editing) {
     return (
       <div className="flex items-center justify-between gap-4">
-        <div className="flex items-center gap-3 min-w-0">
-          <h1 className="text-lg font-bold text-stone-800 truncate">{survey.title}</h1>
-          <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium shrink-0 ${currentStatus.className}`}>
-            {currentStatus.label}
-          </span>
+        <div className="flex flex-col gap-0.5 min-w-0">
+          <div className="flex items-center gap-3 min-w-0">
+            <h1 className="text-lg font-bold text-stone-800 truncate">{survey.title}</h1>
+            <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium shrink-0 ${currentStatus.className}`}>
+              {currentStatus.label}
+            </span>
+          </div>
+          {survey.internal_label && (
+            <p className="text-xs text-stone-500 truncate" title="관리용 라벨 — 응답자에게 보이지 않음">
+              {survey.internal_label}
+            </p>
+          )}
         </div>
         <button onClick={() => setEditing(true)} className="shrink-0 inline-flex items-center gap-1.5 rounded-lg border border-stone-300 px-3 py-1.5 text-xs font-medium text-stone-600 hover:bg-stone-50 transition-colors">
           <Pencil size={12} /> 수정
@@ -57,8 +73,16 @@ export function SurveyInfoEditor({ survey, onUpdated }: { survey: Survey; onUpda
   return (
     <div className="space-y-3">
       <div>
-        <label className="block text-[13px] font-medium text-stone-600 mb-1">설문 제목</label>
-        <input type="text" value={title} onChange={(e) => setTitle(e.target.value)} className="w-full rounded-lg border border-stone-300 px-3 py-2 text-sm focus:border-teal-500 focus:ring-1 focus:ring-teal-500 outline-none" />
+        <label className="block text-[13px] font-medium text-stone-600 mb-1">
+          공개용 제목 <span className="text-stone-400 font-normal">— 응답자 화면에 표시</span>
+        </label>
+        <input type="text" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="예: 엑스퍼트컨설팅 고객만족도 설문" className="w-full rounded-lg border border-stone-300 px-3 py-2 text-sm focus:border-teal-500 focus:ring-1 focus:ring-teal-500 outline-none" />
+      </div>
+      <div>
+        <label className="block text-[13px] font-medium text-stone-600 mb-1">
+          관리용 라벨 <span className="text-stone-400 font-normal">— 관리자에게만 보임 (선택)</span>
+        </label>
+        <input type="text" value={internalLabel} onChange={(e) => setInternalLabel(e.target.value)} placeholder="예: 집체/5월/1차 — 비워두면 차수·월 정보로 자동 표기" className="w-full rounded-lg border border-stone-300 px-3 py-2 text-sm focus:border-teal-500 focus:ring-1 focus:ring-teal-500 outline-none" />
       </div>
       <div>
         <label className="block text-[13px] font-medium text-stone-600 mb-1">안내사항 <span className="text-stone-400 font-normal">— 시작 화면에 표시</span></label>

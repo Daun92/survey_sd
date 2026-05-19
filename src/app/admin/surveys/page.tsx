@@ -8,11 +8,11 @@ async function getSurveys(supabase: Awaited<ReturnType<typeof createClient>>, st
   let q = supabase
     .from("edu_surveys")
     .select(`
-      id, title, status, survey_type, education_type, url_token,
+      id, title, internal_label, status, survey_type, education_type, url_token,
       starts_at, ends_at, created_at,
       edu_submissions(count),
       sessions (
-        name,
+        name, session_number, start_date,
         courses (
           name,
           projects (
@@ -55,6 +55,7 @@ async function getSurveys(supabase: Awaited<ReturnType<typeof createClient>>, st
     return {
       id: s.id,
       title: s.title,
+      internal_label: (s as any).internal_label ?? null,
       status: s.status as string,
       education_type: (s as any).education_type ?? null,
       url_token: s.url_token,
@@ -64,6 +65,8 @@ async function getSurveys(supabase: Awaited<ReturnType<typeof createClient>>, st
       project_name: project?.name ?? null,
       customer_name: customer?.company_name ?? null,
       session_name: session?.name ?? null,
+      session_number: session?.session_number ?? null,
+      session_start_date: session?.start_date ?? null,
       submission_count:
         (s.edu_submissions as unknown as { count: number }[])?.[0]?.count ?? 0,
     };
