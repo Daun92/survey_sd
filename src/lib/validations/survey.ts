@@ -24,6 +24,7 @@ export const questionTypeSchema = z.enum([
 // Server Actions용 (snake_case — Supabase)
 export const updateSurveySchema = z.object({
   title: z.string().min(1, "제목을 입력해 주세요").max(300).optional(),
+  internal_label: z.string().max(200).nullable().optional(),
   status: z.string().optional(),
   starts_at: z.string().nullable().optional(),
   ends_at: z.string().nullable().optional(),

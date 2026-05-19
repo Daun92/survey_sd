@@ -43,6 +43,7 @@ export interface SurveySettings {
 export interface Survey {
   id: string;
   title: string;
+  internal_label?: string | null;
   description: string | null;
   status: string;
   survey_type: string;

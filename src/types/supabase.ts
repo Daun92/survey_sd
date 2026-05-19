@@ -2314,6 +2314,7 @@ export type Database = {
           education_type: string | null
           ends_at: string | null
           id: string
+          internal_label: string | null
           owner_id: string | null
           project_id: string | null
           session_id: string | null
@@ -2332,6 +2333,7 @@ export type Database = {
           education_type?: string | null
           ends_at?: string | null
           id?: string
+          internal_label?: string | null
           owner_id?: string | null
           project_id?: string | null
           session_id?: string | null
@@ -2350,6 +2352,7 @@ export type Database = {
           education_type?: string | null
           ends_at?: string | null
           id?: string
+          internal_label?: string | null
           owner_id?: string | null
           project_id?: string | null
           session_id?: string | null
@@ -4299,6 +4302,18 @@ export type Database = {
         }
         Relationships: []
       }
+      v_cs_data_completeness: {
+        Row: {
+          category: string | null
+          completeness_pct: number | null
+          label: string | null
+          missing_count: number | null
+          missing_pct: number | null
+          sort_order: number | null
+          total_count: number | null
+        }
+        Relationships: []
+      }
       v_cs_dispatch_summary: {
         Row: {
           batch_id: string | null
@@ -4764,6 +4779,33 @@ export type Database = {
         }
         Returns: string
       }
+      fn_cs_batch_archive: {
+        Args: { p_batch_id: string; p_reason?: string }
+        Returns: {
+          auto_dispatch_mode: string
+          batch_name: string
+          confirmed_at: string | null
+          created_at: string | null
+          created_by: string | null
+          criteria: Json | null
+          dispatched_at: string | null
+          dispatched_count: number | null
+          eligible_count: number | null
+          excluded_count: number | null
+          id: string
+          status: string | null
+          survey_id: string | null
+          target_period_end: string | null
+          target_period_start: string | null
+          total_candidates: number | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "cs_target_batches"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       fn_cs_batch_confirm: {
         Args: { p_batch_id: string }
         Returns: {
@@ -4791,6 +4833,16 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      fn_cs_batch_preview: {
+        Args: { p_end: string; p_start: string }
+        Returns: {
+          candidate_contacts: number
+          distinct_projects: number
+          ended_courses: number
+          last_in_project_courses: number
+          overlapping_active_batches: Json
+        }[]
+      }
       fn_cs_business_type: {
         Args: { p_execution_team: string }
         Returns: string
@@ -4798,6 +4850,27 @@ export type Database = {
       fn_cs_check_bris_freshness: {
         Args: { p_threshold_days?: number }
         Returns: Json
+      }
+      fn_cs_contact_extract_positions: {
+        Args: { p_dry_run?: boolean; p_overwrite?: boolean }
+        Returns: {
+          contact_id: string
+          contact_name: string
+          department: string
+          position_before: string
+          position_extracted: string
+          status: string
+        }[]
+      }
+      fn_cs_contact_set_position: {
+        Args: { p_customer_id: string; p_position: string }
+        Returns: {
+          out_contact_id: string
+          out_contact_name: string
+          out_customer_id: string
+          out_position: string
+          out_updated_count: number
+        }[]
       }
       fn_cs_create_batch_and_scan: {
         Args: {

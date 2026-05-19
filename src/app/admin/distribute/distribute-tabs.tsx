@@ -31,6 +31,7 @@ interface ClassGroup {
 interface SurveyItem {
   id: string
   title: string
+  internalLabel: string | null
   token: string
   status: string
   createdAt: string | null
@@ -53,7 +54,11 @@ const educationTypeLabel: Record<string, string> = {
 }
 
 // 동일 설문명이 많은 경우에도 고객사/프로젝트/차수로 구분 가능하게 — 존재하는 메타만 뒤에 덧붙임.
+// internal_label 이 있으면 그게 가장 우선되는 관리용 표기.
 function getSurveyDisplayName(s: SurveyItem) {
+  if (s.internalLabel?.trim()) {
+    return `${s.title} — ${s.internalLabel.trim()}`
+  }
   const metas: string[] = []
   if (s.customerName) metas.push(s.customerName)
   if (s.projectName && s.projectName !== s.customerName) metas.push(s.projectName)
