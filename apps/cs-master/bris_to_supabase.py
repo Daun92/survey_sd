@@ -650,6 +650,9 @@ class BrisSyncPipeline:
                 '고객_이메일': (dm or {}).get('email', ''),
                 '고객_전화': (dm or {}).get('phone', ''),
                 '고객_휴대폰': (dm or {}).get('mobile', ''),
+                # IM (운영매니저, echo_operate) — T-055. 프로젝트 단위 1명 가정
+                'im_name': (eo or {}).get('operationIM', '') if eo else '',
+                'im_no':   (eo or {}).get('imNo', '') if eo else '',
             }
             records.append(rec)
         return records
@@ -839,6 +842,32 @@ class BrisSyncPipeline:
 
             # 프로젝트 멤버
             self._upsert_members(rec, project_id, stats)
+
+        # T-055: IM 정보가 first record 에 있으면 cs_projects.im_name/im_no 갱신.
+        # 통합페이지 record 에는 보통 비어있고 refresh_project_id (4페이지) 경로에서만 채워짐.
+        self._patch_project_im(project_id, first, stats)
+
+    def _patch_project_im(self, project_uuid: str, rec: dict, stats: dict) -> None:
+        """T-055: rec 에 IM 정보가 있으면 cs_projects.im_name/im_no 갱신.
+
+        빈 값일 때는 갱신 skip (NULL 덮어쓰기 회귀 방지). 일반 sync 의 통합페이지
+        record 는 IM 필드 자체가 없으므로 항상 skip 됨. refresh_project_id 의
+        _records_from_4pages 결과만 실제로 갱신됨.
+        """
+        im_name = (rec.get('im_name') or '').strip() or None
+        im_no   = (rec.get('im_no')   or '').strip() or None
+        if not im_name and not im_no:
+            return
+        try:
+            self.sb.table('cs_projects').update({
+                'im_name': im_name,
+                'im_no': im_no,
+                'updated_at': datetime.now().isoformat(),
+            }).eq('id', project_uuid).execute()
+            stats.setdefault('im_patched', 0)
+            stats['im_patched'] += 1
+        except Exception as e:
+            stats['errors'].append(f"im_patch {project_uuid}: {e}")
 
     def _upsert_company(self, rec: dict, stats: dict) -> str:
         """회사 upsert, UUID 반환.
@@ -1230,6 +1259,13 @@ class BrisSyncPipeline:
             sync_id=sync_id,
             fetched_by=os.environ.get('BRIS_SYNC_TRIGGER', 'echo-enrich'))
 
+        # T-055: echo_operate 응답에 IM 정보가 있으면 cs_projects 갱신.
+        # contact 가 비어있어 아래에서 early return 하더라도 IM 만은 갱신되도록 먼저 처리.
+        self._patch_project_im(proj_uuid, {
+            'im_name': (rec_eo or {}).get('operationIM', ''),
+            'im_no':   (rec_eo or {}).get('imNo', ''),
+        }, stats)
+
         cust_id = ((rec_eo or {}).get('clientContactId') or '').strip()
         if not cust_id:
             # 페이지는 존재하나 운영요청서에 contact 미입력 — 캐시하지 않음(다음 sync 에서 채워질 수도)
@@ -1397,6 +1433,10 @@ class BrisSyncPipeline:
             exclude_reason = None
 
         # hash 대상 — "실제 변경" 을 판별할 의미있는 필드만. updated_at/bris_synced_at 제외.
+        # T-055 주의: IM(im_name/im_no) 은 일반 sync 의 통합페이지 record 에 없어 NULL 덮어쓰기
+        # 회귀가 생기므로 hash_payload 에 포함하지 않는다. IM 갱신은 별도:
+        #   - refresh_project_id 경로 → _sync_project_group 직후 _patch_project_im 호출
+        #   - 일반 sync 경로 → _run_echo_enrich_queue 의 _echo_enrich_one 안에서 갱신
         hash_payload = {
             "project_id": proj_id or None,
             "bris_code": bris_code or None,
