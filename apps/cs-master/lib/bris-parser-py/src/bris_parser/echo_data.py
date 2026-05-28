@@ -70,13 +70,15 @@ def extract_echo_data(html: str) -> dict:
                 v = nx.select_one('span.val')
                 venue_address = v.get_text(strip=True) if v else nx.get_text(strip=True)
 
-    # operationIM
+    # operationIM + imNo (T-055/T-056. \uc0ac\uc591 \u00a74-5)
     operation_im = ''
+    operation_im_no = ''
     im_select = soup.select_one('select[name="im_no"]')
     if im_select:
         selected = im_select.select_one('option[selected]')
         if selected:
             operation_im = selected.get_text(strip=True).replace('\u00a0', ' ')
+            operation_im_no = selected.get('value', '') or ''
 
     # amName, amPhone
     am_name = ''
@@ -174,6 +176,7 @@ def extract_echo_data(html: str) -> dict:
         'venue': venue,
         'venueAddress': venue_address,
         'operationIM': operation_im,
+        'imNo': operation_im_no,
         'amName': am_name,
         'amPhone': am_phone,
         'clientContact': client_contact,

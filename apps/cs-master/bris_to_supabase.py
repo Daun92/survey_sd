@@ -846,28 +846,149 @@ class BrisSyncPipeline:
         # T-055: IM 정보가 first record 에 있으면 cs_projects.im_name/im_no 갱신.
         # 통합페이지 record 에는 보통 비어있고 refresh_project_id (4페이지) 경로에서만 채워짐.
         self._patch_project_im(project_id, first, stats)
+        # T-056: AM 정보 cs_staff/cs_project_staff 이중 쓰기 (양 진입점 동일).
+        self._patch_project_am(project_id, first, stats)
 
     def _patch_project_im(self, project_uuid: str, rec: dict, stats: dict) -> None:
-        """T-055: rec 에 IM 정보가 있으면 cs_projects.im_name/im_no 갱신.
+        """T-055: rec 에 IM 정보가 있으면 cs_projects.im_name/im_no 갱신
+        + T-056 이중 쓰기: cs_staff(role=IM) + cs_project_staff 도 동시 갱신.
 
         빈 값일 때는 갱신 skip (NULL 덮어쓰기 회귀 방지). 일반 sync 의 통합페이지
         record 는 IM 필드 자체가 없으므로 항상 skip 됨. refresh_project_id 의
-        _records_from_4pages 결과만 실제로 갱신됨.
+        _records_from_4pages 결과 + _echo_enrich_one 만 실제로 갱신됨.
         """
-        im_name = (rec.get('im_name') or '').strip() or None
-        im_no   = (rec.get('im_no')   or '').strip() or None
-        if not im_name and not im_no:
+        im_name_raw = (rec.get('im_name') or '').strip()
+        im_no       = (rec.get('im_no')   or '').strip() or None
+        if not im_name_raw and not im_no:
             return
+
+        # 1) cs_projects 컬럼 갱신 (레거시 양쪽 유지, T-055)
         try:
             self.sb.table('cs_projects').update({
-                'im_name': im_name,
-                'im_no': im_no,
+                'im_name': im_name_raw or None,
+                'im_no':   im_no,
                 'updated_at': datetime.now().isoformat(),
             }).eq('id', project_uuid).execute()
             stats.setdefault('im_patched', 0)
             stats['im_patched'] += 1
         except Exception as e:
             stats['errors'].append(f"im_patch {project_uuid}: {e}")
+
+        # 2) cs_staff + cs_project_staff 이중 쓰기 (T-056)
+        # im_name 형식 "마아연 과장" → name="마아연", position="과장"
+        parts = im_name_raw.split(' ', 1) if im_name_raw else []
+        im_first_name = parts[0] if parts else ''
+        im_position   = parts[1].strip() if len(parts) >= 2 else None
+        if not im_first_name:
+            return
+        staff_id = self._upsert_staff(name=im_first_name, team=None,
+                                       position=im_position, bris_im_no=im_no, stats=stats)
+        if staff_id:
+            self._upsert_project_staff(project_uuid=project_uuid, staff_id=staff_id,
+                                        role='IM', team_snapshot=None,
+                                        position_snapshot=im_position, stats=stats)
+
+    def _patch_project_am(self, project_uuid: str, rec: dict, stats: dict) -> None:
+        """T-056: AM 정보를 cs_staff/cs_project_staff 에 이중 쓰기.
+        cs_projects.am_name/am_team 은 _upsert_project 가 이미 hash_payload 로 갱신.
+        """
+        am_name = (rec.get('수주_담당자') or '').strip()
+        am_team = (rec.get('수주팀') or '').strip() or None
+        if not am_name:
+            return
+        staff_id = self._upsert_staff(name=am_name, team=am_team,
+                                       position=None, bris_im_no=None, stats=stats)
+        if staff_id:
+            self._upsert_project_staff(project_uuid=project_uuid, staff_id=staff_id,
+                                        role='AM', team_snapshot=am_team,
+                                        position_snapshot=None, stats=stats)
+
+    def _upsert_staff(self, name: str, team: Optional[str],
+                       position: Optional[str], bris_im_no: Optional[str],
+                       stats: dict) -> Optional[str]:
+        """T-056: cs_staff upsert. 사내 직원 마스터.
+
+        매칭 우선순위:
+          1) bris_im_no (IM 고유 식별자, 가장 정확)
+          2) (name, team)
+          3) (name) — IM-only 인 경우 team=None
+        """
+        if not name:
+            return None
+        existing = None
+        if bris_im_no:
+            r = self.sb.table('cs_staff').select('id,team_current,position') \
+                .eq('bris_im_no', bris_im_no).limit(1).execute()
+            if r.data:
+                existing = r.data[0]
+        if not existing and team:
+            r = self.sb.table('cs_staff').select('id,team_current,position') \
+                .eq('name', name).eq('team_current', team).limit(1).execute()
+            if r.data:
+                existing = r.data[0]
+        if not existing:
+            r = self.sb.table('cs_staff').select('id,team_current,position') \
+                .eq('name', name).is_('team_current', 'null').limit(1).execute()
+            if r.data:
+                existing = r.data[0]
+
+        try:
+            if existing:
+                # 기존 값 우선 + 새 값으로 보강 (NULL 덮어쓰기 방지)
+                upd = {'updated_at': datetime.now().isoformat()}
+                if team and not existing.get('team_current'):
+                    upd['team_current'] = team
+                elif team and existing.get('team_current') != team:
+                    # 팀 이동 케이스: team_current 를 최신으로 갱신
+                    upd['team_current'] = team
+                if position and not existing.get('position'):
+                    upd['position'] = position
+                if bris_im_no:
+                    upd['bris_im_no'] = bris_im_no
+                if len(upd) > 1:
+                    self.sb.table('cs_staff').update(upd).eq('id', existing['id']).execute()
+                return existing['id']
+            r = self.sb.table('cs_staff').insert({
+                'name': name,
+                'team_current': team,
+                'position': position,
+                'bris_im_no': bris_im_no,
+            }).execute()
+            stats.setdefault('staff_inserted', 0)
+            stats['staff_inserted'] += 1
+            return r.data[0]['id']
+        except Exception as e:
+            stats['errors'].append(f"staff_upsert {name}/{team}: {e}")
+            return None
+
+    def _upsert_project_staff(self, project_uuid: str, staff_id: str,
+                                role: str, team_snapshot: Optional[str],
+                                position_snapshot: Optional[str],
+                                stats: dict) -> None:
+        """T-056: cs_project_staff upsert (UNIQUE(project_id, role, staff_id)).
+        같은 매핑이 이미 있으면 snapshot 만 갱신 (팀 이동/직책 변화 반영).
+        """
+        try:
+            r = self.sb.table('cs_project_staff').select('id') \
+                .eq('project_id', project_uuid).eq('role', role) \
+                .eq('staff_id', staff_id).limit(1).execute()
+            if r.data:
+                self.sb.table('cs_project_staff').update({
+                    'team_snapshot': team_snapshot,
+                    'position_snapshot': position_snapshot,
+                }).eq('id', r.data[0]['id']).execute()
+                return
+            self.sb.table('cs_project_staff').insert({
+                'project_id': project_uuid,
+                'staff_id': staff_id,
+                'role': role,
+                'team_snapshot': team_snapshot,
+                'position_snapshot': position_snapshot,
+            }).execute()
+            stats.setdefault('project_staff_linked', 0)
+            stats['project_staff_linked'] += 1
+        except Exception as e:
+            stats['errors'].append(f"project_staff_upsert {project_uuid}/{role}: {e}")
 
     def _upsert_company(self, rec: dict, stats: dict) -> str:
         """회사 upsert, UUID 반환.
