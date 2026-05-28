@@ -317,6 +317,28 @@ class BrisSyncPipeline:
             except Exception as e:
                 stats["errors"].append(f"프로젝트 {code}: {str(e)}")
 
+        # sync 끝 — 직책 자동 보강 (사양 §4-7·§8-5 준수 경로, T-044)
+        # _upsert_contact 가 누적한 신규+NULL contact 들에 대해 dm_view 단건 fetch.
+        # BRIS 부담 회피 위해 BRIS_ENRICH_LIMIT_PER_SYNC 환경변수로 상한 조절 (기본 무제한).
+        try:
+            limit_env = os.environ.get('BRIS_ENRICH_LIMIT_PER_SYNC', '').strip()
+            limit = int(limit_env) if limit_env.isdigit() else None
+            self._run_enrich_queue(sync_id=sync_id, stats=stats, limit=limit)
+        except Exception as e:
+            stats['errors'].append(f"enrich_queue: {e}")
+
+        # sync 끝 — echo_operate 보강 큐 (사양 §7-1, T-052)
+        # _upsert_project 가 누적한 (proj_uuid → BRIS PROJECT_ID) 매핑에 대해 echo_operate
+        # + dm_view fetch → echo 출처 contact 로 cs_courses.contact_id 일괄 교체.
+        # 페이지 부재 학습 캐시(cs_projects.echo_page_absent)로 다음 sync 부터 자동 skip.
+        # BRIS 부담 회피 위해 BRIS_ECHO_ENRICH_LIMIT_PER_SYNC 환경변수로 상한 조절.
+        try:
+            echo_limit_env = os.environ.get('BRIS_ECHO_ENRICH_LIMIT_PER_SYNC', '').strip()
+            echo_limit = int(echo_limit_env) if echo_limit_env.isdigit() else None
+            self._run_echo_enrich_queue(sync_id=sync_id, stats=stats, limit=echo_limit)
+        except Exception as e:
+            stats['errors'].append(f"echo_enrich_queue: {e}")
+
         print(f"동기화 완료: {stats}")
         return stats
 
@@ -696,24 +718,27 @@ class BrisSyncPipeline:
                 stats['errors'].append(f'project_biz_list: {e}')
                 print(f'[refresh-pid] biz_list FAIL: {e}')
 
-            # (3) echo_operate — 에코 활성 시만 (실패 허용)
+            # (3) echo_operate — 항상 시도 (실패 허용).
+            # T-052: echoActive 가드 제거 — echo_enabled=false (예: '고객사 외부망 차단')
+            # 케이스에서도 운영요청서 페이지는 존재할 수 있음. 사양 §7-1 보강 조항 참조.
+            # 페이지 존재 여부는 HTTP 응답으로 판단. 404 류는 일반 sync 의
+            # _run_echo_enrich_queue 에서 echo_page_absent=true 로 캐시됨.
             rec_eo = None
-            if rec_pv.get('echoActive'):
-                try:
-                    html_eo, rec_eo = self._fetch_pid_with_relogin(
-                        lambda: self.bris.get_echo_operate_with_raw(project_id))
-                    self._insert_raw_page(
-                        html=html_eo, page_kind='echo_operate',
-                        bris_url=self.bris.ECHO_OPERATE_URL,
-                        fetch_params={'project_id': project_id},
-                        sync_id=sync_id,
-                        fetched_by=os.environ.get('BRIS_SYNC_TRIGGER', 'manual:project-id'))
-                    stats['pages_fetched'] += 1
-                    print(f'[refresh-pid] echo_operate OK — IM={rec_eo.get("operationIM", "")[:20]} '
-                          f'clientContactId={rec_eo.get("clientContactId")}')
-                except Exception as e:
-                    stats['errors'].append(f'echo_operate: {e}')
-                    print(f'[refresh-pid] echo_operate FAIL: {e}')
+            try:
+                html_eo, rec_eo = self._fetch_pid_with_relogin(
+                    lambda: self.bris.get_echo_operate_with_raw(project_id))
+                self._insert_raw_page(
+                    html=html_eo, page_kind='echo_operate',
+                    bris_url=self.bris.ECHO_OPERATE_URL,
+                    fetch_params={'project_id': project_id},
+                    sync_id=sync_id,
+                    fetched_by=os.environ.get('BRIS_SYNC_TRIGGER', 'manual:project-id'))
+                stats['pages_fetched'] += 1
+                print(f'[refresh-pid] echo_operate OK — IM={rec_eo.get("operationIM", "")[:20]} '
+                      f'clientContactId={rec_eo.get("clientContactId")}')
+            except Exception as e:
+                stats['errors'].append(f'echo_operate: {e}')
+                print(f'[refresh-pid] echo_operate FAIL: {e}')
 
             # (4) dm_view — customer_id 있으면 (실패 허용)
             rec_dm = None
@@ -744,6 +769,12 @@ class BrisSyncPipeline:
 
             if records:
                 self._sync_project_group(bris_code, records, stats)
+
+            # (5b) 직책 자동 보강 — refresh_project_id 도 동일 enrich queue 사용 (T-044)
+            try:
+                self._run_enrich_queue(sync_id=sync_id, stats=stats)
+            except Exception as e:
+                stats['errors'].append(f"enrich_queue: {e}")
 
             # (6) sessions=0 케이스: _sync_project_group 이 만든 빈 cs_courses 정리
             #     (course_name=NULL AND start_date=NULL 인 더미 행만 삭제)
@@ -976,16 +1007,349 @@ class BrisSyncPipeline:
         if raw_record_id:
             data["source_raw_record_id"] = raw_record_id
 
+        # cs_contacts.position 자동 보강 대상 큐 — 통합페이지에서는 직책이 합쳐서
+        # 들어오므로(예: 고객_부서='인사팀대리'), 사양 §4-7·§8-5 준수 경로인
+        # dm_view 단건 fetch 로 보강한다. sync 끝에서 일괄 처리 (_run_enrich_queue).
+        # 신규 INSERT 이거나 기존 row 의 position 이 비어있는 UPDATE 케이스에만 큐 등록.
+        contact_uuid: str
+        is_new: bool
+        existing_position: Optional[str] = None
         if existing:
             self.sb.table('cs_contacts') \
                 .update(data) \
                 .eq('id', existing['id']).execute()
-            return existing['id']
+            contact_uuid = existing['id']
+            is_new = False
+            # 기존 position 확인 — 비어있으면 enrich 대상
+            try:
+                pos_check = self.sb.table('cs_contacts') \
+                    .select('position') \
+                    .eq('id', contact_uuid).limit(1).execute()
+                if pos_check.data:
+                    existing_position = (pos_check.data[0].get('position') or '').strip() or None
+            except Exception:
+                pass
         else:
             result = self.sb.table('cs_contacts') \
                 .insert(data).execute()
             stats["contacts"] += 1
-            return result.data[0]['id']
+            contact_uuid = result.data[0]['id']
+            is_new = True
+
+        if cust_id and (is_new or not existing_position):
+            stats.setdefault('_enrich_queue', {})
+            stats['_enrich_queue'].setdefault(cust_id, contact_uuid)
+
+        return contact_uuid
+
+    def _enrich_contact_with_dm(self, customer_id: str,
+                                 contact_uuid: Optional[str] = None,
+                                 sync_id: Optional[str] = None,
+                                 stats: Optional[dict] = None) -> Optional[dict]:
+        """단건 dm_view fetch + cs_contacts.position UPDATE (사양 §4-7·§8-5 준수 경로).
+
+        BRIS 통합페이지(integrated_row)는 '고객_부서: "인사팀대리"' 처럼 부서+직책을
+        한 칸에 합쳐 제공. 직책 별도 컬럼이 없어 dm_view 단건 fetch 로만 사양대로
+        분리(name + position) 수집 가능. 본 메서드가 그 경로.
+
+        실패는 silent — BRIS 일시 장애로 sync 전체가 멈추면 안 됨.
+        """
+        if not customer_id or not self.bris:
+            return None
+
+        try:
+            html_dm, rec_dm = self._fetch_pid_with_relogin(
+                lambda: self.bris.get_dm_view_with_raw(customer_id))
+        except Exception as e:
+            if stats is not None:
+                stats.setdefault('enrich_failed', 0)
+                stats['enrich_failed'] += 1
+            print(f"[enrich] dm_view fetch 실패 customer_id={customer_id}: {e}")
+            return None
+
+        # Layer 0 보존 — page_kind='dm' (constraint 허용 값)
+        self._insert_raw_page(
+            html=html_dm, page_kind='dm',
+            bris_url=self.bris.DM_VIEW_URL,
+            fetch_params={'CUSTOMER_ID': customer_id},
+            sync_id=sync_id,
+            fetched_by=os.environ.get('BRIS_SYNC_TRIGGER', 'enrich'))
+
+        # position 만 갱신 — 다른 필드(department/email/phone/mobile)는 통합페이지가 이미 채움.
+        # dm_view 값이 더 정확한 경우의 명시적 충돌 처리 정책은 후속 트랙.
+        pos = (rec_dm.get('position') or '').strip() if rec_dm else ''
+        if not pos:
+            # 사양 §8-5 의 "성명" 셀 둘째 단어 분리. dm_view 파서가 그 단계까지 안 가는 경우 fallback:
+            # name 필드를 공백으로 다시 분리해 둘째 토큰을 position 으로 채택.
+            raw_name = (rec_dm.get('name') or '').strip() if rec_dm else ''
+            parts = raw_name.split()
+            if len(parts) >= 2:
+                pos = parts[1]
+        if not pos:
+            print(f"[enrich] customer_id={customer_id} name={(rec_dm or {}).get('name','')!r} "
+                  f"dept={(rec_dm or {}).get('department','')!r} → position 비어있음 (스킵)")
+            return rec_dm
+
+        try:
+            update_data = {
+                'position': pos,
+                'updated_at': datetime.now().isoformat(),
+            }
+            if contact_uuid:
+                self.sb.table('cs_contacts').update(update_data).eq('id', contact_uuid).execute()
+            else:
+                self.sb.table('cs_contacts').update(update_data).eq('customer_id', customer_id).execute()
+            if stats is not None:
+                stats.setdefault('enriched', 0)
+                stats['enriched'] += 1
+            print(f"[enrich] customer_id={customer_id} position={pos}")
+        except Exception as e:
+            if stats is not None:
+                stats.setdefault('enrich_failed', 0)
+                stats['enrich_failed'] += 1
+            print(f"[enrich] cs_contacts UPDATE 실패 customer_id={customer_id}: {e}")
+
+        return rec_dm
+
+    def enrich_contacts(self, null_only: bool = True,
+                         limit: Optional[int] = None) -> dict:
+        """수동 backfill: cs_contacts 의 position 보강 (사양 §4-7·§8-5 준수 경로).
+
+        Args:
+          null_only: True 면 position IS NULL 인 contact 만 대상 (기본). False 면 customer_id 있는 모든 contact 재수집.
+          limit: 처리 건수 상한 (BRIS 부담 회피). None 이면 전체.
+
+        Returns: 처리 결과 stats (enriched, enrich_failed, total).
+        """
+        if not self.bris:
+            raise ValueError("BRIS 클라이언트가 설정되지 않았습니다")
+
+        q = self.sb.table('cs_contacts').select('id,customer_id,contact_name,position') \
+            .not_.is_('customer_id', 'null')
+        if null_only:
+            q = q.is_('position', 'null')
+        if limit:
+            q = q.limit(limit)
+        rows = q.execute().data or []
+
+        stats = {'enriched': 0, 'enrich_failed': 0, 'total': len(rows), 'errors': []}
+        print(f"[enrich-cli] 대상 {len(rows)}건 (null_only={null_only}, limit={limit})")
+        for row in rows:
+            try:
+                self._enrich_contact_with_dm(
+                    customer_id=row['customer_id'],
+                    contact_uuid=row['id'],
+                    sync_id=None,
+                    stats=stats)
+            except Exception as e:
+                stats['errors'].append(f"{row.get('contact_name')}({row.get('customer_id')}): {e}")
+        print(f"[enrich-cli] 완료 — enriched={stats['enriched']} failed={stats['enrich_failed']}")
+        return stats
+
+    def _run_enrich_queue(self, sync_id: Optional[str], stats: dict,
+                           limit: Optional[int] = None):
+        """sync 마지막에 enrich 큐 일괄 처리. _upsert_contact 가 누적한 신규+NULL contact 들 대상.
+
+        limit 지정 시 큐의 앞 N건만 처리 (BRIS 부담 회피). 큐는 dict 라 dedupe 자동.
+        """
+        queue = stats.get('_enrich_queue') or {}
+        if not queue:
+            return
+        items = list(queue.items())
+        if limit:
+            items = items[:limit]
+        print(f"[enrich] 큐 처리 시작 — 대상 {len(items)}건 (전체 {len(queue)})")
+        for cust_id, contact_uuid in items:
+            self._enrich_contact_with_dm(
+                customer_id=cust_id,
+                contact_uuid=contact_uuid,
+                sync_id=sync_id,
+                stats=stats)
+        print(f"[enrich] 큐 처리 완료 — enriched={stats.get('enriched',0)} "
+              f"failed={stats.get('enrich_failed',0)}")
+
+    # ========================================
+    # T-052 echo_operate 자동 보강 (사양 §7-1)
+    # ========================================
+
+    def _run_echo_enrich_queue(self, sync_id: Optional[str], stats: dict,
+                                 limit: Optional[int] = None):
+        """sync 마지막에 echo_operate 큐 일괄 처리.
+
+        각 프로젝트에 대해:
+          1) echo_operate fetch — 실패 시 echo_page_absent=true 학습 후 다음에 skip
+          2) clientContactId 추출 — 비어있으면 skip (페이지는 있으나 미입력 상태)
+          3) dm_view fetch (실패 허용) — contact 상세 채움
+          4) cs_contacts upsert + cs_courses.contact_id 일괄 교체 (사양 §7-1 우선순위 1)
+
+        교체 정책: 항상 덮어쓰기 (사용자 결정 2026-05-28). 운영 수정은 외부에서 다시 해야 함.
+        BRIS 부담은 BRIS_ECHO_ENRICH_LIMIT_PER_SYNC 환경변수로 상한 조절.
+        """
+        queue = stats.get('_echo_enrich_queue') or {}
+        if not queue or not self.bris:
+            return
+        items = list(queue.items())
+        if limit:
+            items = items[:limit]
+        print(f"[echo-enrich] 큐 처리 시작 — 대상 {len(items)}건 (전체 {len(queue)})")
+
+        for proj_uuid, project_id in items:
+            try:
+                self._echo_enrich_one(proj_uuid, project_id, sync_id, stats)
+            except Exception as e:
+                stats['errors'].append(f"echo_enrich {project_id}: {e}")
+                print(f"[echo-enrich] project_id={project_id} 예외: {e}")
+
+        print(f"[echo-enrich] 완료 — rebound={stats.get('echo_contact_rebound',0)} "
+              f"absent={stats.get('echo_page_marked_absent',0)} "
+              f"no_contact={stats.get('echo_no_contact',0)}")
+
+    def _echo_enrich_one(self, proj_uuid: str, project_id: str,
+                          sync_id: Optional[str], stats: dict):
+        """단일 프로젝트 echo_operate 보강 (큐 항목 1건)."""
+        # 1) echo_operate fetch
+        try:
+            html_eo, rec_eo = self._fetch_pid_with_relogin(
+                lambda: self.bris.get_echo_operate_with_raw(project_id))
+        except Exception as e:
+            # 404/권한거부/HTML 비정상 — 페이지 부재로 학습
+            self.sb.table('cs_projects') \
+                .update({'echo_page_absent': True,
+                         'updated_at': datetime.now().isoformat()}) \
+                .eq('id', proj_uuid).execute()
+            stats.setdefault('echo_page_marked_absent', 0)
+            stats['echo_page_marked_absent'] += 1
+            print(f"[echo-enrich] project_id={project_id} echo_operate FAIL "
+                  f"→ echo_page_absent=true ({e})")
+            return
+
+        self._insert_raw_page(
+            html=html_eo, page_kind='echo_operate',
+            bris_url=self.bris.ECHO_OPERATE_URL,
+            fetch_params={'project_id': project_id},
+            sync_id=sync_id,
+            fetched_by=os.environ.get('BRIS_SYNC_TRIGGER', 'echo-enrich'))
+
+        cust_id = ((rec_eo or {}).get('clientContactId') or '').strip()
+        if not cust_id:
+            # 페이지는 존재하나 운영요청서에 contact 미입력 — 캐시하지 않음(다음 sync 에서 채워질 수도)
+            stats.setdefault('echo_no_contact', 0)
+            stats['echo_no_contact'] += 1
+            return
+
+        # 2) dm_view 보강 (사양 §7-1: clientContactId 확정 후 dm_view 로 상세 채움)
+        rec_dm = None
+        try:
+            html_dm, rec_dm = self._fetch_pid_with_relogin(
+                lambda: self.bris.get_dm_view_with_raw(cust_id))
+            self._insert_raw_page(
+                html=html_dm, page_kind='dm',
+                bris_url=self.bris.DM_VIEW_URL,
+                fetch_params={'CUSTOMER_ID': cust_id},
+                sync_id=sync_id,
+                fetched_by=os.environ.get('BRIS_SYNC_TRIGGER', 'echo-enrich'))
+        except Exception as e:
+            print(f"[echo-enrich] dm_view FAIL customer_id={cust_id}: {e}")
+
+        # 3) contact upsert
+        contact_uuid = self._upsert_echo_contact(
+            cust_id=cust_id, rec_eo=rec_eo, rec_dm=rec_dm,
+            proj_uuid=proj_uuid, stats=stats)
+        if not contact_uuid:
+            return
+
+        # 4) cs_courses.contact_id 일괄 교체 (사양 §7-1 우선순위 1)
+        upd = self.sb.table('cs_courses') \
+            .update({'contact_id': contact_uuid,
+                     'updated_at': datetime.now().isoformat()}) \
+            .eq('project_id', proj_uuid).execute()
+        rebound = len(upd.data or [])
+        stats.setdefault('echo_contact_rebound', 0)
+        stats['echo_contact_rebound'] += rebound
+        print(f"[echo-enrich] project_id={project_id} cust_id={cust_id} "
+              f"courses rebound={rebound}")
+
+    def _upsert_echo_contact(self, cust_id: str, rec_eo: dict,
+                              rec_dm: Optional[dict], proj_uuid: str,
+                              stats: dict) -> Optional[str]:
+        """echo_operate 출처 contact upsert (사양 §7-1 priority 1).
+
+        이름/부서/직책/이메일/모바일은 dm_view 우선, 없으면 echo_operate 의 clientContact* fallback.
+        place_id 는 dm_view 의 placeId → cs_business_places.bris_place_id 매칭.
+        없으면 같은 프로젝트의 기존 코스 contact 의 place_id 로 fallback.
+        재할당(같은 customer_id 인데 이름 다름) 감지 시 기존 row 를 [LEGACY-cid-reassigned] 태그.
+        """
+        rec_dm = rec_dm or {}
+        name = ((rec_dm.get('name') or rec_eo.get('clientContact', '')) or '').strip()
+        if not name:
+            return None
+
+        # place_id 결정 — dm_view 의 placeId 가 가장 정확
+        bris_place_id = ((rec_dm.get('placeId') or '')).strip() or None
+        place_uuid = None
+        if bris_place_id:
+            r = self.sb.table('cs_business_places') \
+                .select('id').eq('bris_place_id', bris_place_id) \
+                .limit(1).execute()
+            if r.data:
+                place_uuid = r.data[0]['id']
+        if not place_uuid:
+            # fallback: 프로젝트의 한 코스 → 기존 contact 의 place_id
+            r = self.sb.table('cs_courses') \
+                .select('contact_id').eq('project_id', proj_uuid) \
+                .limit(1).execute()
+            if r.data and r.data[0].get('contact_id'):
+                c = self.sb.table('cs_contacts') \
+                    .select('place_id').eq('id', r.data[0]['contact_id']) \
+                    .limit(1).execute()
+                if c.data:
+                    place_uuid = c.data[0].get('place_id')
+
+        # customer_id 기준 조회 + 재할당 감지 (기존 _upsert_contact 와 동일 정책)
+        existing = None
+        r = self.sb.table('cs_contacts') \
+            .select('id,contact_name,customer_id') \
+            .eq('customer_id', cust_id).limit(1).execute()
+        if r.data:
+            existing = r.data[0]
+        if existing and existing.get('contact_name') != name:
+            try:
+                self.sb.table('cs_contacts').update({
+                    'customer_id': None,
+                    'contact_name': (existing.get('contact_name') or '')
+                                    + ' [LEGACY-cid-reassigned]',
+                    'updated_at': datetime.now().isoformat(),
+                }).eq('id', existing['id']).execute()
+                stats.setdefault('contacts_legacy_detached', 0)
+                stats['contacts_legacy_detached'] += 1
+            except Exception as e:
+                stats['errors'].append(
+                    f"echo contact legacy detach 실패 cid={cust_id}: {e}")
+            existing = None
+
+        data = {
+            'customer_id': cust_id,
+            'contact_name': name,
+            'department': ((rec_dm.get('department')
+                            or rec_eo.get('Dept', ''))) or None,
+            'position': ((rec_dm.get('position')
+                          or rec_eo.get('Position', ''))) or None,
+            'email': (rec_dm.get('email') or '') or None,
+            'phone': ((rec_dm.get('phone')
+                       or rec_eo.get('clientContactPhone', ''))) or None,
+            'mobile': ((rec_dm.get('mobile')
+                        or rec_eo.get('Mobile', ''))) or None,
+            'place_id': place_uuid,
+            'updated_at': datetime.now().isoformat(),
+        }
+
+        if existing:
+            self.sb.table('cs_contacts').update(data).eq('id', existing['id']).execute()
+            return existing['id']
+        r = self.sb.table('cs_contacts').insert(data).execute()
+        stats.setdefault('contacts', 0)
+        stats['contacts'] += 1
+        return r.data[0]['id']
 
     def _upsert_project(self, rec: dict, bris_code: str,
                         course_count: int, stats: dict) -> str:
@@ -1002,7 +1366,7 @@ class BrisSyncPipeline:
         existing = None
         if bris_code:
             result = self.sb.table('cs_projects') \
-                .select('id,last_content_hash') \
+                .select('id,last_content_hash,echo_page_absent') \
                 .eq('bris_code', bris_code) \
                 .limit(1).execute()
             if result.data:
@@ -1010,7 +1374,7 @@ class BrisSyncPipeline:
         if not existing and proj_id:
             # bris_code 미매칭 시(구 데이터에 bris_code NULL 등) project_id 로 fallback
             result = self.sb.table('cs_projects') \
-                .select('id,last_content_hash') \
+                .select('id,last_content_hash,echo_page_absent') \
                 .eq('project_id', proj_id) \
                 .limit(1).execute()
             if result.data:
@@ -1061,6 +1425,8 @@ class BrisSyncPipeline:
                 self.sb.table('cs_projects') \
                     .update({'source_raw_record_id': raw_record_id}) \
                     .eq('id', existing['id']).execute()
+            self._maybe_enqueue_echo_enrich(existing['id'], proj_id,
+                                             existing.get('echo_page_absent'), stats)
             return existing['id']
 
         data = {
@@ -1076,12 +1442,29 @@ class BrisSyncPipeline:
             self.sb.table('cs_projects') \
                 .update(data) \
                 .eq('id', existing['id']).execute()
+            self._maybe_enqueue_echo_enrich(existing['id'], proj_id,
+                                             existing.get('echo_page_absent'), stats)
             return existing['id']
         else:
             result = self.sb.table('cs_projects') \
                 .insert(data).execute()
             stats["projects"] += 1
-            return result.data[0]['id']
+            new_uuid = result.data[0]['id']
+            # 신규 프로젝트는 echo_page_absent default false → 무조건 큐 등록
+            self._maybe_enqueue_echo_enrich(new_uuid, proj_id, False, stats)
+            return new_uuid
+
+    def _maybe_enqueue_echo_enrich(self, proj_uuid: str, proj_id: str,
+                                    echo_page_absent: Optional[bool],
+                                    stats: dict) -> None:
+        """T-052: echo_operate 큐 등록 게이트.
+        BRIS PROJECT_ID 없거나 echo_page_absent=true 면 skip.
+        성공/실패 모두 매 sync 등록 가능 (idempotent: 성공은 덮어쓰기, 실패는 부재 학습 후 다음에 skip).
+        """
+        if not proj_id or echo_page_absent is True:
+            return
+        stats.setdefault('_echo_enrich_queue', {})
+        stats['_echo_enrich_queue'][proj_uuid] = proj_id
 
     def _upsert_course(self, rec: dict, project_id: str,
                        contact_id: str, index: int,
@@ -1359,10 +1742,14 @@ BRIS → Supabase 동기화 파이프라인
   # 단일 BRIS PROJECT_ID 풀 컨텍스트 수집 (T2 — 통합페이지 미노출 케이스)
   python bris_to_supabase.py project-id 34619
 
+  # 직책 자동 보강 — dm_view 단건 fetch (사양 §4-7·§8-5, T-044)
+  python bris_to_supabase.py enrich-contacts [--null-only|--all] [--limit N]
+
 환경변수:
   SUPABASE_URL=https://gdwhbacuzhynvegkfoga.supabase.co
   SUPABASE_SERVICE_KEY=your_key
   BRIS_COOKIE_FILE=cookies.json  (fetch/cron/refresh 모드)
+  BRIS_ENRICH_LIMIT_PER_SYNC=N   (cron/fetch 마다 enrich 큐 처리 상한, 기본 무제한)
         """)
         sys.exit(0)
 
@@ -1380,7 +1767,7 @@ BRIS → Supabase 동기화 파이프라인
         result = pipeline.sync_from_html(html, auto_batch=auto)
         print(json.dumps(result, ensure_ascii=False, indent=2))
 
-    elif mode in ('fetch', 'cron', 'refresh', 'project-id'):
+    elif mode in ('fetch', 'cron', 'refresh', 'project-id', 'enrich-contacts'):
         if mode == 'fetch':
             start = sys.argv[2]
             end = sys.argv[3]
@@ -1401,6 +1788,15 @@ BRIS → Supabase 동기화 파이프라인
                 sys.exit(1)
             project_id_arg = sys.argv[2]
             start, end, auto = None, None, False  # 마스터만 등록, batch 자동 생성 안 함
+        elif mode == 'enrich-contacts':
+            # enrich-contacts [--null-only|--all] [--limit N]
+            null_only = '--all' not in sys.argv
+            enrich_limit = None
+            if '--limit' in sys.argv:
+                i = sys.argv.index('--limit')
+                if i + 1 < len(sys.argv) and sys.argv[i + 1].isdigit():
+                    enrich_limit = int(sys.argv[i + 1])
+            start, end, auto = None, None, False
         else:  # cron
             today = date.today()
             last_monday = today - timedelta(days=today.weekday() + 7)
@@ -1440,6 +1836,8 @@ BRIS → Supabase 동기화 파이프라인
                 result = pipeline.refresh_bris_code(bris_code_arg, date_hint=date_hint)
             elif mode == 'project-id':
                 result = pipeline.refresh_project_id(project_id_arg)
+            elif mode == 'enrich-contacts':
+                result = pipeline.enrich_contacts(null_only=null_only, limit=enrich_limit)
             else:
                 result = pipeline.sync(start, end, auto_batch=auto)
             print(json.dumps(result, ensure_ascii=False, indent=2, default=str))
