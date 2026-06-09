@@ -1,0 +1,29 @@
+{% set f = r.f %}{% set res = r.res %}
+<tr id="row-{{ f.key }}" class="ol-row sev-{{ f.severity }}">
+  <td><span class="badge sev-{{ f.severity }}">{{ f.severity }}</span></td>
+  <td>{{ f.resp_id }}<br><small>{{ f.R_Company_Name or '' }}</small></td>
+  <td>{{ f.col_label }}<br><small>{{ f.rule_id }}</small></td>
+  <td class="num">{% if f.value is number %}{% if f.value|abs >= 1000 %}{{ "{:,.0f}".format(f.value) }}{% else %}{{ "{:.4g}".format(f.value) }}{% endif %}{% else %}{{ f.value }}{% endif %}</td>
+  <td><small>{{ f.note }}</small></td>
+  <td class="act">
+    {% if res is none %}
+      <form hx-post="/outliers/decide" hx-target="#row-{{ f.key }}" hx-swap="outerHTML">
+        <input type="hidden" name="resp_id" value="{{ f.resp_id }}">
+        <input type="hidden" name="rule_id" value="{{ f.rule_id }}">
+        <input type="hidden" name="col" value="{{ f.col }}">
+        <input type="hidden" name="before" value="{{ f.value }}">
+        <button name="action" value="approved" title="값 정상 — 변경 없음">승인</button>
+        <button name="action" value="ignored" title="대상 아님 — 변경 없음">무시</button>
+        <input class="after" name="after" placeholder="보정값" size="12">
+        <button name="action" value="correct" class="primary">보정</button>
+      </form>
+    {% elif res.kind == "corrected" %}
+      <span class="done corr">보정완료 → {{ res.after }}</span>
+    {% elif res.kind == "ignored" %}
+      <span class="done">무시</span>
+    {% else %}
+      <span class="done">승인</span>
+    {% endif %}
+  </td>
+</tr>
+{% if oob %}{% include "_outlier_summary.html" %}{% endif %}

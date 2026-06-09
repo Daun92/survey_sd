@@ -1,0 +1,104 @@
+# 세그먼트 분석 문항 인벤토리 — 2026 설문 기준 (docs/SEGMENT_FULL_ITEMS_SPEC_22th.md)
+#
+# 두 산출물의 공통 기반:
+#   - XLSX(데이터수준 종합): html != 제외 인 전 문항 × (전체·규모5·공공·업종)
+#   - HTML(하이라이트): html == 핵심 만 본문, 부록은 접기
+#
+# 라벨·코드맵(예: 1=교육인원증가 …)은 config 에 중복 보관하지 않고
+# 집계기 scripts/segment_aggregate.py 가 코드북 0_survey/codebook_22th.xlsx 에서 런타임 도출:
+#   - dist/multi/dist_multi : '코드표' 응답형식의 'n=라벨' 파싱
+#   - mean_pct/mean_pct_cf/likert/likert_iv/mean/tenure_ym : '코드표' 하위항목
+#   - issue_rank/issue_multi : 'HRD이슈_항목코드' 시트(A그룹 _n_2_che / B그룹 _n_4_che, 코드 1~15)
+#
+# agg 종류 (scripts/segment_aggregate.py:aggregate):
+#   macro       = 5거시지표 mean+median (원/명)
+#   mean        = 숫자 평균(+중앙값)
+#   tenure_ym   = '년-월' 형식 → 개월 환산 평균/중앙값 (HRD 경력 전용)              [신규]
+#   mean_pct    = % 항목들 평균(형태/지출/직책 등, 합~100)
+#   mean_pct_cf = 현재(_3)/향후(_4) 쌍 → 항목별 현재·향후 평균% (Ⅲ HRD활동 다수)     [신규]
+#   dist        = 단일선택 분포
+#   dist_multi  = 다항목 각각 단일선택 분포 + 실시율(4=실시중) (Ⅱ 제도현황)            [신규]
+#   multi_rate  = 복수응답 선택률
+#   likert      = 1~5 척도 mean+분포
+#   likert_iv   = 중요도/수행도(또는 2-col) 쌍 mean+분포+gap                          [신규]
+#   issue_rank  = p4 주요이슈 cheOrder('순위)항목_그룹' 2=A·4=B) 파싱 → 순위분포+언급률 [신규]
+#   issue_multi = p4 기타이슈 A그룹(_n_2_che)·B그룹(_n_4_che) 쉼표복수 선택률          [신규]
+#
+# ── ② 코드북 검증 결과 (2026-05-29, verify 전건 해소) ──
+# 모든 명시 cols 가 raw_validated(243컬럼)에 존재. 와일드카드는 집계기가 코드북으로 전개하며
+# 응답형식='텍스트'(_etc 입력칸)는 자동 제외. 확인된 코드북 quirk(집계기가 처리):
+#   (A) hrd_staff: p2)R_1_4_3~_6_3 은 '숫자(명)'이 아니라 '년-월 형식'(경력) → 인원/경력 문항 분리.
+#   (B) edu_content: p3)R_1_7(저성과자)·p3)R_1_9(저성과자) 라벨 중복 → 집계기가 동일라벨 합산.
+#   (C) remote_demand(구 refund): p3)R_11_multi 는 '고용보험 환급'이 아니라 '원격교육 수요전망'(1확대/2변동없음/3축소).
+#   (D) issue_rank/issue_etc: p4)R_1·R_2 는 단일컬럼이 아니라 A그룹(_n_2_che)/B그룹(_n_4_che)+순위(cheOrder) 구조.
+#   (E) perf_link: p4)R_3 _3/_4 접미는 현재/향후가 아니라 '중요도/수행도'.
+#   (F) perf_barrier: 컬럼은 p4)R_4_n_3_rad (단일선택), p4)R_4_6_etc 는 텍스트.
+#   (G) HRD이슈 코드 자체 quirk: A그룹9='세대간 협업'(스펙상 축소표현 유지), B그룹6·7 둘 다 'CDP' 라벨 중복.
+
+questions:
+  # ── Ⅰ. 교육관련 지표 (검증 완료, 현 리포트/1단계 반영) ──
+  - {id: macro,        page: 1, title: 거시지표,                 agg: macro,      html: 핵심, cols: ["p1)R_1_1_2","p1)R_1_2_2","p1)R_1_3_2","p1)R_1_4_2","p1)R_1_5_2"], kim21: "Ⅰ 거시(1:1)"}
+  - {id: budget_chg,   page: 1, title: 교육비 증감,              agg: dist,       html: 핵심, cols: ["p1)R_2_n_2"], kim21: "Ⅰ 2(1:1)", note: "응답형식 1~5=증가구간, NaN=동일(분포에서 제외됨), '1~5뒤-'=감소구간"}
+  - {id: inc_reason,   page: 1, title: 교육비 증가 이유,         agg: multi_rate, html: 핵심, cols: ["p1)R_3_multi"], kim21: "Ⅰ 2-2(1:1)"}
+  - {id: dec_reason,   page: 1, title: 교육비 감소 이유,         agg: multi_rate, html: 핵심, cols: ["p1)R_4_multi"], kim21: "Ⅰ 2-3(1:1)"}
+  - {id: edu_time,     page: 1, title: 1인당 교육시간,           agg: mean,       html: 핵심, cols: ["p1)R_5_1_2"], kim21: "Ⅰ 3(1:1)"}
+  - {id: form_head,    page: 1, title: 형태별 참가인원 비율,     agg: mean_pct,   html: 부록, cols: ["p1)R_6_1_2","p1)R_6_1_3","p1)R_6_1_4","p1)R_6_1_5","p1)R_6_1_6","p1)R_6_1_7"], kim21: "Ⅰ 4(1:1)"}
+  - {id: form_spend,   page: 1, title: 형태별 지출 비율,         agg: mean_pct,   html: 부록, cols: ["p1)R_7_1_2","p1)R_7_1_3","p1)R_7_1_4","p1)R_7_1_5","p1)R_7_1_6","p1)R_7_1_7","p1)R_7_1_8","p1)R_7_1_9"], kim21: "Ⅰ 5-1(1:1)"}
+  - {id: role_spend,   page: 1, title: 직책별 교육비 지출,       agg: mean_pct,   html: 부록, cols: ["p1)R_8_1_2","p1)R_8_1_3","p1)R_8_1_4","p1)R_8_1_5"], kim21: "Ⅰ 5-2(1:1)"}
+  - {id: ai_ratio,     page: 1, title: 교육비 중 AI 교육 비율,   agg: dist,       html: 핵심, cols: ["p1)R_9_multi"], kim21: "Ⅰ 5-4(1:1)"}
+  - {id: satisfaction, page: 1, title: 교육 투자 효과 만족도,    agg: likert,     html: 핵심, cols: ["p1)R_10_multi"], kim21: "Ⅰ 6(1:1)", note: "1=매우만족..5=매우불만족 (낮을수록 긍정)"}
+
+  # ── Ⅱ. HRD 현황 (검증 완료) ──
+  # hrd_staff(인원)와 hrd_tenure(경력)는 코드북 quirk(A)로 분리 — 한 문항(1-1)이지만 응답형식 상이.
+  - {id: hrd_staff,    page: 2, title: HRD 담당 인원 현황,       agg: mean,       html: 부록, cols: ["p2)R_1_1_3","p2)R_1_2_3","p2)R_1_3_3"], kim21: 신규, note: "HRD담당/전담사내강사/현업병행 인원(명)"}
+  - {id: hrd_tenure,   page: 2, title: HRD 담당자 경력,          agg: tenure_ym,  html: 부록, cols: ["p2)R_1_4_3","p2)R_1_5_3","p2)R_1_6_3"], kim21: 신규, note: "평균/최장/최단 HRD경력 — '년-월' 형식 → 개월환산"}
+  - {id: hrd_orgform,  page: 2, title: HRD 조직 형태,            agg: dist,       html: 부록, cols: ["p2)R_2_multi"], kim21: 신규}
+  - {id: hrd_toprank,  page: 2, title: HRD 담당 최고 직급,       agg: dist,       html: 부록, cols: ["p2)R_3_multi"], kim21: 신규}
+  - {id: hrd_role,     page: 2, title: HRD 조직 역할 수준,       agg: dist,       html: 부록, cols: ["p2)R_4_multi"], kim21: 신규}
+  - {id: ceo_engage,   page: 2, title: 경영층 관심·참여,        agg: likert,     html: 부록, cols: ["p2)R_5_1_2","p2)R_5_2_2","p2)R_5_3_2"], kim21: 신규}
+  - {id: facility,     page: 2, title: 연수시설 보유,            agg: dist,       html: 부록, cols: ["p2)R_6_multi"], kim21: 신규, note: "후속 수용인원(p2)R_7_multi)은 범위 외"}
+  - {id: edu_system,   page: 2, title: 교육체계 보유,            agg: dist,       html: 부록, cols: ["p2)R_8_multi"], kim21: 신규}
+  - {id: lms,          page: 2, title: LMS 보유,                 agg: dist,       html: 부록, cols: ["p2)R_9_multi"], kim21: 신규}
+  - {id: hrd_system,   page: 2, title: HRD 제도 현황(12제도),    agg: dist_multi, html: 부록, cols: ["p2)R_10_*"], kim21: 신규, note: "12제도 각 1=미고려..4=실시중..5=중단. 실시율=4비율"}
+  - {id: kpi,          page: 2, title: HRD 성과지표,             agg: multi_rate, html: 부록, cols: ["p2)R_11_multi"], kim21: 신규}
+  - {id: outsrc_exp,   page: 2, title: 아웃소싱 경험,            agg: dist,       html: 부록, cols: ["p2)R_12_multi"], kim21: 신규}
+  - {id: outsrc_item,  page: 2, title: 아웃소싱 항목,            agg: multi_rate, html: 부록, cols: ["p2)R_13_multi"], kim21: 신규}
+  - {id: outsrc_cost,  page: 2, title: 아웃소싱 비용 비중,       agg: mean,       html: 부록, cols: ["p2)R_14_1_2"], kim21: 신규}
+  - {id: outsrc_plan,  page: 2, title: 아웃소싱 확대 고려영역,   agg: dist,       html: 부록, cols: ["p2)R_15_multi"], kim21: 신규}
+  - {id: improve,      page: 2, title: 개선 필요 사항,           agg: multi_rate, html: 부록, cols: ["p2)R_16_multi"], kim21: 신규}
+
+  # ── Ⅲ. HRD 활동 (검증 완료). 현재(_3)/향후(_4) 쌍 → mean_pct_cf 가 분리 ──
+  - {id: edu_content,  page: 3, title: 교육내용(16, 현재/향후),  agg: mean_pct_cf, html: 핵심, cols: ["p3)R_1_*"], kim21: "21 8)예산편성 재구성", note: "quirk(B): _7·_9 둘 다 '저성과자 교육' → 집계기 동일라벨 합산"}
+  - {id: edu_support,  page: 3, title: 교육지원 활동(3, 현재/향후), agg: mean_pct_cf, html: 부록, cols: ["p3)R_2_*"], kim21: 신규}
+  - {id: method,       page: 3, title: 학습기법(11, 현재/향후),  agg: mean_pct_cf, html: 부록, cols: ["p3)R_3_*"], kim21: "21 교육테마 일부"}
+  - {id: edu_form2,    page: 3, title: 교육형태(9, 현재/향후),   agg: mean_pct_cf, html: 핵심, cols: ["p3)R_4_*"], kim21: "21 교육형태"}
+  - {id: evaluation,   page: 3, title: 교육평가(4단계, 현재/향후), agg: mean_pct_cf, html: 부록, cols: ["p3)R_5_*"], kim21: 신규}
+  - {id: remote_yn,    page: 3, title: 원격교육 실행여부,        agg: dist,       html: 부록, cols: ["p3)R_6_multi"], kim21: 신규}
+  - {id: remote_form,  page: 3, title: 원격교육 위탁형태(현/향), agg: mean_pct_cf, html: 부록, cols: ["p3)R_7_*"], kim21: 신규, note: "자체/외부위탁 2항목"}
+  - {id: remote_field, page: 3, title: 원격교육 분야,            agg: multi_rate, html: 부록, cols: ["p3)R_8_multi"], kim21: 신규}
+  - {id: remote_type,  page: 3, title: 원격교육 형태,            agg: multi_rate, html: 부록, cols: ["p3)R_9_multi"], kim21: 신규}
+  - {id: remote_lack,  page: 3, title: 부족한 원격교육 분야,     agg: multi_rate, html: 부록, cols: ["p3)R_10_multi"], kim21: 신규}
+  - {id: remote_demand, page: 3, title: 원격교육 수요 전망,       agg: dist,       html: 부록, cols: ["p3)R_11_multi"], kim21: 신규, note: "quirk(C): 구 'refund'(고용보험환급) 오라벨 정정. 1=확대/2=변동없음/3=축소"}
+  - {id: elearn_dev,   page: 3, title: 이러닝 자체개발 여부,     agg: dist,       html: 부록, cols: ["p3)R_12_multi"], kim21: 신규}
+  - {id: elearn_topic, page: 3, title: 자사 이러닝 주제,         agg: multi_rate, html: 부록, cols: ["p3)R_13_multi"], kim21: 신규}
+
+  # ── Ⅳ. HRD 이슈 (검증 완료). A그룹(_n_2_che 코드1~15)/B그룹(_n_4_che 코드1~15) ──
+  - {id: issue_rank,   page: 4, title: 주요 이슈 1~3순위,        agg: issue_rank,  html: 핵심, cols: ["p4)R_1_n_2_che","p4)R_1_n_4_che","p4)R_1_cheOrder"], kim21: "21 9/10/11 교육테마", note: "quirk(D): cheOrder='순위)항목_그룹'(그룹2=A·4=B). HRD이슈_항목코드 라벨"}
+  - {id: issue_etc,    page: 4, title: 기타 주요 이슈,           agg: issue_multi, html: 부록, cols: ["p4)R_2_n_2_che","p4)R_2_n_4_che"], kim21: 신규, note: "A/B그룹 쉼표복수 선택률"}
+  - {id: perf_link,    page: 4, title: 성과관리 연계활동(12,중요/수행), agg: likert_iv, html: 부록, cols: ["p4)R_3_*"], kim21: 신규, note: "quirk(E): _3=중요도, _4=수행도 (현/향 아님)"}
+  - {id: perf_barrier, page: 4, title: 수행 방해요인,            agg: dist,       html: 부록, cols: ["p4)R_4_n_3_rad"], kim21: 신규, note: "quirk(F): 단일선택 1=비용..7=없음"}
+
+  # ── Ⅴ. AI 도입과 활용 (22회 신설, 검증 완료) ──
+  - {id: ai_strategy,  page: 5, title: AI 전사 전략 실행,        agg: dist,       html: 핵심, cols: ["p5)R_1_multi"], kim21: 신규, note: "현 p15"}
+  - {id: ai_ceo,       page: 5, title: CEO·경영진 AI 관심,       agg: dist,       html: 핵심, cols: ["p5)R_2_multi"], kim21: 신규, note: "현 p15"}
+  - {id: ai_awareness, page: 5, title: 임직원 AI 활용 인식(중요/활용), agg: likert_iv, html: 부록, cols: ["p5)R_3_1_3","p5)R_3_2_3"], kim21: 신규, note: "2-col 쌍: 중요성인식 vs 활용정도 (suffix 동일, 명시 페어)"}
+  - {id: ai_stage,     page: 5, title: AI 교육 도입 단계,        agg: dist,       html: 핵심, cols: ["p5)R_4_multi"], kim21: 신규, note: "현 p16"}
+  - {id: ai_target,    page: 5, title: AI 교육 주요 대상,        agg: multi_rate, html: 핵심, cols: ["p5)R_5_multi"], kim21: 신규}
+  - {id: ai_field,     page: 5, title: AI 교육 분야,             agg: multi_rate, html: 핵심, cols: ["p5)R_6_multi"], kim21: 신규}
+  - {id: ai_outcome,   page: 5, title: AI 교육 기대 성과,        agg: multi_rate, html: 핵심, cols: ["p5)R_7_multi"], kim21: 신규}
+  - {id: ai_satis,     page: 5, title: AI 교육 만족·활용도,      agg: likert_iv, html: 부록, cols: ["p5)R_8_1_2","p5)R_8_2_2"], kim21: 신규, note: "2-col 쌍: 만족도 vs 현업활용도"}
+  - {id: ai_difficulty,page: 5, title: AI 교육 실행 어려움,      agg: dist,       html: 부록, cols: ["p5)R_9_multi"], kim21: 신규}
+  - {id: ai_budget27,  page: 5, title: 27년 AI 교육예산 전망,    agg: dist,       html: 핵심, cols: ["p5)R_10_multi"], kim21: 신규, note: "현 p16"}
+  - {id: ai_future,    page: 5, title: 향후 AI 교육 계획,        agg: multi_rate, html: 핵심, cols: ["p5)R_11_multi"], kim21: 신규}
+
+# 세그먼트 축은 config/segments.yaml(전체·규모5·공공) + 업종(재분류 후) 사용.

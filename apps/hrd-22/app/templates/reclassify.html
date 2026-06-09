@@ -1,0 +1,29 @@
+{% set active_slug = "reclassify" %}
+{% extends "base.html" %}
+{% block content %}
+  <h2>업종 재분류</h2>
+  {% include "_reclassify_summary.html" %}
+
+  <table class="grid">
+    <thead><tr><th>응답자</th><th>자유응답(R_Cate_Name)</th><th>표준 업종 지정</th></tr></thead>
+    <tbody>
+      {% for r in rows %}{% include "_reclassify_row.html" %}{% endfor %}
+    </tbody>
+  </table>
+  {% if not rows %}<p class="note">재분류 대상(기업 etc) 후보가 없습니다.</p>{% endif %}
+
+  <p class="note">대상 = 기업 모집단(R_Div 1·2·3) 중 R_Cate=etc. 자유응답을 보고 표준 업종으로 매핑합니다.
+     결정은 <code>reclassification</code>(field=R_Cate)으로 원장에 append → 산출 시 반영.
+     주요업종 선정(재분류 후 카운트 ≥10)은 산출/미리보기 단계에서 수행.</p>
+
+  <style>
+    table.grid { border-collapse: collapse; width: 100%; margin-top: 14px; font-size: 13px; }
+    table.grid th, table.grid td { border: 1px solid #dde3ec; padding: 6px 8px; text-align: left; vertical-align: top; }
+    table.grid th { background: #eef2f7; }
+    small { color: #778; }
+    td.act form { display: flex; gap: 6px; align-items: center; }
+    td.act select { padding: 4px 6px; border: 1px solid #c3ccda; border-radius: 5px; }
+    td.act button { cursor: pointer; border: 1px solid #1f3a5f; background: #1f3a5f; color: #fff; border-radius: 5px; padding: 4px 10px; }
+    .done.corr { color: #1f3a5f; font-weight: 600; }
+  </style>
+{% endblock %}

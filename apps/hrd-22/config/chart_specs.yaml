@@ -1,0 +1,685 @@
+# 22회 도표 사양 (chart_specs) — v1 초안
+# 자동 생성: workspace/gen_chart_specs.py
+# 출처: 21회 분석가이드 도표 인벤토리 + codebook_22th(export 교정본) 변수 매핑
+# 검증: 0_survey/chart_var_mapping_22th.md / docs/SEGMENT_RULE_VERIFICATION_21th.md
+
+# ── 세그먼트 정의 (가이드 분석기준 + 21회 김태웅 산출 검증 결과) ──
+segment_defs:
+  size_tier:   # 가이드 표시 기준 = 3단계 + 전체 + 공공. 5계산구간을 roll-up.
+    display: [전체, "1000이상", "300-999", "299이하", 공공]
+    rollup:  # segments.yaml 5구간 → 표시 3단계
+      "299이하":  ["100미만", "100-300"]
+      "300-999":  ["300-500", "500-1000"]
+      "1000이상": ["1000이상"]
+    source_col: "p1)R_1_2_2"   # 전체 직원 수
+  major_industry:   # 가이드: 모수 많은 순 10개 이상 업종을 개별 분석
+    rule: "재분류 후 최종 카운트 10명 이상 업종을 개별 시트로 (21회=8개)"
+    note: "21회는 raw가 아닌 수기 재분류 후 카운트 기준 적용. 22회 선정은 정제 확정 후 재계산 필요."
+    ref_21th: [전자, 자동차, 에너지, 패션, 의료, 금융, IT, 교육]
+    source_col: "R_Cate"
+  public:
+    rule: "R_Div=4 → 공공기관, R_Div=5 → 공공기타(학교)"
+  top3_only:
+    rule: "분포 상위 3개 항목만 그래프 표기 (도표35 등). 집계는 overall과 동일, 표시 단계에서 상위3 절단."
+    base: overall
+
+# ── 도표 목록 ──
+charts:
+  - id: 1
+    chapter: "1장 조사개요"
+    title: "도표. 응답기업 및 기관 기본특성"
+    subcharts:
+      - sub_title: "기업(전체 및 규모별) 및 공공기관 구분"
+        q_ref: ""
+        variables: []   # ⚠ 미매칭(22회 삭제/신규 확인)
+        segment: size_tier
+      - sub_title: "응답기업의 업종 분포"
+        q_ref: ""
+        variables: []   # ⚠ 미매칭(22회 삭제/신규 확인)
+        segment: major_industry
+  - id: 3
+    chapter: "1장 조사개요"
+    title: "도표. 조사대상의 매출 규모"
+    subcharts:
+      - sub_title: "응답기업의 매출 규모 평균"
+        q_ref: "I-1). 거시지표로 분석  *기업만 분석"
+        variables: ["p1)R_1_1_2", "p1)R_1_2_2", "p1)R_1_3_2", "p1)R_1_4_2", "p1)R_1_5_2"]
+        primary_var: "p1)R_1_1_2"   # 매출총액
+        segment: size_tier
+      - sub_title: "주요 업종별 매출 규모 평균"
+        q_ref: "I-1). 거시지표로 분석  *기업만 분석"
+        variables: ["p1)R_1_1_2", "p1)R_1_2_2", "p1)R_1_3_2", "p1)R_1_4_2", "p1)R_1_5_2"]
+        primary_var: "p1)R_1_1_2"   # 매출총액
+        segment: major_industry
+  - id: 4
+    chapter: "1장 조사개요"
+    title: "도표. 조사대상의 인원 규모"
+    subcharts:
+      - sub_title: "기업(전체 및 규모별) 및 공공기관의 인원 규모 평균"
+        q_ref: "I-1). 거시지표로 분석"
+        variables: ["p1)R_1_1_2", "p1)R_1_2_2", "p1)R_1_3_2", "p1)R_1_4_2", "p1)R_1_5_2"]
+        primary_var: "p1)R_1_2_2"   # 전체 직원 수
+        segment: size_tier
+      - sub_title: "기업(전체 및 규모별) 및 공공기관의 교육대상 직원 수 평균"
+        q_ref: "I-1). 거시지표로 분석"
+        variables: ["p1)R_1_1_2", "p1)R_1_2_2", "p1)R_1_3_2", "p1)R_1_4_2", "p1)R_1_5_2"]
+        primary_var: "p1)R_1_3_2"   # 교육대상 직원 수
+        segment: size_tier
+  - id: 5
+    chapter: "2장 HRD 투입비용"
+    title: "도표. 조사대상의 교육예산 및 집행 경비"
+    subcharts:
+      - sub_title: "응답기업(전체 및 규모별) 및 기관의 교육예산 총액"
+        q_ref: "I-1). 거시지표로 분석"
+        variables: ["p1)R_1_1_2", "p1)R_1_2_2", "p1)R_1_3_2", "p1)R_1_4_2", "p1)R_1_5_2"]
+        primary_var: "p1)R_1_4_2"   # 교육예산 총액
+        segment: size_tier
+      - sub_title: "응답기업(전체 및 규모별) 및 기관의 교육경비 집행총액"
+        q_ref: "I-1). 거시지표로 분석"
+        variables: ["p1)R_1_1_2", "p1)R_1_2_2", "p1)R_1_3_2", "p1)R_1_4_2", "p1)R_1_5_2"]
+        primary_var: "p1)R_1_5_2"   # 교육경비 집행총액
+        segment: size_tier
+      - sub_title: "* 기업규모별 상세"
+        q_ref: "I-1). 거시지표로 분석"
+        variables: ["p1)R_1_1_2", "p1)R_1_2_2", "p1)R_1_3_2", "p1)R_1_4_2", "p1)R_1_5_2"]
+        primary_var: "p1)R_1_4_2"   # 교육예산 총액
+        segment: size_tier
+  - id: 6
+    chapter: "2장 HRD 투입비용"
+    title: "도표. 매출대비 교육비 비율"
+    subcharts:
+      - sub_title: "응답기업(전체 및 규모별)의 매출 대비 교육비 비율"
+        q_ref: "I-1). 거시지표로 분석(매출총액 대비 교육집행경비 비율)
+* 기업만 분석함"
+        variables: ["p1)R_1_1_2", "p1)R_1_5_2"]
+        formula: "p1)R_1_5_2 / p1)R_1_1_2"   # 집행경비 / 매출
+        segment: size_tier
+      - sub_title: "주요 업종별 매출 대비 교육비 비율"
+        q_ref: ""
+        variables: []   # ⚠ 미매칭(22회 삭제/신규 확인)
+        segment: overall
+  - id: 7
+    chapter: "2장 HRD 투입비용"
+    title: "도표. 구성원 1인당 교육비"
+    subcharts:
+      - sub_title: "기업(전체 및 규모별) 및 공공기관 1인 교육비 평균(예산 및 집행)"
+        q_ref: "I-1). 거시지표 중, 교육경비예산,집행/교육대상 직원수로 계산"
+        variables: ["p1)R_1_3_2", "p1)R_1_4_2", "p1)R_1_5_2"]
+        formula: "p1)R_1_5_2 / p1)R_1_3_2"   # 집행경비 / 교육대상 직원수 = 1인당
+        segment: size_tier
+      - sub_title: "주요업종별 1인 평균교육비(예산 및 집행)"
+        q_ref: "I-1). 거시지표로 분석"
+        variables: ["p1)R_1_3_2", "p1)R_1_4_2", "p1)R_1_5_2"]
+        formula: "p1)R_1_5_2 / p1)R_1_3_2"
+        segment: major_industry
+  - id: 8
+    chapter: "2장 HRD 투입비용"
+    title: "도표. 구성원 1인당 교육시간"
+    subcharts:
+      - sub_title: "기업(전체 및 규모별) 및 공공기관 1인당 교육시간 평균"
+        q_ref: "1-3). 분석"
+        variables: ["p1)R_5_1_2"]
+        segment: size_tier
+      - sub_title: "주요업종별 1인당 교육시간 평균"
+        q_ref: "1-3). 분석"
+        variables: ["p1)R_5_1_2"]
+        segment: major_industry
+  - id: 9
+    chapter: "2장 HRD 투입비용"
+    title: "도표. 전년 대비 교육비 증감 비율"
+    subcharts:
+      - sub_title: "기업(전체 및 규모별) 및 공공기관 교육비 증감비율"
+        q_ref: "I-2-1). 분석"
+        variables: ["p1)R_2_n_2"]
+        segment: size_tier
+      - sub_title: "주요업종별 교육비 증감비율"
+        q_ref: "I-2-1). 분석"
+        variables: ["p1)R_2_n_2"]
+        segment: major_industry
+  - id: 10
+    chapter: "2장 HRD 투입비용"
+    title: "도표. 전년 대비 교육비 증감 이유"
+    subcharts:
+      - sub_title: "증가이유(복수응답)"
+        q_ref: "I-2-2). 분석"
+        variables: ["p1)R_3_multi", "p1)R_3_etc"]
+        segment: overall
+      - sub_title: "감소이유(복수응답)"
+        q_ref: "I-2-3). 분석"
+        variables: ["p1)R_4_multi", "p1)R_4_etc"]
+        segment: overall
+  - id: 11
+    chapter: "2장 HRD 투입비용"
+    title: "도표. 교육운영 형태별 현황"
+    subcharts:
+      - sub_title: "교육형태별 참가인원 비율"
+        q_ref: "I-4. 분석"
+        variables: ["p1)R_6_1_2", "p1)R_6_1_3", "p1)R_6_1_4", "p1)R_6_1_5", "p1)R_6_1_6", "p1)R_6_1_7"]
+        segment: overall
+      - sub_title: "교육형태별 교육비 지출 비율"
+        q_ref: "I-5-1)분석"
+        variables: ["p1)R_7_1_2", "p1)R_7_1_3", "p1)R_7_1_4", "p1)R_7_1_5", "p1)R_7_1_6", "p1)R_7_1_7", "p1)R_7_1_8", "p1)R_7_1_9"]
+        segment: overall
+  - id: 12
+    chapter: "2장 HRD 투입비용"
+    title: "도표. 대상별 교육비 지출 비율"
+    subcharts:
+      - sub_title: "기업의 직책자.비직책자 교육비 지출 비율"
+        q_ref: "I-5-2) 분석"
+        variables: ["p1)R_8_1_2", "p1)R_8_1_3", "p1)R_8_1_4", "p1)R_8_1_5"]
+        segment: overall
+      - sub_title: "기업규모별 직책자.비직책자 교육비 지출 비율"
+        q_ref: "I-5-2) 분석"
+        variables: ["p1)R_8_1_2", "p1)R_8_1_3", "p1)R_8_1_4", "p1)R_8_1_5"]
+        segment: size_tier
+      - sub_title: "공공기관의 직급별 교육비 지출 비율"
+        q_ref: "I-5-3) 분석"
+        variables: []   # ⚠ 미매칭(22회 삭제/신규 확인)
+        segment: overall
+  - id: 13
+    chapter: "2장 HRD 투입비용"
+    title: "도표.교육비 투자 대비 효과"
+    subcharts:
+      - sub_title: "기업(전체 및 규모별) 및 공공기관 교육비 투자 대비 효과"
+        q_ref: "I-6). 분석"
+        variables: ["p1)R_10_multi"]
+        segment: size_tier
+      - sub_title: "주요업종별 교육비 투자 대비 효과"
+        q_ref: "I-6). 분석"
+        variables: ["p1)R_10_multi"]
+        segment: major_industry
+  - id: 14
+    chapter: "3장 HRD 현황"
+    title: "도표. HRD 부서의 조직현황"
+    subcharts:
+      - sub_title: "기업(전체 및 규모별) 및 공공기관 HRD 부서의 조직형태"
+        q_ref: "II-1-2) 분석"
+        variables: ["p2)R_2_multi", "p2)R_2_etc"]
+        segment: size_tier
+      - sub_title: "기업(전체 및 규모별) 및 공공기관 HRD부서의 역할"
+        q_ref: "II-1-4) 분석"
+        variables: ["p2)R_4_multi"]
+        segment: size_tier
+  - id: 15
+    chapter: "3장 HRD 현황"
+    title: "도표. HRD부서의 담당인력현황"
+    subcharts:
+      - sub_title: "기업(전체 및 규모별) 및 공공기관의 HRD 담당인원 수"
+        q_ref: "II-1-1) 분석"
+        variables: ["p2)R_1_1_3", "p2)R_1_2_3", "p2)R_1_3_3", "p2)R_1_4_3", "p2)R_1_5_3", "p2)R_1_6_3"]
+        segment: size_tier
+      - sub_title: "기업(전체 및 규모별) 및 공공기관의 사내강사"
+        q_ref: "II-1-1) 분석"
+        variables: ["p2)R_1_1_3", "p2)R_1_2_3", "p2)R_1_3_3", "p2)R_1_4_3", "p2)R_1_5_3", "p2)R_1_6_3"]
+        segment: size_tier
+      - sub_title: "기업(전체 및 규모별) 및 공공기관 HRD 인력의 평균 근속개월"
+        q_ref: "II-1-1) 분석"
+        variables: ["p2)R_1_1_3", "p2)R_1_2_3", "p2)R_1_3_3", "p2)R_1_4_3", "p2)R_1_5_3", "p2)R_1_6_3"]
+        segment: size_tier
+      - sub_title: "기업(전체 및 규모별) 및 공공기관의 HRD 최고 직급"
+        q_ref: "II-1-3) 분석"
+        variables: ["p2)R_3_multi"]
+        segment: size_tier
+  - id: 16
+    chapter: "3장 HRD 현황"
+    title: "도표. HRD부문의 성과지표"
+    subcharts:
+      - sub_title: "HRD부문의 성과지표(복수응답)"
+        q_ref: "II-5) 분석"
+        variables: ["p2)R_11_multi", "p2)R_11_etc"]
+        segment: overall
+      - sub_title: "기업(전체 및 규모별) 및 공공기관 HRD부문의 성과지표"
+        q_ref: "II-5) 분석"
+        variables: ["p2)R_11_multi", "p2)R_11_etc"]
+        segment: size_tier
+  - id: 17
+    chapter: "3장 HRD 현황"
+    title: "도표. HRD활동에 대한 경영진의 참여"
+    subcharts:
+      - sub_title: "경영진의 HRD에 대한 참여 정도"
+        q_ref: "II-2. 분석"
+        variables: ["p2)R_5_1_2", "p2)R_5_2_2", "p2)R_5_3_2"]
+        segment: overall
+  - id: 18
+    chapter: "3장 HRD 현황"
+    title: "도표. 교육 인프라 보유 현황"
+    subcharts:
+      - sub_title: "기업(전체 및 규모별) 및 공공기관 연수시설 보유현황"
+        q_ref: "II-3-1). 분석"
+        variables: ["p2)R_6_multi"]
+        segment: size_tier
+      - sub_title: "기업(전체 및 규모별) 및 공공기관 연수시설의 수용인원"
+        q_ref: "II-3-1-2). 분석"
+        variables: ["p2)R_7_multi"]
+        segment: size_tier
+      - sub_title: "기업(전체 및 규모별) 및 공공기관 자체 교육체계 보유 현황"
+        q_ref: "II-3-2). 분석"
+        variables: ["p2)R_8_multi"]
+        segment: size_tier
+      - sub_title: "기업(전체 및 규모별) 및 공공기관 교육운영관리시스템(LMS) 보유현황"
+        q_ref: "II-3-3). 분석"
+        variables: ["p2)R_9_multi"]
+        segment: size_tier
+  - id: 19
+    chapter: "3장 HRD 현황"
+    title: "도표. HRD 외부용역 현황"
+    subcharts:
+      - sub_title: "기업(전체 및 규모별) 및 공공기관 외부 컨설팅 및 용역(아웃소싱) 경험 유무"
+        q_ref: "II-6-1). 분석"
+        variables: ["p2)R_12_multi"]
+        segment: size_tier
+      - sub_title: "외부컨설팅 및 용역경험이 있는 경우, 교육비 전체 대비 외부 컨설팅 및 용역비용의 비중"
+        q_ref: "II-6-3). 분석"
+        variables: ["p2)R_14_1_2"]
+        segment: size_tier
+      - sub_title: "외부 컨설팅 및 용역 현황(복수응답)"
+        q_ref: "II-6-2). 분석"
+        variables: ["p2)R_13_multi"]
+        segment: overall
+      - sub_title: "기업(전체 및 규모별) 및 공공기관 외부 컨설팅 및 용역 현황(복수응답)"
+        q_ref: "II-6-2). 분석"
+        variables: ["p2)R_13_multi"]
+        segment: size_tier
+  - id: 20
+    chapter: "3장 HRD 현황"
+    title: "도표. HRD 외부용역 계획"
+    subcharts:
+      - sub_title: "외부 용역 확대 고려 영역"
+        q_ref: "II-6-4). 분석"
+        variables: ["p2)R_15_multi", "p2)R_15_etc"]
+        segment: overall
+      - sub_title: "기업(전체 및 규모별) 및 공공기관 외부 용역 확대 고려 영역"
+        q_ref: "II-6-4). 분석"
+        variables: ["p2)R_15_multi", "p2)R_15_etc"]
+        segment: size_tier
+  - id: 21
+    chapter: "3장 HRD 현황"
+    title: "도표. HRD제도 도입현황"
+    subcharts:
+      - sub_title: "HRD제도 도입현황"
+        q_ref: "II-4-1). 분석"
+        variables: ["p2)R_10_1_3", "p2)R_10_2_3", "p2)R_10_3_3", "p2)R_10_4_3", "p2)R_10_5_3", "p2)R_10_6_3", "p2)R_10_7_3", "p2)R_10_8_3", "p2)R_10_9_3", "p2)R_10_10_3", "p2)R_10_11_3", "p2)R_10_12_3", "p2)R_10_12_etc"]
+        segment: overall
+  - id: 22
+    chapter: "3장 HRD 현황"
+    title: "도표.기업규모(공공)별 HRD 제도 도입 현황"
+    subcharts:
+      - sub_title: "기업(전체 및 규모별) 및 공공기관 핵심인재 육성제도 현황"
+        q_ref: "II-4-1). 분석"
+        variables: ["p2)R_10_1_3", "p2)R_10_2_3", "p2)R_10_3_3", "p2)R_10_4_3", "p2)R_10_5_3", "p2)R_10_6_3", "p2)R_10_7_3", "p2)R_10_8_3", "p2)R_10_9_3", "p2)R_10_10_3", "p2)R_10_11_3", "p2)R_10_12_3", "p2)R_10_12_etc"]
+        segment: size_tier
+      - sub_title: "기업(전체 및 규모별) 및 공공기관 직무자격제도(직무등급) 현황"
+        q_ref: "II-4-1). 분석"
+        variables: ["p2)R_10_1_3", "p2)R_10_2_3", "p2)R_10_3_3", "p2)R_10_4_3", "p2)R_10_5_3", "p2)R_10_6_3", "p2)R_10_7_3", "p2)R_10_8_3", "p2)R_10_9_3", "p2)R_10_10_3", "p2)R_10_11_3", "p2)R_10_12_3", "p2)R_10_12_etc"]
+        segment: size_tier
+      - sub_title: "기업(전체 및 규모별) 및 공공기관 자기개발비 지원제도 현황"
+        q_ref: "II-4-1). 분석"
+        variables: ["p2)R_10_1_3", "p2)R_10_2_3", "p2)R_10_3_3", "p2)R_10_4_3", "p2)R_10_5_3", "p2)R_10_6_3", "p2)R_10_7_3", "p2)R_10_8_3", "p2)R_10_9_3", "p2)R_10_10_3", "p2)R_10_11_3", "p2)R_10_12_3", "p2)R_10_12_etc"]
+        segment: size_tier
+      - sub_title: "기업(전체 및 규모별) 및 공공기관 신입/경력사원 조직정착 지원제도 현황"
+        q_ref: "II-4-1). 분석"
+        variables: ["p2)R_10_1_3", "p2)R_10_2_3", "p2)R_10_3_3", "p2)R_10_4_3", "p2)R_10_5_3", "p2)R_10_6_3", "p2)R_10_7_3", "p2)R_10_8_3", "p2)R_10_9_3", "p2)R_10_10_3", "p2)R_10_11_3", "p2)R_10_12_3", "p2)R_10_12_etc"]
+        segment: size_tier
+      - sub_title: "기업(전체 및 규모별) 및 공공기관 멘토링 제도 현황"
+        q_ref: "II-4-1). 분석"
+        variables: ["p2)R_10_1_3", "p2)R_10_2_3", "p2)R_10_3_3", "p2)R_10_4_3", "p2)R_10_5_3", "p2)R_10_6_3", "p2)R_10_7_3", "p2)R_10_8_3", "p2)R_10_9_3", "p2)R_10_10_3", "p2)R_10_11_3", "p2)R_10_12_3", "p2)R_10_12_etc"]
+        segment: size_tier
+      - sub_title: "기업(전체 및 규모별) 및 공공기관  OJT 교육제도 현황"
+        q_ref: "II-4-1). 분석"
+        variables: ["p2)R_10_1_3", "p2)R_10_2_3", "p2)R_10_3_3", "p2)R_10_4_3", "p2)R_10_5_3", "p2)R_10_6_3", "p2)R_10_7_3", "p2)R_10_8_3", "p2)R_10_9_3", "p2)R_10_10_3", "p2)R_10_11_3", "p2)R_10_12_3", "p2)R_10_12_etc"]
+        segment: size_tier
+      - sub_title: "기업(전체 및 규모별) 및 공공기관 사내강사 제도 현황"
+        q_ref: "II-4-1). 분석"
+        variables: ["p2)R_10_1_3", "p2)R_10_2_3", "p2)R_10_3_3", "p2)R_10_4_3", "p2)R_10_5_3", "p2)R_10_6_3", "p2)R_10_7_3", "p2)R_10_8_3", "p2)R_10_9_3", "p2)R_10_10_3", "p2)R_10_11_3", "p2)R_10_12_3", "p2)R_10_12_etc"]
+        segment: size_tier
+      - sub_title: "기업(전체 및 규모별) 및 공공기관 학점/교육이수 제도 현황"
+        q_ref: "II-4-1). 분석"
+        variables: ["p2)R_10_1_3", "p2)R_10_2_3", "p2)R_10_3_3", "p2)R_10_4_3", "p2)R_10_5_3", "p2)R_10_6_3", "p2)R_10_7_3", "p2)R_10_8_3", "p2)R_10_9_3", "p2)R_10_10_3", "p2)R_10_11_3", "p2)R_10_12_3", "p2)R_10_12_etc"]
+        segment: size_tier
+      - sub_title: "기업(전체 및 규모별) 및 공공기관 경력개발계획 제도 현황"
+        q_ref: "II-4-1). 분석"
+        variables: ["p2)R_10_1_3", "p2)R_10_2_3", "p2)R_10_3_3", "p2)R_10_4_3", "p2)R_10_5_3", "p2)R_10_6_3", "p2)R_10_7_3", "p2)R_10_8_3", "p2)R_10_9_3", "p2)R_10_10_3", "p2)R_10_11_3", "p2)R_10_12_3", "p2)R_10_12_etc"]
+        segment: size_tier
+      - sub_title: "기업(전체 및 규모별) 및 공공기관 생애설계(은퇴설계포함) 제도 현황"
+        q_ref: "II-4-1). 분석"
+        variables: ["p2)R_10_1_3", "p2)R_10_2_3", "p2)R_10_3_3", "p2)R_10_4_3", "p2)R_10_5_3", "p2)R_10_6_3", "p2)R_10_7_3", "p2)R_10_8_3", "p2)R_10_9_3", "p2)R_10_10_3", "p2)R_10_11_3", "p2)R_10_12_3", "p2)R_10_12_etc"]
+        segment: size_tier
+      - sub_title: "기업(전체 및 규모별) 및 공공기관 학습조직지원, 관리제도 현황"
+        q_ref: "II-4-1). 분석"
+        variables: ["p2)R_10_1_3", "p2)R_10_2_3", "p2)R_10_3_3", "p2)R_10_4_3", "p2)R_10_5_3", "p2)R_10_6_3", "p2)R_10_7_3", "p2)R_10_8_3", "p2)R_10_9_3", "p2)R_10_10_3", "p2)R_10_11_3", "p2)R_10_12_3", "p2)R_10_12_etc"]
+        segment: size_tier
+  - id: 23
+    chapter: "3장 HRD 현황"
+    title: "도표. HRD 개선사항"
+    subcharts:
+      - sub_title: "HRD 개선사항(복수응답)"
+        q_ref: "II-7). 분석"
+        variables: ["p2)R_16_multi", "p2)R_16_etc"]
+        segment: overall
+      - sub_title: "기업(전체 및 규모별) 및 공공기관 HRD 개선사항(복수응답)"
+        q_ref: "II-7). 분석"
+        variables: ["p2)R_16_multi", "p2)R_16_etc"]
+        segment: size_tier
+  - id: 24
+    chapter: "4장 HRD 활동"
+    title: "도표. 교육내용에 대한 현재-향후 실시비율"
+    subcharts:
+      - sub_title: "교육내용에 대한 현재-향후 실시비율"
+        q_ref: "III-1). 분석"
+        variables: ["p3)R_1_1_3", "p3)R_1_1_4", "p3)R_1_2_3", "p3)R_1_2_4", "p3)R_1_3_3", "p3)R_1_3_4", "p3)R_1_4_3", "p3)R_1_4_4", "p3)R_1_5_3", "p3)R_1_5_4", "p3)R_1_6_3", "p3)R_1_6_4", "p3)R_1_7_3", "p3)R_1_7_4", "p3)R_1_8_3", "p3)R_1_8_4", "p3)R_1_9_3", "p3)R_1_9_4", "p3)R_1_10_3", "p3)R_1_10_4", "p3)R_1_11_3", "p3)R_1_11_4", "p3)R_1_12_3", "p3)R_1_12_4", "p3)R_1_13_3", "p3)R_1_13_4", "p3)R_1_14_3", "p3)R_1_14_4", "p3)R_1_15_3", "p3)R_1_15_4", "p3)R_1_16_3", "p3)R_1_16_4"]
+        segment: overall
+      - sub_title: "기업(전체 및 규모별) 및 공공기관 교육내용에 대한 현재-향후 실시비율"
+        q_ref: "III-1). 분석"
+        variables: ["p3)R_1_1_3", "p3)R_1_1_4", "p3)R_1_2_3", "p3)R_1_2_4", "p3)R_1_3_3", "p3)R_1_3_4", "p3)R_1_4_3", "p3)R_1_4_4", "p3)R_1_5_3", "p3)R_1_5_4", "p3)R_1_6_3", "p3)R_1_6_4", "p3)R_1_7_3", "p3)R_1_7_4", "p3)R_1_8_3", "p3)R_1_8_4", "p3)R_1_9_3", "p3)R_1_9_4", "p3)R_1_10_3", "p3)R_1_10_4", "p3)R_1_11_3", "p3)R_1_11_4", "p3)R_1_12_3", "p3)R_1_12_4", "p3)R_1_13_3", "p3)R_1_13_4", "p3)R_1_14_3", "p3)R_1_14_4", "p3)R_1_15_3", "p3)R_1_15_4", "p3)R_1_16_3", "p3)R_1_16_4"]
+        segment: size_tier
+  - id: 25
+    chapter: "4장 HRD 활동"
+    title: "도표. 학습기법에 대한 현재-향후 비율"
+    subcharts:
+      - sub_title: "학습기법에 대한 현재-향후 비율"
+        q_ref: "III-3). 분석"
+        variables: ["p3)R_3_1_3", "p3)R_3_1_4", "p3)R_3_2_3", "p3)R_3_2_4", "p3)R_3_3_3", "p3)R_3_3_4", "p3)R_3_4_3", "p3)R_3_4_4", "p3)R_3_5_3", "p3)R_3_5_4", "p3)R_3_6_3", "p3)R_3_6_4", "p3)R_3_7_3", "p3)R_3_7_4", "p3)R_3_8_3", "p3)R_3_8_4", "p3)R_3_9_3", "p3)R_3_9_4", "p3)R_3_10_3", "p3)R_3_10_4", "p3)R_3_11_3", "p3)R_3_11_4", "p3)R_3_11_etc"]
+        segment: overall
+      - sub_title: "기업(전체 및 규모별) 및 공공기관 학습기법에 대한 현재-향후 비율"
+        q_ref: "III-3). 분석"
+        variables: ["p3)R_3_1_3", "p3)R_3_1_4", "p3)R_3_2_3", "p3)R_3_2_4", "p3)R_3_3_3", "p3)R_3_3_4", "p3)R_3_4_3", "p3)R_3_4_4", "p3)R_3_5_3", "p3)R_3_5_4", "p3)R_3_6_3", "p3)R_3_6_4", "p3)R_3_7_3", "p3)R_3_7_4", "p3)R_3_8_3", "p3)R_3_8_4", "p3)R_3_9_3", "p3)R_3_9_4", "p3)R_3_10_3", "p3)R_3_10_4", "p3)R_3_11_3", "p3)R_3_11_4", "p3)R_3_11_etc"]
+        segment: size_tier
+  - id: 26
+    chapter: "4장 HRD 활동"
+    title: "도표. 교육형태별 지출에 대한 현재 -향후 비율"
+    subcharts:
+      - sub_title: "교육형태별 지출에 대한 현재 -향후 비율"
+        q_ref: "III-4). 분석"
+        variables: ["p3)R_4_1_3", "p3)R_4_1_4", "p3)R_4_2_3", "p3)R_4_2_4", "p3)R_4_3_3", "p3)R_4_3_4", "p3)R_4_4_3", "p3)R_4_4_4", "p3)R_4_5_3", "p3)R_4_5_4", "p3)R_4_6_3", "p3)R_4_6_4", "p3)R_4_7_3", "p3)R_4_7_4", "p3)R_4_8_3", "p3)R_4_8_4", "p3)R_4_9_3", "p3)R_4_9_4", "p3)R_4_9_etc"]
+        segment: overall
+      - sub_title: "기업(전체 및 규모별) 및 공공기관 교육형태 지출에 대한 현재-향후 비율"
+        q_ref: "III-4). 분석"
+        variables: ["p3)R_4_1_3", "p3)R_4_1_4", "p3)R_4_2_3", "p3)R_4_2_4", "p3)R_4_3_3", "p3)R_4_3_4", "p3)R_4_4_3", "p3)R_4_4_4", "p3)R_4_5_3", "p3)R_4_5_4", "p3)R_4_6_3", "p3)R_4_6_4", "p3)R_4_7_3", "p3)R_4_7_4", "p3)R_4_8_3", "p3)R_4_8_4", "p3)R_4_9_3", "p3)R_4_9_4", "p3)R_4_9_etc"]
+        segment: size_tier
+  - id: 27
+    chapter: "4장 HRD 활동"
+    title: "도표. 교육 전중후 활동 비율"
+    subcharts:
+      - sub_title: "교육 전중후 활동 비율"
+        q_ref: "III-2). 분석"
+        variables: ["p3)R_2_1_3", "p3)R_2_1_4", "p3)R_2_2_3", "p3)R_2_2_4", "p3)R_2_3_3", "p3)R_2_3_4"]
+        segment: overall
+      - sub_title: "기업(전체 및 규모별) 및 공공기관 교육 전중후 활동 비율"
+        q_ref: "III-2). 분석"
+        variables: ["p3)R_2_1_3", "p3)R_2_1_4", "p3)R_2_2_3", "p3)R_2_2_4", "p3)R_2_3_3", "p3)R_2_3_4"]
+        segment: size_tier
+  - id: 28
+    chapter: "4장 HRD 활동"
+    title: "도표. 교육평가 단계별 현재-향후 비율"
+    subcharts:
+      - sub_title: "교육평가 단계별 현재-향후 비율"
+        q_ref: "III-5). 분석"
+        variables: ["p3)R_5_1_3", "p3)R_5_1_4", "p3)R_5_2_3", "p3)R_5_2_4", "p3)R_5_3_3", "p3)R_5_3_4", "p3)R_5_4_3", "p3)R_5_4_4"]
+        segment: overall
+      - sub_title: "기업(전체 및 규모별) 및 공공기관 교육평가 단계별 현재-향후 비율"
+        q_ref: "III-5). 분석"
+        variables: ["p3)R_5_1_3", "p3)R_5_1_4", "p3)R_5_2_3", "p3)R_5_2_4", "p3)R_5_3_3", "p3)R_5_3_4", "p3)R_5_4_3", "p3)R_5_4_4"]
+        segment: size_tier
+  - id: 29
+    chapter: "4장 HRD 활동"
+    title: "도표. 원격교육 실행 현황"
+    subcharts:
+      - sub_title: "원격교육 실행(계획) 유무"
+        q_ref: "III-6-1). 분석"
+        variables: ["p3)R_6_multi"]
+        segment: overall
+      - sub_title: "기업(전체 및 규모별) 및 공공기관 원격교육 실행(계획) 유무"
+        q_ref: "III-6-1). 분석"
+        variables: ["p3)R_6_multi"]
+        segment: size_tier
+      - sub_title: "원격교육 위탁 형태의 현재-향후 실시비율"
+        q_ref: "III-6-2). 분석"
+        variables: ["p3)R_7_1_3", "p3)R_7_1_4", "p3)R_7_2_3", "p3)R_7_2_4"]
+        segment: overall
+      - sub_title: "기업(전체 및 규모별) 및 공공기관 원격교육 위탁 형태의 현재-향후 실시비율"
+        q_ref: "III-6-2). 분석"
+        variables: ["p3)R_7_1_3", "p3)R_7_1_4", "p3)R_7_2_3", "p3)R_7_2_4"]
+        segment: size_tier
+  - id: 30
+    chapter: "4장 HRD 활동"
+    title: "도표 진행중인 원격교육 분야"
+    subcharts:
+      - sub_title: "진행중인 원격교육 분야(복수응답)"
+        q_ref: "III-6-3). 분석"
+        variables: ["p3)R_8_multi", "p3)R_8_etc"]
+        segment: overall
+      - sub_title: "기업(전체 및 규모별) 및 공공기관 진행중인 원격교육 분야(복수응답)"
+        q_ref: "III-6-3). 분석"
+        variables: ["p3)R_8_multi", "p3)R_8_etc"]
+        segment: size_tier
+  - id: 31
+    chapter: "4장 HRD 활동"
+    title: "도표. 진행중인 원격교육 훈련의 형태"
+    subcharts:
+      - sub_title: "진행중인 원격교육 훈련의 형태(복수응답)"
+        q_ref: "III-6-4). 분석"
+        variables: ["p3)R_9_multi", "p3)R_9_etc"]
+        segment: overall
+      - sub_title: "기업(전체 및 규모별) 및 공공기관 진행중인 원격교육 훈련의 형태(복수응답)"
+        q_ref: "III-6-4). 분석"
+        variables: ["p3)R_9_multi", "p3)R_9_etc"]
+        segment: size_tier
+  - id: 32
+    chapter: "4장 HRD 활동"
+    title: "도표. 원격교육의 부족분야"
+    subcharts:
+      - sub_title: "부족하다고 생각되는 원격교육 분야(복수응답)"
+        q_ref: "III-6-5). 분석"
+        variables: ["p3)R_10_multi", "p3)R_10_etc"]
+        segment: overall
+      - sub_title: "기업(전체 및 규모별) 및 공공기관 부족하다고 생각되는 원격교육 분야"
+        q_ref: "III-6-5). 분석"
+        variables: ["p3)R_10_multi", "p3)R_10_etc"]
+        segment: overall
+  - id: 33
+    chapter: "4장 HRD 활동"
+    title: "도표. 고용보험 환급기반 원격교육 수요"
+    subcharts:
+      - sub_title: "고용보험 환급기반 원격교육 수요 예상"
+        q_ref: "III-6-6). 분석"
+        variables: ["p3)R_11_multi"]
+        segment: overall
+      - sub_title: "기업(전체 및 규모별) 및 공공기관 고용보험 환급기반 원격교육 수요"
+        q_ref: "III-6-6). 분석"
+        variables: ["p3)R_11_multi"]
+        segment: size_tier
+  - id: 34
+    chapter: "4장 HRD 활동"
+    title: "도표. 이러닝 콘텐츠 개발"
+    subcharts:
+      - sub_title: "이러닝 콘텐츠 자체개발(계획) 유무"
+        q_ref: "III-6-7). 분석"
+        variables: ["p3)R_12_multi"]
+        segment: overall
+      - sub_title: "기업(전체 및 규모별) 및 공공기관의 이러닝 콘텐츠 자체개발(계획) 유무"
+        q_ref: "III-6-7). 분석"
+        variables: ["p3)R_12_multi"]
+        segment: overall
+      - sub_title: "개발했거나 계획이 있는 이러닝 콘텐츠(복수응답)"
+        q_ref: "III-6-8). 분석"
+        variables: ["p3)R_13_multi", "p3)R_13_etc"]
+        segment: overall
+      - sub_title: "기업(전체 및 규모별) 및 공공기관 개발했거나 계획이 있는 이러닝 콘텐츠(복수응답)"
+        q_ref: "III-6-8). 분석"
+        variables: ["p3)R_13_multi", "p3)R_13_etc"]
+        segment: size_tier
+  - id: 35
+    chapter: "5장 HRD 이슈"
+    title: "도표. 향후 HRD 세가지 주요 이슈"
+    subcharts:
+      - sub_title: "향후 HRD 세가지 주요 이슈 순위"
+        q_ref: "IV-1-1). 분석(New)"
+        variables: ["p4)R_1_n_2_che", "p4)R_1_n_4_che", "p4)R_1_cheOrder"]
+        segment: top3_only
+      - sub_title: "기업(전체 및 규모별) 및 공공기관의 향후 HRD 세가지 주요 이슈 순위"
+        q_ref: "IV-1-1). 분석(New)"
+        variables: ["p4)R_1_n_2_che", "p4)R_1_n_4_che", "p4)R_1_cheOrder"]
+        segment: size_tier
+  - id: 36
+    chapter: "5장 HRD 이슈"
+    title: "도표. 향후 HRD 주요 이슈 기타"
+    subcharts:
+      - sub_title: "향후 HRD 주요 이슈 기타(앞의 3가지 제외)"
+        q_ref: "IV-1-2). 분석(New)"
+        variables: ["p4)R_2_n_2_che", "p4)R_2_n_4_che"]
+        segment: overall
+      - sub_title: "기업(전체 및 규모별) 및 공공기관의 향후HRD 주요 이슈 기타(앞의 3가지 제외)"
+        q_ref: "IV-1-2). 분석(New)"
+        variables: ["p4)R_2_n_2_che", "p4)R_2_n_4_che"]
+        segment: size_tier
+  - id: 37
+    chapter: "5장 HRD 이슈"
+    title: "도표. HRD 기능의 성과관리 연계성에 대한 중요도 및 수행도 인식"
+    subcharts:
+      - sub_title: "HRD 기능의 성과관리 연계성에 대한 중요도 및 수행도 인식"
+        q_ref: "IV-2-1). 분석"
+        variables: ["p4)R_3_1_3", "p4)R_3_1_4", "p4)R_3_2_3", "p4)R_3_2_4", "p4)R_3_3_3", "p4)R_3_3_4", "p4)R_3_4_3", "p4)R_3_4_4", "p4)R_3_5_3", "p4)R_3_5_4", "p4)R_3_6_3", "p4)R_3_6_4", "p4)R_3_7_3", "p4)R_3_7_4", "p4)R_3_8_3", "p4)R_3_8_4", "p4)R_3_9_3", "p4)R_3_9_4", "p4)R_3_10_3", "p4)R_3_10_4", "p4)R_3_11_3", "p4)R_3_11_4", "p4)R_3_12_3", "p4)R_3_12_4", "p4)R_3_12_etc"]
+        segment: overall
+  - id: 38
+    chapter: "5장 HRD 이슈"
+    title: "도표. 성과관리와 연계된 교육활동의 방해원인"
+    subcharts:
+      - sub_title: "성과관리 방해 원인"
+        q_ref: "IV-2-2). 분석"
+        variables: ["p4)R_4_n_3_rad", "p4)R_4_6_etc"]
+        segment: overall
+      - sub_title: "기업(전체 및 규모별) 및 공공기관 성과연계 방해원인"
+        q_ref: "IV-2-2). 분석"
+        variables: ["p4)R_4_n_3_rad", "p4)R_4_6_etc"]
+        segment: size_tier
+  - id: 39
+    chapter: "6장 기타 HR 활동"
+    title: "도표. AI도입 관련 전사 차원의 전략 혹은 계획"
+    subcharts:
+      - sub_title: "AI도입 관련 전사 차원의 전략 혹은 계획의 실행 유무"
+        q_ref: "V-1) 분석"
+        variables: ["p5)R_1_multi"]
+        segment: overall
+      - sub_title: "기업(전체 및 규모별) 및 공공기관의  AI도입 관련 전사 차원의 전략 혹은 계획의 실행 유무"
+        q_ref: "V-1) 분석"
+        variables: ["p5)R_1_multi"]
+        segment: size_tier
+  - id: 40
+    chapter: "6장 기타 HR 활동"
+    title: "도표. AI도입과 활용에 대한 CEO 및 경영진의 지원"
+    subcharts:
+      - sub_title: "AI도입과 활용에 대한 CEO 및 경영진의 관심 및 지원활동"
+        q_ref: "V-2) 분석"
+        variables: ["p5)R_2_multi"]
+        segment: overall
+      - sub_title: "기업(전체 및 규모별) 및 공공기관의  AI도입과 활용에 대한 CEO 및 경영진의 관심 및 지원활동"
+        q_ref: "V-2) 분석"
+        variables: ["p5)R_2_multi"]
+        segment: size_tier
+  - id: 41
+    chapter: "6장 기타 HR 활동"
+    title: "도표. AI의 업무활용에 대한 인식 수준"
+    subcharts:
+      - sub_title: "임직원들이 가지고 있는 AI의 업무활용에 대한 중요도, 활용 수준"
+        q_ref: "V-3) 분석"
+        variables: ["p5)R_3_1_3", "p5)R_3_2_3"]
+        segment: overall
+      - sub_title: "기업(전체 및 규모별) 및 공공기관의 임직원들이 가지고 있는 AI의 업무활용에 대한 중요도, 활용 수준"
+        q_ref: "V-3) 분석"
+        variables: ["p5)R_3_1_3", "p5)R_3_2_3"]
+        segment: size_tier
+  - id: 42
+    chapter: "6장 기타 HR 활동"
+    title: "도표. 25년도의 AI 교육 계획"
+    subcharts:
+      - sub_title: "25년 교육계획에 AI 관련 교육 포함 유무"
+        q_ref: "V-4) 분석"
+        variables: ["p5)R_4_multi"]
+        segment: overall
+      - sub_title: "기업(전체 및 규모별) 및 공공기관의 25년 교육계획에 AI 관련 교육 포함 유무"
+        q_ref: "V-4) 분석"
+        variables: ["p5)R_4_multi"]
+        segment: size_tier
+  - id: 43
+    chapter: "6장 기타 HR 활동"
+    title: "도표. AI 교육의 실행 목표"
+    subcharts:
+      - sub_title: "AI 교육의 실행 목표"
+        q_ref: "V-5) 분석"
+        variables: ["p5)R_5_multi"]
+        segment: overall
+      - sub_title: "기업(전체 및 규모별) 및 공공기관의 AI 교육 실행 목표"
+        q_ref: "V-5) 분석"
+        variables: ["p5)R_5_multi"]
+        segment: size_tier
+  - id: 44
+    chapter: "6장 기타 HR 활동"
+    title: "도표. AI 교육시 우선 실행 프로그램"
+    subcharts:
+      - sub_title: "AI 교육시 우선 실행할 프로그램"
+        q_ref: "V-6) 분석"
+        variables: ["p5)R_6_multi", "p5)R_6_etc"]
+        segment: overall
+      - sub_title: "기업(전체 및 규모별) 및 공공기관의 AI 교육시 우선 실행할 프로그램"
+        q_ref: "V-6) 분석"
+        variables: ["p5)R_6_multi", "p5)R_6_etc"]
+        segment: size_tier
+  - id: 45
+    chapter: "6장 기타 HR 활동"
+    title: "도표. AI 교육 우선 실행 대상"
+    subcharts:
+      - sub_title: "AI 교육이 가장 필요한 대상"
+        q_ref: "V-7) 분석"
+        variables: ["p5)R_7_multi"]
+        segment: overall
+      - sub_title: "기업(전체 및 규모별) 및 공공기관에서 AI 교육이 가장 필요한 대상"
+        q_ref: "V-7) 분석"
+        variables: ["p5)R_7_multi"]
+        segment: size_tier
+  - id: 46
+    chapter: "6장 기타 HR 활동"
+    title: "도표. AI 교육 실행 애로사항"
+    subcharts:
+      - sub_title: "담당자로서 AI 교육 실행시 겪는 어려움"
+        q_ref: "V-8) 분석"
+        variables: ["p5)R_8_1_2", "p5)R_8_2_2"]
+        segment: overall
+      - sub_title: "기업(전체 및 규모별) 및 공공기관의 담당자로서 AI 교육 실행시 겪는 어려움"
+        q_ref: "V-8) 분석"
+        variables: ["p5)R_8_1_2", "p5)R_8_2_2"]
+        segment: size_tier
+  - id: 47
+    chapter: "6장 기타 HR 활동"
+    title: "26년 교육계획시 AI 관련 교육예산"
+    subcharts:
+      - sub_title: "26년 교육계획시, AI 교육예산의 증감 여부"
+        q_ref: "V-9) 분석"
+        variables: ["p5)R_9_multi"]
+        segment: overall
+      - sub_title: "기업(전체 및 규모별) 및 공공기관의 26년 교육계획시, AI 교육예산의 증감 여부"
+        q_ref: "V-9) 분석"
+        variables: ["p5)R_9_multi"]
+        segment: size_tier
+  - id: 48
+    chapter: "6장 기타 HR 활동"
+    title: "AI 교육 전문업체의 지원"
+    subcharts:
+      - sub_title: "AI 교육 전문업체로부터 받고 싶은 지원"
+        q_ref: "V-10) 분석"
+        variables: ["p5)R_10_multi"]
+        segment: overall
+      - sub_title: "기업(전체 및 규모별) 및 공공기관의 AI 교육 전문업체로부터 받고 싶은 지원"
+        q_ref: "V-10) 분석"
+        variables: ["p5)R_10_multi"]
+        segment: size_tier
+
+# ── 22회 신규 도표 후보 (21회 가이드에 없음) ──
+new_charts_22th:
+  - title: "교육비 중 AI 교육 비율"
+    q_ref: "I-5-4)"
+    variables: ["p1)R_9_multi"]
+    segment: size_tier
+  - title: "향후 AI 교육 계획"
+    q_ref: "V-11)"
+    variables: ["p5)R_11_multi", "p5)R_11_etc"]
+    segment: overall

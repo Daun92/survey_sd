@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>HRD 22회 정제·집계 작업대</title>
+  <script src="https://unpkg.com/htmx.org@1.9.12"></script>
+  <style>
+    body { font-family: system-ui, sans-serif; margin: 0; color: #1a1a1a; }
+    header { background: #1f3a5f; color: #fff; padding: 12px 20px; }
+    nav { display: flex; gap: 4px; background: #eef2f7; padding: 6px 20px; flex-wrap: wrap; }
+    nav a { padding: 8px 14px; border-radius: 6px; text-decoration: none; color: #1f3a5f; font-size: 14px; }
+    nav a.active { background: #1f3a5f; color: #fff; }
+    nav a.todo { color: #99a; }
+    main { padding: 20px; max-width: 1000px; }
+    .cards { display: flex; gap: 14px; flex-wrap: wrap; }
+    .card { background: #f7f9fc; border: 1px solid #dde3ec; border-radius: 10px; padding: 16px 20px; min-width: 130px; }
+    .card .v { font-size: 28px; font-weight: 700; color: #1f3a5f; }
+    .card .k { font-size: 13px; color: #667; }
+    .note { color: #889; font-size: 13px; margin-top: 16px; }
+  </style>
+</head>
+<body>
+  <header><strong>제22회 인재개발 실태조사</strong> · 정제·집계 작업대</header>
+  <nav>
+    {% for slug, label, done in tabs %}
+      <a href="/{{ slug }}" class="{{ 'active' if slug == active_slug else '' }} {{ '' if done else 'todo' }}">
+        {{ label }}{{ '' if done else ' ·TODO' }}
+      </a>
+    {% endfor %}
+  </nav>
+  <main>{% block content %}{% endblock %}</main>
+</body>
+</html>

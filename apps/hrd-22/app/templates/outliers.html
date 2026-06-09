@@ -1,0 +1,54 @@
+{% set active_slug = "outliers" %}
+{% extends "base.html" %}
+{% block content %}
+  <h2>이상치 검토</h2>
+  {% include "_outlier_summary.html" %}
+
+  <div class="filters">
+    {% set base = "?pending=1" if pending else "?pending=0" %}
+    <span>severity:</span>
+    {% for s in ["all", "critical", "high", "medium"] %}
+      <a href="/outliers?sev={{ s }}{{ '&pending=1' if pending else '' }}"
+         class="chip {{ 'on' if sev == s else '' }}">{{ s }}</a>
+    {% endfor %}
+    <span class="sep">·</span>
+    <a href="/outliers?sev={{ sev }}{{ '&pending=0' if pending else '&pending=1' }}"
+       class="chip {{ 'on' if pending else '' }}">미결만</a>
+  </div>
+
+  <table class="grid">
+    <thead><tr>
+      <th>등급</th><th>응답자</th><th>지표/규칙</th><th>값</th><th>비고</th><th>처리</th>
+    </tr></thead>
+    <tbody>
+      {% for r in rows %}{% include "_outlier_row.html" %}{% endfor %}
+    </tbody>
+  </table>
+  {% if not rows %}<p class="note">해당 조건의 이상치 후보가 없습니다.</p>{% endif %}
+
+  <p class="note">승인/무시는 데이터를 바꾸지 않고 검수 기록(<code>outlier_review</code>)만 남깁니다.
+     보정은 <code>correction</code> 결정으로 원장에 추가되어 산출 시 반영됩니다.
+     모든 결정은 <code>{{ "config/decisions_21th.yaml" }}</code> 에 append.</p>
+
+  <style>
+    table.grid { border-collapse: collapse; width: 100%; margin-top: 14px; font-size: 13px; }
+    table.grid th, table.grid td { border: 1px solid #dde3ec; padding: 6px 8px; text-align: left; vertical-align: top; }
+    table.grid th { background: #eef2f7; }
+    td.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+    small { color: #778; }
+    .badge { padding: 2px 7px; border-radius: 5px; color: #fff; font-size: 11px; }
+    .sev-critical .badge, .badge.sev-critical { background: #b3261e; }
+    .sev-high .badge, .badge.sev-high { background: #d97706; }
+    .sev-medium .badge, .badge.sev-medium { background: #6b7280; }
+    td.act form { display: flex; gap: 4px; align-items: center; flex-wrap: wrap; }
+    td.act button { cursor: pointer; border: 1px solid #c3ccda; background: #fff; border-radius: 5px; padding: 4px 8px; }
+    td.act button.primary { background: #1f3a5f; color: #fff; border-color: #1f3a5f; }
+    td.act input.after { border: 1px solid #c3ccda; border-radius: 5px; padding: 4px 6px; }
+    .done { color: #1f7a3f; font-weight: 600; }
+    .done.corr { color: #1f3a5f; }
+    .filters { margin-top: 14px; font-size: 13px; }
+    .chip { padding: 3px 9px; border-radius: 12px; border: 1px solid #c3ccda; text-decoration: none; color: #1f3a5f; margin-right: 4px; }
+    .chip.on { background: #1f3a5f; color: #fff; border-color: #1f3a5f; }
+    .filters .sep { color: #aab; margin: 0 6px; }
+  </style>
+{% endblock %}

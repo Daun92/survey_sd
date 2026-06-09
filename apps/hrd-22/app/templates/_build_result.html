@@ -1,0 +1,36 @@
+{% set r = result %}
+<div class="build-result">
+  {% if r.ok %}
+    <p class="ok">✓ 재생성 완료 — 결정 적용 {{ r.n_applied }}행.</p>
+  {% else %}
+    <p class="err">✗ 산출 중 오류. 아래 로그 확인.</p>
+  {% endif %}
+
+  {% if r.chart %}
+  <div class="cards">
+    <div class="card"><div class="v">{{ r.chart.population_N.get("기업", "—") }}</div><div class="k">기업 모집단</div></div>
+    <div class="card"><div class="v">{{ r.chart.population_N.get("공공", "—") }}</div><div class="k">공공 모집단</div></div>
+    <div class="card"><div class="v">{{ r.chart.n_charts }}</div><div class="k">도표 데이터</div></div>
+  </div>
+  <p class="note">집계법: {% for a, n in r.chart.aggs.items() %}{{ a }} {{ n }}{{ ", " if not loop.last }}{% endfor %}</p>
+  {% endif %}
+
+  {% if r.sheets %}
+  <h4>김태웅 시트별 N</h4>
+  <table class="mini"><tr>{% for s in r.sheets %}<th>{{ s.name }}</th>{% endfor %}</tr>
+    <tr>{% for s in r.sheets %}<td>{{ s.N }}</td>{% endfor %}</tr></table>
+  {% endif %}
+
+  <p class="note">산출물: <code>{{ r.kim_out.name }}</code> · <code>{{ r.chart_out.name }}</code>
+     (재생성 가능한 파생물, <code>_app_</code> 접두).</p>
+
+  {% if r.warns %}
+  <details open><summary>적용 경고 {{ r.warns|length }}건</summary>
+    <ul>{% for w in r.warns %}<li>{{ w }}</li>{% endfor %}</ul></details>
+  {% endif %}
+
+  <details><summary>실행 로그</summary>
+    <pre>{{ r.kim_log }}
+
+{{ r.chart_log }}</pre></details>
+</div>

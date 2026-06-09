@@ -1,0 +1,13 @@
+{% set active_slug = "" %}
+{% extends "base.html" %}
+{% block content %}
+  <h2>상태판</h2>
+  <div class="cards">
+    <div class="card"><div class="v">{{ s.corp_N }}</div><div class="k">기업 모집단</div></div>
+    <div class="card"><div class="v">{{ s.pub_N }}</div><div class="k">공공 모집단(별도)</div></div>
+    <div class="card"><div class="v">{{ s.rows }}</div><div class="k">정제 DB 행</div></div>
+    <div class="card"><div class="v">{{ s.dup_groups }}</div><div class="k">중복 조직 그룹</div></div>
+  </div>
+  <p class="note">데이터: {{ s.data_file }} · 모집단 = 기업/공공 분리(POPULATION_FILTER_SPEC_22th).
+     수치는 검증된 엔진(curation_engine · stage4_extract_chart_data)에서 실시간 산출.</p>
+{% endblock %}

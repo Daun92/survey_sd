@@ -1,0 +1,50 @@
+{% set active_slug = "build" %}
+{% extends "base.html" %}
+{% block content %}
+  <h2>산출 / 미리보기</h2>
+
+  <table class="status">
+    <tr><th>결정 원장</th>
+      <td>{{ n_decisions }}건 · 최종 갱신 {{ status.ledger_updated or "—" }}</td></tr>
+    {% for key, label in [("kim", "김태웅 xlsx"), ("chart", "chart_data.json")] %}
+    {% set o = status[key] %}
+    <tr><th>{{ label }}</th><td>
+      {% if not o.exists %}<span class="muted">아직 생성 안 됨</span>
+      {% else %}생성 {{ o.mtime }}
+        {% if o.fresh is none %}<span class="muted">· 신선도 미상</span>
+        {% elif o.fresh %}<span class="fresh">· 최신</span>
+        {% else %}<span class="stale">· 원장보다 오래됨 — 재생성 필요</span>{% endif %}
+      {% endif %}
+    </td></tr>
+    {% endfor %}
+  </table>
+
+  <button hx-post="/build/run" hx-target="#build-result" hx-swap="innerHTML"
+          hx-disabled-elt="this" hx-indicator="#build-spin" class="run">
+    재생성 (결정 적용 → 김태웅 + chart_data)
+  </button>
+  <span id="build-spin" class="htmx-indicator">⏳ 산출 중…</span>
+
+  <div id="build-result"></div>
+
+  <p class="note">결정 원장을 정제 DB에 적용(<code>apply_decisions</code>)한 스냅샷으로 검증된 stage4 스크립트 2종을 그대로 실행합니다.
+     산출물은 <code>4_aggregated/_app_*</code> 에 기록(검증 fixture와 분리).</p>
+
+  <style>
+    table.status { border-collapse: collapse; margin: 8px 0 16px; font-size: 13px; }
+    table.status th, table.status td { border: 1px solid #dde3ec; padding: 6px 12px; text-align: left; }
+    table.status th { background: #eef2f7; white-space: nowrap; }
+    button.run { cursor: pointer; background: #1f3a5f; color: #fff; border: none; border-radius: 7px; padding: 10px 16px; font-size: 14px; }
+    button.run:disabled { opacity: .5; cursor: default; }
+    .htmx-indicator { display: none; margin-left: 10px; color: #667; }
+    .htmx-request #build-spin.htmx-indicator, #build-spin.htmx-request.htmx-indicator { display: inline; }
+    .fresh { color: #1f7a3f; } .stale { color: #b3261e; } .muted { color: #99a; }
+    .build-result { margin-top: 18px; }
+    .build-result .ok { color: #1f7a3f; font-weight: 600; }
+    .build-result .err { color: #b3261e; font-weight: 600; }
+    table.mini { border-collapse: collapse; font-size: 13px; margin: 6px 0; }
+    table.mini th, table.mini td { border: 1px solid #dde3ec; padding: 4px 10px; text-align: center; }
+    .build-result pre { background: #f4f6fa; padding: 10px; border-radius: 6px; overflow-x: auto; font-size: 12px; }
+    .build-result details { margin-top: 10px; }
+  </style>
+{% endblock %}

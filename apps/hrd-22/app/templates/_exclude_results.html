@@ -1,0 +1,7 @@
+<table class="grid">
+  <thead><tr><th>resp_id</th><th>회사명</th><th>R_Div</th><th>상태</th><th>처리</th></tr></thead>
+  <tbody>
+    {% for row in rows %}{% include "_exclude_row.html" %}{% endfor %}
+  </tbody>
+</table>
+{% if q and not rows %}<p class="note">"{{ q }}" 검색 결과 없음.</p>{% endif %}

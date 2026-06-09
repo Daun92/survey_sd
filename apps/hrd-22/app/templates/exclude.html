@@ -1,0 +1,37 @@
+{% set active_slug = "exclude" %}
+{% extends "base.html" %}
+{% block content %}
+  <h2>포함/제외</h2>
+  {% include "_exclude_ncards.html" %}
+
+  <div class="searchbar">
+    <input type="search" name="q" placeholder="회사명 또는 resp_id 검색"
+           hx-get="/exclude/search" hx-target="#ex-results" hx-trigger="input changed delay:300ms, search"
+           autocomplete="off">
+  </div>
+  <div id="ex-results"></div>
+
+  <h3>현재 제외 {{ excluded|length }}건</h3>
+  {% if excluded %}
+    {% set rows = excluded %}{% include "_exclude_results.html" %}
+  {% else %}
+    <p class="note">현재 제외된 응답자가 없습니다. 위에서 검색해 제외할 수 있습니다.</p>
+  {% endif %}
+
+  <p class="note">제외/복원은 <code>exclusion</code> 결정으로 append(같은 응답자는 최신 결정이 유효).
+     모집단 N 은 결정 적용(<code>apply_decisions</code>) + <code>build_population</code> 으로 실시간 산출.</p>
+
+  <style>
+    table.grid { border-collapse: collapse; width: 100%; margin-top: 10px; font-size: 13px; }
+    table.grid th, table.grid td { border: 1px solid #dde3ec; padding: 6px 8px; text-align: left; }
+    table.grid th { background: #eef2f7; }
+    small { color: #778; }
+    .searchbar { margin-top: 16px; }
+    .searchbar input { width: 320px; max-width: 100%; padding: 7px 10px; border: 1px solid #c3ccda; border-radius: 6px; font-size: 14px; }
+    .badge { padding: 2px 7px; border-radius: 5px; color: #fff; font-size: 11px; }
+    .badge.excl { background: #b3261e; }
+    .badge.incl { background: #1f7a3f; }
+    td.act button { cursor: pointer; border: 1px solid #c3ccda; background: #fff; border-radius: 5px; padding: 4px 10px; }
+    td.act button.warn { border-color: #b3261e; color: #b3261e; }
+  </style>
+{% endblock %}

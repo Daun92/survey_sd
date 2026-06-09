@@ -1,0 +1,184 @@
+# 21회 → 22회 codebook patch 사양
+#
+# 사용: scripts/stage0_patch_codebook.py 가 이 yaml 을 읽고
+#       reference/21th_cleaned.xlsx 의 '코드표' 시트를 변환 →
+#       0_survey/codebook_22th.xlsx 출력.
+#
+# ⚠️ 한계 (2026-05-20 확인): 이 패치는 21회 변수명을 '상속'한다. 22회 webapp 은
+#    Page 1 + p5)R_8 변수명 슬롯을 21회와 다르게 재배정하므로, 이 패치만 재실행하면
+#    Page 1 변수명이 22회 raw export(제 22회…_All.xlsx) 와 불일치한다.
+#
+# 후처리 도구 변경 이력:
+#   - 5/20 시점 (구): workspace/regen_codebook_export_order.py + 0_survey/export_alignment_22th.md
+#     → canonical 정의를 "PPTX v0.2 = 21회 이름" 으로 잡았음. 5/27 webapp 운영본 및
+#       실응답 raw 가 22회 webapp 이름을 사용함을 확인하면서 방향 reverse 로 폐기.
+#   - 5/28 시점 (현): scripts/stage0_rename_part1.py + workspace/part1_rename_map.yaml
+#     → canonical = webapp form(=실응답 raw _All.xlsx). 이 패치 재실행 후 stage0_rename_part1 를
+#       돌리면 codebook 이 webapp 이름과 정렬된다. 21회_매핑 열로 21회 코드도 보존.
+#     상세: workspace/codebook_correction_plan.md
+#
+# 주의: drop / update_response_format / rename_sub_item 는 21회 이름공간에서
+#       동작하므로 22회 export 이름으로 바꾸면 안 된다(아래 값 유지).
+#       replace_block(신규 정의)만 22회 export 이름을 직접 사용.
+#
+# 변경 분류:
+#   - drop: 삭제할 컬럼코드 목록
+#   - rename_sub_item: 같은 컬럼코드의 하위항목(sub_item) 라벨만 교체
+#   - update_response_format: 응답형식(옵션 텍스트) 갱신
+#   - add: 신규 컬럼 정의 (append)
+#   - replace_block: 특정 prefix 의 컬럼 블록 전체 교체 (Part V 같은 대규모 개편용)
+
+# ─────────────────────────────────────────────────────────────
+# 단순 변경
+# ─────────────────────────────────────────────────────────────
+
+drop:
+  # Part I 5-3) 공공 직급별 교육비 지출 비율 (slide 3, 전체 삭제)
+  - "p1)R_9_1_2"
+  - "p1)R_9_1_3"
+  - "p1)R_9_1_4"
+  - "p1)R_9_1_5"
+  - "p1)R_9_1_6"
+  - "p1)R_9_1_7"
+
+rename_sub_item:
+  # Part III 1. 교육내용 16항목 중 9번 라벨 변경 (slide 10)
+  - col: "p3)R_1_9_3"
+    new_sub_item: "저성과자 교육 - 현재 비율"
+  - col: "p3)R_1_9_4"
+    new_sub_item: "저성과자 교육 - 향후 비율"
+
+  # Part IV 1-1) 주요 이슈 30항목 중 2건 (slide 15·16)
+  # NOTE: HRD이슈_항목코드 시트의 항목 매핑 갱신 필요 — 아래 hrd_issue_mapping 참조
+
+update_response_format:
+  # Part I 2-2) 교육비 증가 이유 옵션 1개 추가 (AI(DT) 등 교육 비용 증가)
+  - col: "p1)R_3_multi"
+    new_response_format: "1=교육인원증가, 2=개인교육비지원증가, 3=컨설팅/개발비용증가, 4=AI/DT교육비용증가, 5=시스템도입비용증가, 6=기타"
+
+# Part IV HRD 이슈 30항목 항목코드 매핑 (별도 시트 patch)
+hrd_issue_mapping:
+  # "DEI(Diversity&Equity&Inclusion) 강화 교육" → "팀 단위 교육(팀내 소통, 협업, 일하는 방식 등)"
+  # "잡크래프팅" → "CDP(경력개발 프로그램)"
+  # NOTE: 21회 HRD이슈_항목코드 시트의 항목명 직접 교체
+  - old: "DEI(Diversity&Equity&Inclusion) 강화 교육"
+    new: "팀 단위 교육(팀내 소통, 협업, 일하는 방식 등)"
+  - old: "잡크래프팅"
+    new: "CDP(경력개발 프로그램)"
+
+# ─────────────────────────────────────────────────────────────
+# 신규 컬럼 (Part I)
+# ─────────────────────────────────────────────────────────────
+
+add:
+  - col: "p1)R_11_multi"
+    part: "I. 교육관련 지표"
+    question: "5-4) 교육비 중 AI 교육 비율"
+    sub_item: "비율 구간"
+    response_format: "1=AI교육실행안함, 2=10%미만, 3=10-20%미만, 4=20-30%미만, 5=30-50%미만, 6=50%이상"
+
+# ─────────────────────────────────────────────────────────────
+# Part V (AI 도입과 활용) 전체 블록 교체
+# 21회 p5)R_1 ~ p5)R_10 (15컬럼) → 22회 p5)R_1 ~ p5)R_11 (20컬럼 추정)
+# ─────────────────────────────────────────────────────────────
+
+replace_block:
+  - prefix: "p5)"
+    new_columns:
+      # 1) AI 전사 전략 — 21회 동일
+      - col: "p5)R_1_multi"
+        part: "V. AI 도입과 활용"
+        question: "1) AI 전사 전략 실행 여부"
+        sub_item: "실행상태"
+        response_format: "1=실행중, 2=수립중, 3=고려중, 4=미고려"
+
+      # 2) CEO 관심 — 21회 동일
+      - col: "p5)R_2_multi"
+        part: "V. AI 도입과 활용"
+        question: "2) CEO 경영진 AI 관심/지원"
+        sub_item: "관심수준"
+        response_format: "1=매우적극적, 2=적극적, 3=보통, 4=관심없음, 5=전혀관심없음"
+
+      # 3) 임직원 AI 활용 인식 — 21회 동일 (중요성 + 활용 정도)
+      - col: "p5)R_3_1_3"
+        part: "V. AI 도입과 활용"
+        question: "3) 임직원 AI 활용 인식"
+        sub_item: "중요성 인식"
+        response_format: "1~5점 척도"
+      - col: "p5)R_3_2_3"
+        part: "V. AI 도입과 활용"
+        question: "3) 임직원 AI 활용 인식"
+        sub_item: "활용 정도"
+        response_format: "1~5점 척도"
+
+      # 4) AI 교육 도입 단계 — 신규
+      - col: "p5)R_4_multi"
+        part: "V. AI 도입과 활용"
+        question: "4) AI 교육 도입 단계"
+        sub_item: "도입단계"
+        response_format: "1=미도입, 2=검토중, 3=초기도입, 4=확산단계, 5=고도화단계"
+
+      # 5) AI 교육 주요 대상 (복수) — 옵션 개편
+      - col: "p5)R_5_multi"
+        part: "V. AI 도입과 활용"
+        question: "5) AI 교육 주요 대상"
+        sub_item: "대상선택"
+        response_format: "1=경영진/임원, 2=직책자, 3=실무자, 4=신입사원, 5=IT/데이터전문, 6=AI퍼실리테이터, 7=전직원"
+
+      # 6) AI 교육 분야 (복수) — 신규/개편
+      - col: "p5)R_6_multi"
+        part: "V. AI 도입과 활용"
+        question: "6) AI 교육 분야"
+        sub_item: "분야선택"
+        response_format: "1=AI리터러시, 2=프롬프트엔지니어링, 3=업무자동화/에이전트, 4=부서특화, 5=데이터보안/거버넌스, 6=기타"
+      - col: "p5)R_6_etc"
+        part: "V. AI 도입과 활용"
+        question: "6) AI 교육 분야"
+        sub_item: "기타 입력"
+        response_format: "텍스트"
+
+      # 7) 기대 성과 — 신규 (21회 R_5 일부 유사)
+      - col: "p5)R_7_multi"
+        part: "V. AI 도입과 활용"
+        question: "7) AI 교육 기대 성과"
+        sub_item: "성과선택"
+        response_format: "1=중요성인식, 2=AItool체험, 3=생산성향상, 4=업무품질향상, 5=일하는방법개선, 6=비즈니스모델발굴"
+
+      # 8) AI 교육 후 만족도/현업활용도 — 신규 (5점 척도 × 2)
+      #    export 접미사는 _2 (만족도 R_8_1_2 / 활용도 R_8_2_2)
+      - col: "p5)R_8_1_2"
+        part: "V. AI 도입과 활용"
+        question: "8) AI 교육 만족도/활용도"
+        sub_item: "만족도"
+        response_format: "1~5점 척도"
+      - col: "p5)R_8_2_2"
+        part: "V. AI 도입과 활용"
+        question: "8) AI 교육 만족도/활용도"
+        sub_item: "현업활용도"
+        response_format: "1~5점 척도"
+
+      # 9) AI 교육 어려움 — 번호 + 옵션 변경
+      - col: "p5)R_9_multi"
+        part: "V. AI 도입과 활용"
+        question: "9) AI 교육 실행 어려움"
+        sub_item: "어려움선택"
+        response_format: "1=강사확보, 2=교육방향성모호, 3=과정탐색, 4=대상별세분화, 5=성과검증, 6=거부감/동기부여, 7=예산부족"
+
+      # 10) 27년 AI 예산 — 옵션 4구간으로 확대 (21회는 3구간)
+      - col: "p5)R_10_multi"
+        part: "V. AI 도입과 활용"
+        question: "10) 27년 AI 교육예산 전망"
+        sub_item: "예산전망"
+        response_format: "1=대폭확대(20%이상), 2=일부확대(10%내외), 3=유지, 4=축소"
+
+      # 11) 향후 AI 교육 계획 (복수) — 신규
+      - col: "p5)R_11_multi"
+        part: "V. AI 도입과 활용"
+        question: "11) 향후 AI 교육 계획"
+        sub_item: "내용선택"
+        response_format: "1=실제업무적용, 2=업무효율화워크숍, 3=AI에이전트구축, 4=노코드앱개발, 5=AI리더십, 6=잘모르겠다, 7=기타"
+      - col: "p5)R_11_etc"
+        part: "V. AI 도입과 활용"
+        question: "11) 향후 AI 교육 계획"
+        sub_item: "기타 입력"
+        response_format: "텍스트"

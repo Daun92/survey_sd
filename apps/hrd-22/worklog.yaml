@@ -1,0 +1,416 @@
+entries:
+- id: 1
+  timestamp: 2026-05-15T09:30
+  stage: setup
+  type: setup
+  title: 22회 프로젝트 디렉토리 골격 세팅
+  description: 'hrd_report_template 와 분리된 22회 전용 워크스페이스 생성.
+
+    단계 = 폴더 = 산출물 구조. config·docs·scripts·reference·workspace 분리.
+
+    '
+  artifacts:
+  - README.md
+  - pyproject.toml
+  - .gitignore
+  - 0_survey/ ~ 5_report/ (6 단계 폴더)
+- id: 2
+  timestamp: 2026-05-15T09:35
+  stage: setup
+  type: deliverable
+  title: 워크플로우·READINESS 문서 작성
+  description: '6단계 (0~5) 명세서 작성. 각 단계의 입력·처리·출력·검증·자동도 정의.
+
+    raw 도착 전·후 도구 준비 우선순위 표.
+
+    '
+  artifacts:
+  - docs/WORKFLOW.md
+  - docs/READINESS.md
+- id: 3
+  timestamp: 2026-05-15T09:38
+  stage: setup
+  type: setup
+  title: reference 21회 4개 자료 복사
+  description: '21회 raw / cleaned / kim / guide 를 reference/ 에 사본 보관. 단계 4 검증의 정답지
+    역할.
+
+    '
+  artifacts:
+  - reference/21th_raw.xlsx
+  - reference/21th_cleaned.xlsx
+  - reference/21th_kim.xlsx
+  - reference/21th_guide.xlsx
+  - reference/21th_survey_extracted.txt
+- id: 4
+  timestamp: 2026-05-15T09:42
+  stage: setup
+  type: deliverable
+  title: 진척 관리 시스템 v1 (progress.yaml + 대시보드)
+  description: '단일 데이터 소스 progress.yaml → 자동 생성 MD + HTML 대시보드.
+
+    산출물 단위 진척률 자동 계산, 단계별 카드/마일스톤 타임라인 포함.
+
+    '
+  artifacts:
+  - progress.yaml
+  - scripts/update_dashboard.py
+  - dashboard/index.html
+  - docs/PROGRESS.md
+- id: 5
+  timestamp: 2026-05-15T10:42
+  stage: 0
+  type: deliverable
+  title: 단계 0 — 22회 설문 v0.2 → 변경분 자동 식별
+  description: '22회 PPTX 텍스트 추출 + 21회 baseline 과 slide 단위 diff.
+
+    11개 slide 변경 식별, 자동 분류 (TRIVIAL/A/B/C/D/E).
+
+    '
+  artifacts:
+  - scripts/stage0_diff_survey.py
+  - 0_survey/survey_22th_extracted.txt
+  - 0_survey/change_log_21_22.md
+- id: 6
+  timestamp: 2026-05-15T10:45
+  stage: 0
+  type: finding
+  title: 발견 — Part V (AI) 대대적 개편
+  description: '22회 변경의 핵심:
+
+    • Part V slide 20·21: 추가 43개 옵션 / 삭제 37개 (AI 도입 단계·교육 분야·기대 성과·만족도·향후 계획 등)
+
+    • Part I slide 2 (옵션 +1), slide 3 (공공 직급별 표 삭제), slide 4 (AI 교육 비율 신규)
+
+    • Part III/IV: sub_item 라벨 3건 교체 (DEI→팀단위, 잡크래프팅→CDP, 디지털역량→저성과자)
+
+    '
+  artifacts:
+  - 0_survey/change_log_21_22.md
+- id: 7
+  timestamp: 2026-05-15T10:53
+  stage: 0
+  type: deliverable
+  title: 단계 0 — 22회 codebook patch (243컬럼)
+  description: 'YAML 사양 + 자동 patch 스크립트로 21회 248컬럼 → 22회 243컬럼.
+
+    Part V 15→16, Part I R_11 신규, 공공직급 6 삭제, sub_item·response_format·HRD이슈 항목 갱신.
+
+    '
+  artifacts:
+  - config/codebook_patch_22th.yaml
+  - scripts/stage0_patch_codebook.py
+  - 0_survey/codebook_22th.xlsx
+  - 0_survey/codebook_patch_report.md
+- id: 8
+  timestamp: 2026-05-15T10:56
+  stage: 0
+  type: decision
+  title: 결정 — 가이드는 자동 patch 대신 분석가 수기 편집
+  description: '가이드 xlsx 는 결합셀·서식 많아 자동 patch 깨질 위험.
+
+    대신 21회 사본 + 변경 사항 체크리스트(8개 항목)를 분석가에게 인계.
+
+    매년 도구 재사용성 vs 정확성 트레이드오프 — 정확성 우선.
+
+    '
+  artifacts:
+  - 0_survey/analysis_guide_22th.xlsx
+  - 0_survey/guide_change_notes.md
+- id: 9
+  timestamp: 2026-05-15T11:00
+  stage: 4
+  type: analysis
+  title: 단계 4 — 김태웅 16시트 reverse-engineer
+  description: '21회 정제 DB(305) → 김태웅(N=206) 매핑 시도.
+
+    • 인력규모/매출/예산/예산변동 구간: 100% 자동화 가능 (단순 cut)
+
+    • 산업 분류 R_Cate: 자동 불가 — etc 38명을 R_Cate_Name 기반으로 분석가 수기 재분류
+
+    • R_Div=4(공공 60) + R_Div=5(학교 5) = 65 → 김태웅 공공/공공기타 56 (-9 추가 제외)
+
+    '
+  artifacts:
+  - workspace/reverse_kim_mapping.py
+- id: 10
+  timestamp: 2026-05-15T11:05
+  stage: 4
+  type: decision
+  title: 결정 — 집계기 v1 = 자동 영역만, 산업 분류는 v2/수기
+  description: 'v1 범위: 전체 시트 + 인력규모 5시트 + 컬럼 그룹 1)업종(raw)/2)인력규모/3)매출/4)예산/5)예산변동.
+
+    v2 (후속): 산업 10시트 — 분석가 수기 재분류 보조 도구.
+
+    KPI: 인력규모 시트의 김태웅 정답 일치율 (산업 시트는 raw 기준 인정).
+
+    '
+- id: 11
+  timestamp: 2026-05-15T11:27
+  stage: 4
+  type: deliverable
+  title: 단계 4 v1 — 김태웅 형식 집계기 작성 + 21회 검증
+  description: 'config/segments.yaml 정의 (7시트 + 4컬럼 그룹) + 자동 생성기 + 검증 스크립트.
+
+
+    검증 결과 (workspace/test_kim_21th_v1.xlsx vs reference/21th_kim.xlsx):
+
+    - v1 모집단 N=237 vs 김태웅 N=206 — 차이 +31 = 김태웅 산업 수기 분류 단계 제외분
+
+    - 인력규모 5시트 자체 일치율: 4/5 (각 80%)
+
+    - 1000이상 시트에서 v1=59 vs 김태웅=60 (-1) 미세 차이 추적 필요
+
+    - 매출/예산 그룹은 모집단 +15% 영향으로 빈도 모두 v1 큼
+
+    → 자동화는 정상, 차이는 김태웅 산업 분류 31명에서 기인'
+  artifacts:
+  - config/segments.yaml
+  - scripts/stage4_build_kim_xlsx.py
+  - workspace/test_kim_21th_v1.xlsx
+  - tests/test_stage4_with_21th.py
+  - tests/test_stage4_report.md
+- id: 12
+  timestamp: 2026-05-15T11:39
+  stage: 4
+  type: finding
+  title: v1 검증 결과 — 비율 기반 94% 일치 (±5pp)
+  description: '비율 기반 검증 추가로 자동화 정확도 명확.
+
+
+    전체 시트 17 라벨 종합:
+
+    - ±2pp 일치: 11/17 (65%)
+
+    - ±5pp 일치: 16/17 (94%)
+
+    - 인력규모/매출/예산 자동 구간 매핑 검증 통과
+
+
+    남은 차이 1pp 는 김태웅 산업 수기 분류 31명 영향 (자동화 영역 밖).
+
+    segments.yaml 에 optional_exclusion_column 옵션 추가 — 분석가가 정제 DB 에 ''excluded_from_kim=true''
+    표시 시 정확히 일치 가능.'
+  artifacts:
+  - tests/test_stage4_report.md
+  - config/segments.yaml
+  - scripts/stage4_build_kim_xlsx.py
+- id: 13
+  timestamp: 2026-05-15T11:55
+  stage: 2
+  type: deliverable
+  title: 단계 2 v1 — 검증·이상치 플래그 도구 + 21회 recall 90%
+  description: 'stage2_validate_raw.py + stage2_flag_outliers.py 작성.
+
+
+    outlier_rules.yaml = 9 single_column + 3 cross_column + 1 respondent 규칙.
+
+    correction_patterns.yaml = 21회 정정 21건 학습 (분석가 참고용).
+
+
+    21회 raw reverse-run:
+
+    - 자동 이상치 후보 216건 (medium 113 / high 52 / critical 51)
+
+    - 정정 21건 중 19건 자동 플래그 (Recall 90%)
+
+    - 미감지 2건 = budget/revenue 비율 1% 미만이지만 단위 오류 케이스 (분석가 수기 검수 영역)'
+  artifacts:
+  - scripts/stage2_validate_raw.py
+  - scripts/stage2_flag_outliers.py
+  - config/outlier_rules.yaml
+  - config/correction_patterns.yaml
+  - tests/test_stage2_recall.py
+  - tests/test_stage2_report.md
+- id: 14
+  timestamp: 2026-05-15T12:34
+  stage: 3
+  type: deliverable
+  title: 단계 3 분석가 검수 매뉴얼 작성
+  description: '단계 2 산출물(outlier_report)을 받아 정제 DB를 만드는 5단계 절차서.
+
+    - 21회 정정 사례 21건을 의사결정 가이드로 정리
+
+    - 단위 보정 패턴 (×1억, ×0.1, ×0.01) 사례 표
+
+    - 김태웅 모집단 일치를 위한 excluded_from_kim 표시 절차
+
+    - 검증 체크리스트 + 다음 단계 트리거
+
+    - FAQ 5항목 (false positive, 무응답, 신규 패턴 등)'
+  artifacts:
+  - docs/CLEANING_MANUAL.md
+- id: 15
+  timestamp: 2026-05-20T11:05
+  stage: 0
+  type: deliverable
+  title: raw export 양식 ↔ 설문지 v0.2 정렬 + codebook_22th.xlsx export 기준 재생성
+  description: 제 22회…_All.xlsx(웹앱 raw export 243컬럼)을 설문지 v0.2 PPTX 기준으로 검증. export=설문지=canonical
+    확정. 05-15 codebook_22th.xlsx가 Page1(변수명 14건 + AI/투자효과 순서) · p5)R_8(접미사) 어긋남 발견.
+    R_7_1_2 이름충돌(교육시간 vs 지출집합)도 식별. codebook_22th.xlsx를 export 순서로 재생성(불일치 0 검증).
+    segments.yaml 예산변동 R_2_n_2→R_3_n_2 파이프라인 버그 수정. patch yaml 한계 경고+후처리 명시.
+  artifacts:
+  - 0_survey/export_alignment_22th.md
+  - 0_survey/codebook_22th.xlsx
+  - config/segments.yaml
+  - config/codebook_patch_22th.yaml
+  - workspace/regen_codebook_export_order.py
+- id: 16
+  timestamp: 2026-05-20T11:20
+  stage: 3
+  type: analysis
+  title: 21회 N=206 모집단 축소 추론 + 가이드 도표→export 변수 매핑 초안
+  description: '참고_2025/analyis 4파일 분석: raw620(완료303)→확인완료305→김태웅206. 305→206(-99)=민간236→150(-86)+공공65→56(-9)+무효4.
+    결정론적 규칙(완료/5필수237/완성도/전파트299) 모두 206 불일치, 1000이상 구간 237기준59<김태웅60(+1)→부분집합아님→분석가
+    수기 curation(업종 재분류+개별제외) 확정. 22회는 역산 대신 사전 명시적 필터 5계층(완료/중복/핵심지표/모집단/업종재분류) 정의
+    권장. 별건: 가이드 도표 112행/질문지ref 56종 → codebook_22th(export교정본) 설문항목 매칭, 55/56 자동매칭(미매칭
+    I-5-3=22회삭제). 신규도표후보 2건(I-5-4 AI비율, V-11 AI계획).'
+  artifacts:
+  - docs/POPULATION_FILTER_ANALYSIS_21th.md
+  - 0_survey/chart_var_mapping_22th.md
+  - workspace/reverse_206.py
+  - workspace/map_charts_to_vars.py
+- id: 17
+  timestamp: 2026-05-20T11:40
+  stage: 4
+  type: deliverable
+  title: chart_specs.yaml v1 생성 + 가이드 세그먼트 규칙 반영 검증
+  description: '가이드 도표 인벤토리(112) + codebook(export교정본) 변수매핑 결합 → config/chart_specs.yaml
+    v1 자동생성: 도표47/세부112/변수매칭108. segment_defs(size_tier 5구간→3단계 roll-up, major_industry
+    선정규칙, public) 명시. 신규도표 후보 2건 포함. 별건 검증: 규모구간=가이드 3단계는 김태웅 5구간의 roll-up(층위차, 정합).
+    주요업종 ''10이상 개별분석''은 재분류 후 최종카운트 기준 적용(금융raw9→11포함/건설raw10→0제외), 6~7개 아닌 8개. segments.yaml은
+    roll-up·선정규칙 미인코딩이라 chart_specs에 보강.'
+  artifacts:
+  - config/chart_specs.yaml
+  - docs/SEGMENT_RULE_VERIFICATION_21th.md
+  - workspace/gen_chart_specs.py
+  - workspace/verify_guide_rules.py
+- id: 18
+  timestamp: 2026-05-20T13:04
+  stage: 3
+  type: decision
+  title: 김태웅 정제·집계 프로세스 + 관리 GUI 설계 (구현 보류)
+  description: '결정: 독립 경량 로컬앱(1인) / 작업대+상태판 동등 / 프레임워크 미확정. 핵심 설계: decisions_22th.yaml(분석가
+    결정 원장)을 단일 진실원으로, 정제 DB는 raw+decisions 멱등 파생 → 21회 black box 추적가능화. resp_id(사업자번호>+regdate>행순서),
+    결정 3유형(correction/exclusion/reclassification) 스키마, corrections_log 포맷, 모집단 확정
+    공식, 화면6탭, 빌드 7단계 정의. 구현 전 확정 5건(프레임워크/resp_id폴백/중복규칙/업종재분류 시점/chart_data 산출기).'
+  artifacts:
+  - docs/CURATION_APP_DESIGN.md
+- id: 19
+  timestamp: 2026-05-20T13:25
+  stage: 3
+  type: decision
+  title: 정제·집계 GUI 구현 전 확정 5건 결정
+  description: '1)프레임워크=FastAPI+HTMX/Jinja. 2)식별자=resp_id(행,R%04d+해시고정)/org_key(조직,사업자번호>회사명정규화)
+    분리. 3)중복제거=조직1건 자동추천(완성도최대→최신regdate)+수기override, 분류불일치그룹 검토플래그, 비선택은 dedup_dropped
+    추적. 4)순서=재분류확정→모집단확정→주요업종선정, 선정=재분류후 카운트≥10 추천+수기확정. 5)집계=코드북 응답방식+접미사 자동추론(mean/mean_pct/dist/multi_rate/likert/rank)+chart_specs
+    override. 21회 중복 실측: 8개 사업자번호 그룹 모두 동일조직 담당자2명, 사업자번호 99% 충실.'
+  artifacts:
+  - docs/CURATION_APP_DESIGN.md
+  - workspace/dedup_study.py
+- id: 20
+  timestamp: 2026-05-20T15:38
+  stage: 4
+  type: deliverable
+  title: 정제·집계 CLI 엔진 21회 시험 — 라운드어댑터+결정엔진+집계기 (25테스트 통과)
+  description: 'raw 없이 21회 cleaned(305)로 김태웅 핵심 엔진 선제작·검증. round_adapter(21→22 이름변환,
+    native R_9_1_* drop·충돌안전), curation_engine(ingest/dedup/apply, 멱등성·검토플래그3), stage4_extract_chart_data(응답방식
+    자동추론 mean/dist/mean_pct/likert/multi_rate, size_tier roll-up). chart_specs 거시지표
+    primary_var/formula 보강(매출대비교육비 1.42%, 1인당 89.7만원). 김태웅 인력규모 분포 ±5pp 이내. pytest
+    25건 통과. 한계: mean_pct 합>100·공공 모집단 정의 통일 필요.'
+  artifacts:
+  - scripts/round_adapter.py
+  - scripts/curation_engine.py
+  - scripts/stage4_extract_chart_data.py
+  - config/round_var_map_21_22.yaml
+  - config/chart_specs.yaml
+  - tests/test_curation_21th.py
+  - tests/test_chart_data_21th.py
+  - tests/ENGINE_TEST_21th_report.md
+- id: 21
+  timestamp: 2026-05-20T16:58
+  stage: 3
+  type: decision
+  title: 정제 필터 5계층 합의 확정 (POPULATION_FILTER_SPEC_22th)
+  description: 'L1 완료(tesmi_status). L2 중복(org_key 1건,완성도→최신,충돌검토). L3 핵심지표 기업=직원수+교육예산/공공=직원수,
+    매출 비필수. L4-a 공공 별도집계(21회 혼합과 의도적 차이). L4-b 임의제외=분석가 재량 허용+로그 필수(21회 ~80명 무사유 일괄제외
+    금지). L5 소수업종 N<10→기업기타. 한계2(공공 모집단) 해소=기업+공공 분리. 구현영향: segments.yaml required_columns에서
+    R_Cate·매출 제거+교육예산 추가, 기업/공공 분기.'
+  artifacts:
+  - docs/POPULATION_FILTER_SPEC_22th.md
+- id: 22
+  timestamp: 2026-05-20T17:15
+  stage: 4
+  type: deliverable
+  title: 정제 필터 합의 config 반영 + 21회 재검증 (기업/공공 분리)
+  description: 'POPULATION_FILTER_SPEC_22th 구현: segments.yaml population_filter를 corporate(R_Div1-3,직원수+예산/집행)/public(R_Div4-5,직원수)로
+    분리, 매출·R_Cate 필수 제거. stage4_build_kim main() build_pop+시트별 population. stage4_extract_chart_data
+    build_population(기업∪공공)+segment_masks R_Div분기(전체=기업,size_tier 공공컬럼 별도). 21회 재검증:
+    기업235/공공65, 공공조직시트 N=65(이전0→한계2해소), 규모별 45/49/37/45/59=235. pytest 26건 통과(test_corporate_public_split
+    추가). 김태웅 차이=문서화된 black box(L4 임의제외).'
+  artifacts:
+  - config/segments.yaml
+  - scripts/stage4_build_kim_xlsx.py
+  - scripts/stage4_extract_chart_data.py
+  - tests/test_chart_data_21th.py
+  - docs/POPULATION_FILTER_SPEC_22th.md
+- id: 23
+  timestamp: 2026-05-20T17:27
+  stage: 5
+  type: deliverable
+  title: (b) mean_pct 정규화 + (a) 작업대 UI 골격 세팅 (다음 세션 진입 준비)
+  description: '(b) 집계기 mean_pct를 그룹 일관 분모로 정규화(빈칸=0% 배분, 현재/향후 _3/_4 분리, _etc 제외):
+    교육형태 인원비율 121→100. (a) FastAPI+HTMX 골격 app/main.py+templates: 상태판은 엔진 실연결(기업235/공공65/중복9),
+    5탭 스텁. assign_ids 멱등화. 기존 test 2개 stdout 가드(pytest 캡처 충돌 수정). pyproject app/dev
+    deps. 진입문서 docs/SESSION_STARTER_app.md. pytest 30건 통과(앱 스모크 포함).'
+  artifacts:
+  - scripts/stage4_extract_chart_data.py
+  - scripts/curation_engine.py
+  - app/main.py
+  - app/templates/base.html
+  - app/templates/status.html
+  - app/templates/stub.html
+  - tests/test_app_smoke.py
+  - docs/SESSION_STARTER_app.md
+  - pyproject.toml
+- id: 24
+  timestamp: 2026-05-28T10:27
+  stage: 0
+  type: decision
+  title: Part I 컬럼명 webapp 정렬 (raw=truth)
+  description: 5/27 raw 조기 도착(40건, 완료 10건)으로 codebook ↔ raw 사이 Part I 23쌍 드리프트 발견.
+    5/20 export_alignment 의 canonical 가정(PPTX=21회 이름)이 5/27 webapp 운영본·실응답과 reverse
+    임을 확인. webapp form (research.exc.co.kr/RAC/survey/view/hrd_2026/{1..5}) = raw
+    _All.xlsx = canonical 로 재정의. scripts/stage0_rename_part1.py 작성·실행하여 codebook Part
+    I 26 컬럼명을 22회 신코드로 일괄 rename, 21회_매핑 신규 열로 21회 코드 보존, R_2_n_2 하위항목 연도 25년 갱신.
+    config/chart_specs.yaml 33건·0_survey/guide_change_notes.md 1건 후속 치환. 5/20 도구 (workspace/regen_codebook_export_order.py·verify_after_regen.py)
+    와 export_alignment_22th.md 는 OBSOLETE 처리. drift 0 확인.
+  artifacts:
+  - 0_survey/codebook_22th.xlsx
+  - scripts/stage0_rename_part1.py
+  - workspace/part1_rename_map.yaml
+  - workspace/codebook_correction_plan.md
+  - workspace/mapping_webapp_vs_codebook.md
+  - config/chart_specs.yaml
+  - 0_survey/guide_change_notes.md
+  - 0_survey/export_alignment_22th.md
+  - config/codebook_patch_22th.yaml
+- id: 25
+  timestamp: 2026-05-29T11:00
+  stage: 5
+  type: deliverable
+  title: 단계 5 — 발표용 deck 비주얼 정비 (14장 대외 완성본, 3라운드)
+  description: '루트 정리(임시 PNG 46개→_archive). 발표 deck 3라운드 정비. A(구조·공간): placeholder
+    5장(p7·8·13·14·17) 빌드 제외→13장+페이지번호/TOTAL 동적화, raw·시각화 meta-line→SUBTITLES 청중부제,
+    내부 outlier caveat→대외 톤, 7개 차트 세로 채움(heatstrip space-evenly·stack 220px·likert
+    히어로+score grid stretch·likert-mini .plot 중앙·도넛 하향), p9 슬로프 리워크(헤더 SVG 내장 정렬·라벨
+    클램프). B(레이아웃·표기·흐름): 커버 display:grid 특이도 버그(.slide.active가 .cover 이김) 수정→section.slide.cover+중앙정렬,
+    Letter ''이번 호에서 보는 것'' 미니목차, Likert 바 세그먼트 % 직접표기(light 플래그 대비), AI 전환 챕터 디바이더
+    추가 + 만족도(p12)↔AI비율(p11) 재배치(_arrange_deck)→14장. C(차트 형태): p6 우측 중앙 발산형(감소값|감소바|구간|증가바|증가값,+부호),
+    p9 슬로프→Sankey 알루비얼 교차형(좌 참가순·우 지출순 독립정렬, 한줄 라벨 밴드중앙, 값별 폰트·색 차등, MINH=16). 슬로프는
+    initP9Slope로 보존. 데이터 prelim(완료42/전체100). 베이스라인·before/after 캡처=5_report/preview/_audit_20260529/.'
+  artifacts:
+  - scripts/stage5_render_deck.py
+  - scripts/stage5_render_html.py
+  - 5_report/preview/deck_22th_20260528.html
+  - 5_report/preview/_audit_20260529/

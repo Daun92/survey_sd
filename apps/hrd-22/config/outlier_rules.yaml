@@ -1,0 +1,104 @@
+# 22회 raw 응답 이상치 자동 플래그 규칙
+#
+# scripts/stage2_flag_outliers.py 가 적용.
+# 21회 정정 사례 21건 (12 매출 + 9 교육예산) 학습 결과 기반.
+# 자동 정정은 하지 않음 — 분석가 검수 대상으로 플래그만 표시.
+
+# ─────────────────────────────────────────────
+# 거시지표 단일 컬럼 이상 (값 자체의 비합리성)
+# ─────────────────────────────────────────────
+
+single_column_rules:
+  # 1. 매출 — 너무 작거나 너무 크면 단위 오류 의심
+  - col: "p1)R_1_1_2"
+    label: 매출액
+    flag: 매출_단위의심_과소
+    condition: "value > 0 and value < 100_000_000"
+    severity: high
+    note: "1억 미만 = 입력 단위 의심 (예: 8549 → 8549억원 의도)"
+
+  - col: "p1)R_1_1_2"
+    flag: 매출_단위의심_과대
+    condition: "value > 1_000_000_000_000_000"
+    severity: high
+    note: "1000조 초과 비현실"
+
+  - col: "p1)R_1_1_2"
+    flag: 매출_무응답
+    condition: "value == 0"
+    severity: medium
+    note: "0 입력 = 응답 안 함. 후속 확인 필요."
+
+  # 2. 교육예산
+  - col: "p1)R_1_5_2"
+    flag: 교육예산_단위의심_과소
+    condition: "value > 0 and value < 1_000_000"
+    severity: high
+    note: "100만원 미만 = 단위 의심 (예: 7 → 7억원 의도)"
+
+  - col: "p1)R_1_5_2"
+    flag: 교육예산_단위의심_과대
+    condition: "value > 100_000_000_000"
+    severity: high
+    note: "1000억 초과 비현실 — 단위 오류 가능"
+
+  - col: "p1)R_1_5_2"
+    flag: 교육예산_무응답
+    condition: "value == 0"
+    severity: medium
+    note: "0 입력 = 응답 안 함"
+
+  # 3. 인원수
+  - col: "p1)R_1_2_2"
+    flag: 인원수_비정상
+    condition: "value < 1 or value > 1_000_000"
+    severity: high
+    note: "1명 미만 또는 100만명 초과"
+
+# ─────────────────────────────────────────────
+# 컬럼 간 관계 이상 (multi-column)
+# ─────────────────────────────────────────────
+
+cross_column_rules:
+  - id: ratio_budget_vs_revenue
+    label: 매출 대비 교육비 비율 비정상
+    expression: "p1)R_1_5_2 / p1)R_1_1_2"
+    require_nonzero: ["p1)R_1_5_2", "p1)R_1_1_2"]
+    upper_threshold: 0.05
+    severity: high
+    note: "비율 5% 초과 = 매출 또는 예산의 단위 오류 (한국 평균 0.05%)"
+
+  - id: budget_exceeds_revenue
+    label: 교육예산 > 매출
+    expression: "p1)R_1_5_2 - p1)R_1_1_2"
+    upper_threshold: 0
+    severity: critical
+    note: "명백한 단위 오류"
+
+  - id: emp_revenue_mismatch
+    label: 인원수 vs 매출 불균형
+    expression: "p1)R_1_1_2 / p1)R_1_2_2"
+    lower_threshold: 10_000_000
+    upper_threshold: 100_000_000_000
+    severity: medium
+    note: "정상 범위 = 인당 매출 1천만~1000억"
+
+  - id: peremp_per_target
+    label: 1인당 교육비 비정상 (교육대상 인원 의심)
+    expression: "p1)R_1_5_2 / p1)R_1_3_2"   # 교육집행 / 교육대상직원수 = 1인당 교육비(원/명)
+    require_nonzero: ["p1)R_1_5_2", "p1)R_1_3_2"]
+    upper_threshold: 10_000_000              # 1천만원/명 초과 (stage7 PEREMP_CEIL 1000만원과 동일)
+    severity: high
+    note: "1인당 교육비 1천만원/명 초과 = 교육대상 인원(R_1_3_2) 과소 입력 의심 (예: 1명)"
+
+# ─────────────────────────────────────────────
+# 응답자 단위 종합 이상
+# ─────────────────────────────────────────────
+
+respondent_rules:
+  - id: many_zeros
+    label: 거시지표 다수 0
+    columns: ["p1)R_1_1_2", "p1)R_1_2_2", "p1)R_1_5_2"]
+    flag_if_zero_count_gte: 2
+    severity: high
+    note: "다수 거시지표 0 = 응답 불성실 의심"

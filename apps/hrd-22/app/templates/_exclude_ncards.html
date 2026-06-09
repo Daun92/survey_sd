@@ -1,0 +1,5 @@
+<div id="ex-ncards" class="cards"{% if oob %} hx-swap-oob="true"{% endif %}>
+  <div class="card"><div class="v">{{ counts.corp_N }}</div><div class="k">기업 모집단(실시간)</div></div>
+  <div class="card"><div class="v">{{ counts.pub_N }}</div><div class="k">공공 모집단(실시간)</div></div>
+  <div class="card"><div class="v">{{ counts.excluded_n }}</div><div class="k">제외 건수</div></div>
+</div>

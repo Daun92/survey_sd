@@ -1,0 +1,21 @@
+{% set c = r.c %}{% set res = r.res %}
+<tr id="rcrow-{{ c.key }}" class="rc-row">
+  <td>{{ c.resp_id }}<br><small>{{ c.company or '' }}</small></td>
+  <td>{{ c.cate_name or '—' }}</td>
+  <td class="act">
+    {% if res is none %}
+      <form hx-post="/reclassify/decide" hx-target="#rcrow-{{ c.key }}" hx-swap="outerHTML">
+        <input type="hidden" name="resp_id" value="{{ c.resp_id }}">
+        <input type="hidden" name="before" value="etc">
+        <select name="after" required>
+          <option value="" selected disabled>업종 선택…</option>
+          {% for code, label in choices %}<option value="{{ code }}">{{ label }}</option>{% endfor %}
+        </select>
+        <button class="primary">재분류</button>
+      </form>
+    {% else %}
+      <span class="done corr">→ {{ res.after_label }}</span>
+    {% endif %}
+  </td>
+</tr>
+{% if oob %}{% include "_reclassify_summary.html" %}{% endif %}

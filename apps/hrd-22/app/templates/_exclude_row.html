@@ -1,0 +1,24 @@
+{% set x = row %}
+<tr id="exrow-{{ x.key }}" class="ex-row">
+  <td>{{ x.resp_id }}</td>
+  <td>{{ x.company or '' }}</td>
+  <td>{{ x.rdiv }}</td>
+  <td>
+    {% if x.excluded %}<span class="badge excl">제외됨</span>
+    {% else %}<span class="badge incl">포함</span>{% endif %}
+    {% if x.reason %}<small> · {{ x.reason }}</small>{% endif %}
+  </td>
+  <td class="act">
+    <form hx-post="/exclude/toggle" hx-target="#exrow-{{ x.key }}" hx-swap="outerHTML">
+      <input type="hidden" name="resp_id" value="{{ x.resp_id }}">
+      {% if x.excluded %}
+        <input type="hidden" name="excluded" value="false">
+        <button>포함 복원</button>
+      {% else %}
+        <input type="hidden" name="excluded" value="true">
+        <button class="warn">제외</button>
+      {% endif %}
+    </form>
+  </td>
+</tr>
+{% if oob %}{% include "_exclude_ncards.html" %}{% endif %}

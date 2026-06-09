@@ -1,0 +1,5 @@
+<div id="rc-summary" class="cards"{% if oob %} hx-swap-oob="true"{% endif %}>
+  <div class="card"><div class="v">{{ summary.total }}</div><div class="k">etc 후보</div></div>
+  <div class="card"><div class="v">{{ summary.pending }}</div><div class="k">미분류</div></div>
+  <div class="card"><div class="v">{{ summary.done }}</div><div class="k">재분류 완료</div></div>
+</div>

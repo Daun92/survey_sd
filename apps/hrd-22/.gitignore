@@ -1,0 +1,31 @@
+# apps/hrd-22 — 코드만 git 추적. 데이터·산출물·자격증명은 원 작업 폴더에만 둔다.
+# (원 작업 폴더: D:\00.26년업무\07.HR실태조사\22회_2026\ — raw/PII/creds/대용량 산출물 보유)
+
+# 파이프라인 단계 산출물 (개인정보·대용량) — 이 레포 사본에서 절대 추적 금지
+0_survey/
+1_raw/
+2_validated/
+3_cleaned/
+4_aggregated/
+5_report/
+dashboard/
+assets/
+reference/
+publish/
+workspace/
+logs/
+_archive/
+
+# 자격증명
+creds/
+
+# 파이썬 잔여물
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# 백업·임시
+*.bak
+*.bak_*
+*.tmp.xlsx
+~$*
