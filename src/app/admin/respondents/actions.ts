@@ -20,9 +20,19 @@ export interface RespondentInput {
   notes?: string;
 }
 
+// respondents.phone 은 숫자만 형태로 저장한다 (T-067).
+// 발송이 SMS 기준이라 전화번호가 사람의 식별 키이고, CSV 임포트·발송 경로가 모두
+// 숫자만으로 조회하기 때문에 하이픈 표기가 섞이면 같은 사람을 못 찾아 중복이 생긴다.
+// DB 에도 unique index respondents_phone_norm_key (fn_cs_norm_phone 기반)가 걸려 있다.
+function normalizePhoneForStore<T extends { phone?: string | null }>(data: T): T {
+  if (!("phone" in data)) return data;
+  const digits = (data.phone ?? "").replace(/[^0-9]/g, "");
+  return { ...data, phone: digits || null };
+}
+
 export async function createRespondent(data: RespondentInput) {
   const supabase = await createClient();
-  const { error } = await supabase.from("respondents").insert(data);
+  const { error } = await supabase.from("respondents").insert(normalizePhoneForStore(data));
   if (error) throw new Error("응답자 추가 실패: " + error.message);
   revalidatePath("/admin/respondents");
   invalidateRespondentPicker();
@@ -32,7 +42,7 @@ export async function updateRespondent(id: string, data: Partial<RespondentInput
   const supabase = await createClient();
   const { error } = await supabase
     .from("respondents")
-    .update({ ...data, updated_at: new Date().toISOString() })
+    .update({ ...normalizePhoneForStore(data), updated_at: new Date().toISOString() })
     .eq("id", id);
   if (error) throw new Error("응답자 수정 실패: " + error.message);
   revalidatePath("/admin/respondents");
