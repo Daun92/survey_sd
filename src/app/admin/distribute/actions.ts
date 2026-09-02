@@ -43,9 +43,15 @@ async function buildCustomerMap(
 
 /**
  * CSV/수동 입력 rows 를 respondents 테이블에 upsert 한다.
- * - 이메일 기준 중복 체크 (있으면 update, 없으면 insert)
+ * - **휴대전화번호 기준 중복 체크** (있으면 update, 없으면 insert). 발송이 SMS 라
+ *   전화번호가 사람의 식별 키다. admin/respondents/actions.ts 와 같은 규칙.
+ * - 전화번호가 없을 때만 이메일로 폴백한다.
  * - customer_id 는 company_name 단일 매칭 시에만 세팅, 아니면 null
  * 반환값: rows 와 동일 순서의 respondent id 배열 (실패한 row 는 null 대신 빈 문자열 제외)
+ *
+ * ※ 2026-09-02(T-067) 이전에는 이메일로 찾아 재사용했다. 이메일은 발송에 쓰이지 않아
+ *   더미·공용 값이 그대로 들어오는데, 그 레코드의 name/phone 을 매번 덮어쓰는 바람에
+ *   서로 다른 27명이 레코드 1건(최상준/SAF@NAVER.COM)을 공유하는 오염이 생겼다.
  */
 async function upsertRespondents(
   supabase: AdminSupabase,
@@ -59,7 +65,33 @@ async function upsertRespondents(
     const customerId = row.company ? customerMap.get(row.company) ?? null : null
     let respondentId: string | null = null
 
-    if (row.email) {
+    // 1순위: 휴대전화번호
+    if (row.phoneNormalized) {
+      const { data: existing } = await supabase
+        .from("respondents")
+        .select("id")
+        .eq("phone", row.phoneNormalized)
+        .limit(1)
+        .maybeSingle()
+
+      if (existing) {
+        respondentId = existing.id
+        await supabase
+          .from("respondents")
+          .update({
+            name: row.name,
+            // 이메일은 비어 있을 때만 채운다 (더미 값이 기존 주소를 덮지 않도록)
+            ...(row.email ? { email: row.email } : {}),
+            // customer_id 는 NULL 을 덮어쓰는 경우에만 세팅 (기존 customer_id 보존)
+            ...(customerId !== null ? { customer_id: customerId } : {}),
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", respondentId)
+      }
+    }
+
+    // 2순위: 전화번호가 없을 때만 이메일 폴백
+    if (!respondentId && !row.phoneNormalized && row.email) {
       const { data: existing } = await supabase
         .from("respondents")
         .select("id")
@@ -73,8 +105,6 @@ async function upsertRespondents(
           .from("respondents")
           .update({
             name: row.name,
-            phone: row.phoneNormalized || null,
-            // customer_id 는 NULL 을 덮어쓰는 경우에만 세팅 (기존 customer_id 보존)
             ...(customerId !== null ? { customer_id: customerId } : {}),
             updated_at: new Date().toISOString(),
           })
