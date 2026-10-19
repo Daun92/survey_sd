@@ -1782,19 +1782,8 @@ class BrisSyncPipeline:
         }).execute()
         sync_id = result.data
         print(f"[sync] 시작 — sync_id: {sync_id}, 기간: {start_date}~{end_date}")
-        # bris.sync_runs 미러링 — /admin 모니터링 패널용.
-        # 실패해도 본 파이프라인은 계속 (격리 테이블).
-        try:
-            run = self.sb.rpc('fn_bris_sync_run_start', {
-                'p_endpoint': 'cs_integrated',
-                'p_window_start': start_date,
-                'p_window_end': end_date,
-                'p_trigger': os.environ.get('BRIS_SYNC_TRIGGER', 'cron'),
-            }).execute()
-            self._sync_run_id = run.data
-        except Exception as e:
-            self._sync_run_id = None
-            print(f"[sync] bris.sync_runs 미러링 시작 실패(무시): {e}")
+        # (2026-07-06 제거) bris.sync_runs 미러링 — 서버측 함수(fn_bris_sync_run_*)가
+        # 배포된 적 없고 읽는 화면도 없는 반쪽 기능이라 삭제. 기록은 cs_sync_logs가 담당.
         return sync_id
 
     def _sync_finish(self, sync_id: str, status: str,
@@ -1815,24 +1804,6 @@ class BrisSyncPipeline:
         }).execute()
         print(f"[sync] 완료 — status: {status}"
               + (f", error: {error_msg}" if error_msg else ""))
-        # bris.sync_runs 미러링 — 모니터링용 종료 업데이트.
-        run_id = getattr(self, '_sync_run_id', None)
-        if run_id:
-            try:
-                upserted = (stats.get('companies', 0) + stats.get('contacts', 0)
-                            + stats.get('projects', 0) + stats.get('courses', 0))
-                norm_status = 'success' if status == 'success' else 'failed'
-                self.sb.rpc('fn_bris_sync_run_finish', {
-                    'p_run_id': run_id,
-                    'p_status': norm_status,
-                    'p_rows_fetched': stats.get('total_records', 0),
-                    'p_rows_inserted': upserted,
-                    'p_rows_skipped': stats.get('quarantined', 0),
-                    'p_error': error_msg,
-                }).execute()
-            except Exception as e:
-                print(f"[sync] bris.sync_runs 미러링 종료 실패(무시): {e}")
-            self._sync_run_id = None
 
     def _post_sync_auto_batch(self, sync_id: str,
                               start_date: str, end_date: str) -> dict:
