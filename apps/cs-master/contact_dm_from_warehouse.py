@@ -13,8 +13,10 @@ BRIS 사업장 페이지의 '등록 담당자 전체' 목록으로, 담당자마
   - dm_is_inactive      = (is_inactive = 'Y')
   - dm_rank_first       = 그 사업장 DM 목록의 가나다 1위 여부
                           (전체 기준 1위 OR 활성 담당자 기준 1위)
+  - dm_log_dates        = 담당자 사업장의 영업일지(sales_log) '만난 사람'(cont1)에
+                          cs_contacts.contact_name 이 기재된 활동일 목록 (T-071, 작성자 무관)
   - warehouse 에 customer_id 미존재 → skip (기존 값 보존)
-  - 4개 값이 모두 현재와 같으면 PATCH 생략
+  - 5개 값이 모두 현재와 같으면 PATCH 생략
 
 실행 (bris-sync venv 사용 — duckdb 의존):
   D:\claude\bris-sync\.venv\Scripts\python.exe contact_dm_from_warehouse.py [--dry-run]
@@ -27,6 +29,7 @@ import argparse
 import datetime
 import json
 import os
+import re
 import sys
 import urllib.parse
 import urllib.request
@@ -114,9 +117,10 @@ def load_warehouse_dm():
         if active:
             first_ids.add(str(active[0][0]))
 
-    out = {}
-    for cid, _place, _name, visit, am, inactive in rows:
+    out, places = {}, {}
+    for cid, place, _name, visit, am, inactive in rows:
         cid = str(cid)
+        places.setdefault(cid, set()).add(place)
         prev = out.get(cid)
         cur = {
             'dm_last_visit_date': _norm_date(visit),
@@ -127,7 +131,43 @@ def load_warehouse_dm():
         # customer_id 는 사실상 고유하나 중복 시 최근 방문일이 늦은 쪽을 채택
         if prev is None or (cur['dm_last_visit_date'] or '') > (prev['dm_last_visit_date'] or ''):
             out[cid] = cur
+    return out, places
+
+
+def load_sales_log_by_place():
+    """place_id → [(활동일 ISO, cont1)]. '만난 사람'(cont1) 이 기재된 영업일지만."""
+    import duckdb
+    con = duckdb.connect(WAREHOUSE_PATH, read_only=True)
+    rows = con.execute("""
+        SELECT PLACE_ID, CAST(STARTDATE AS DATE), cont1
+        FROM sales_log
+        WHERE STARTDATE IS NOT NULL AND cont1 IS NOT NULL AND trim(cont1) <> ''
+    """).fetchall()
+    con.close()
+    out = {}
+    for place, day, cont1 in rows:
+        out.setdefault(place, []).append((day.isoformat(), cont1))
     return out
+
+
+# cont1 은 '황주연 과장, 김효섭 팀장' · '정용호(염슬기책임/이찬민매니저)' 같은 자유 텍스트.
+# 이름 앞은 한글이 아니어야 하고, 뒤는 한글이 아니거나 직책이 바로 붙어야 한다 (김진 ≠ 김진주).
+_TITLES = ('과장|대리|팀장|주임|주무관|차장|부장|매니저|프로|사원|선임|책임|수석|실장|본부장|원장|'
+           '센터장|파트장|님|담당|교수|행정원|검사원|연구원|국장|소장|이사|상무|전무')
+
+
+def log_dates(name, place_ids, logs_by_place):
+    """담당자 사업장들의 영업일지 중 cont1 에 이름이 기재된 활동일(중복 제거, 오름차순)."""
+    name = (name or '').strip()
+    if len(name) < 2:
+        return []
+    rx = re.compile(r'(?<![가-힣])' + re.escape(name) + r'(?:(?![가-힣])|(?=' + _TITLES + r'))')
+    days = set()
+    for p in place_ids:
+        for day, cont1 in logs_by_place.get(p, ()):
+            if rx.search(cont1):
+                days.add(day)
+    return sorted(days)
 
 
 def main():
@@ -136,7 +176,8 @@ def main():
     args = ap.parse_args()
 
     url, key = _load_env()
-    dm = load_warehouse_dm()
+    dm, dm_places = load_warehouse_dm()
+    logs_by_place = load_sales_log_by_place()
     print(f'[dm-sync] warehouse 담당자 {len(dm)}건 '
           f'(방문일 보유 {sum(1 for v in dm.values() if v["dm_last_visit_date"])}건, '
           f'비활성 {sum(1 for v in dm.values() if v["dm_is_inactive"])}건)')
@@ -144,11 +185,12 @@ def main():
     contacts = _rest(url, key, 'GET',
                      '/rest/v1/cs_contacts'
                      '?select=id,customer_id,contact_name,dm_last_visit_date,'
-                     'dm_last_visit_am,dm_is_inactive,dm_rank_first&limit=5000')
+                     'dm_last_visit_am,dm_is_inactive,dm_rank_first,dm_log_dates&limit=5000')
     print(f'[dm-sync] cs_contacts {len(contacts)}건')
 
-    fields = ('dm_last_visit_date', 'dm_last_visit_am', 'dm_is_inactive', 'dm_rank_first')
-    updated, unchanged, unmatched, no_cid = 0, 0, 0, 0
+    fields = ('dm_last_visit_date', 'dm_last_visit_am', 'dm_is_inactive', 'dm_rank_first',
+              'dm_log_dates')
+    updated, unchanged, unmatched, no_cid, with_log = 0, 0, 0, 0, 0
     for c in contacts:
         cid = c.get('customer_id')
         if not cid:
@@ -158,6 +200,11 @@ def main():
         if desired is None:
             unmatched += 1
             continue
+        desired = dict(desired)
+        desired['dm_log_dates'] = log_dates(c.get('contact_name'), dm_places.get(str(cid), ()),
+                                            logs_by_place)
+        if desired['dm_log_dates']:
+            with_log += 1
         if all(c.get(f) == desired[f] for f in fields):
             unchanged += 1
             continue
@@ -175,7 +222,7 @@ def main():
 
     tag = ' (dry-run)' if args.dry_run else ''
     print(f'[dm-sync] 완료{tag} — 갱신 {updated}, 동일 {unchanged}, '
-          f'미매칭 skip {unmatched}, customer_id 없음 {no_cid}')
+          f'미매칭 skip {unmatched}, customer_id 없음 {no_cid}, 영업일지 기재 {with_log}')
 
 
 if __name__ == '__main__':
