@@ -2,6 +2,8 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath, updateTag } from "next/cache";
+import { pickSamePersonByEmail } from "@/lib/respondents/match-by-email";
+import { normPhone, phoneLookupKeys } from "@/lib/respondents/phone-key";
 
 // distribute 페이지의 응답자 picker 캐시 무효화 헬퍼.
 // respondents 가 추가/수정/삭제될 때 호출해 30초 캐시를 즉시 갱신한다.
@@ -113,7 +115,7 @@ export interface BulkImportResult {
 
 /**
  * CSV 일괄 업로드: 휴대전화(digits) 기반 upsert.
- * - 전화번호 없는 row 는 이메일로 fallback dedup. 둘 다 없으면 insert (dedup 불가).
+ * - 전화번호 없는 row 는 이메일+이름이 같을 때만 fallback dedup (이메일만 같으면 새로 insert). 둘 다 없으면 insert.
  * - 이름만 있는 row 는 skipped.
  * - company 이름이 customers.company_name 에 정확히 1건 매칭되면 customer_id 자동 세팅.
  */
@@ -148,14 +150,15 @@ export async function bulkImportRespondents(rows: BulkRow[]): Promise<BulkImport
       continue;
     }
     const customerId = row.company ? customerMap.get(row.company) ?? null : null;
-    const phone = row.phone?.replace(/[^0-9]/g, "") || null;
+    // DB fn_cs_norm_phone 과 같은 숫자 키 — 하이픈으로 저장된 같은 번호도 찾는다 (T-073)
+    const phone = normPhone(row.phone);
 
     // 1) 전화번호 기반 dedup (주 키)
     if (phone) {
       const { data: existing } = await supabase
         .from("respondents")
         .select("id, email")
-        .eq("phone", phone)
+        .in("phone", phoneLookupKeys(row.phone))
         .limit(1)
         .maybeSingle();
 
@@ -176,19 +179,20 @@ export async function bulkImportRespondents(rows: BulkRow[]): Promise<BulkImport
         continue;
       }
     } else if (row.email) {
-      // 2) 전화 없으면 이메일 fallback
-      const { data: existing } = await supabase
+      // 2) 전화 없으면 이메일 fallback — 이름까지 같은 응답자만 재사용 (T-073, distribute/actions.ts 와 같은 규칙)
+      const { data: candidates } = await supabase
         .from("respondents")
-        .select("id")
+        .select("id, name")
         .eq("email", row.email)
-        .limit(1)
-        .maybeSingle();
+        .limit(20);
+
+      const sameId = pickSamePersonByEmail(candidates ?? [], row.name);
+      const existing = sameId ? { id: sameId } : null;
 
       if (existing) {
         const { error } = await supabase
           .from("respondents")
           .update({
-            name: row.name,
             department: row.department ?? null,
             position: row.position ?? null,
             ...(customerId !== null ? { customer_id: customerId } : {}),

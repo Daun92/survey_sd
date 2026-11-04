@@ -2,6 +2,8 @@
 
 import { createAdminClient } from "@/lib/supabase/admin"
 import { createBatchSchema, type CreateBatchInput } from "@/lib/validations/distribution"
+import { pickSamePersonByEmail } from "@/lib/respondents/match-by-email"
+import { normPhone, phoneLookupKeys } from "@/lib/respondents/phone-key"
 
 interface DistributionResult {
   name: string
@@ -45,7 +47,7 @@ async function buildCustomerMap(
  * CSV/수동 입력 rows 를 respondents 테이블에 upsert 한다.
  * - **휴대전화번호 기준 중복 체크** (있으면 update, 없으면 insert). 발송이 SMS 라
  *   전화번호가 사람의 식별 키다. admin/respondents/actions.ts 와 같은 규칙.
- * - 전화번호가 없을 때만 이메일로 폴백한다.
+ * - 전화번호가 없을 때만 이메일로 폴백한다. 이메일이 같아도 이름이 다르면 새 응답자로 만든다(T-073).
  * - customer_id 는 company_name 단일 매칭 시에만 세팅, 아니면 null
  * 반환값: rows 와 동일 순서의 respondent id 배열 (실패한 row 는 null 대신 빈 문자열 제외)
  *
@@ -64,13 +66,16 @@ async function upsertRespondents(
   for (const row of rows) {
     const customerId = row.company ? customerMap.get(row.company) ?? null : null
     let respondentId: string | null = null
+    // 저장·조회는 DB fn_cs_norm_phone 과 같은 숫자 키로 (T-073). 원문('010-2230-5532')으로 찾으면
+    // 숫자만으로 저장된 같은 번호를 못 찾고, 새로 넣다가 unique index 에 막혀 respondent_id 가 빈다.
+    const phoneKey = normPhone(row.phoneNormalized)
 
     // 1순위: 휴대전화번호
-    if (row.phoneNormalized) {
+    if (phoneKey) {
       const { data: existing } = await supabase
         .from("respondents")
         .select("id")
-        .eq("phone", row.phoneNormalized)
+        .in("phone", phoneLookupKeys(row.phoneNormalized))
         .limit(1)
         .maybeSingle()
 
@@ -90,24 +95,21 @@ async function upsertRespondents(
       }
     }
 
-    // 2순위: 전화번호가 없을 때만 이메일 폴백
-    if (!respondentId && !row.phoneNormalized && row.email) {
-      const { data: existing } = await supabase
+    // 2순위: 전화번호가 없을 때만 이메일 폴백 — 이름까지 같은 응답자만 재사용 (T-073)
+    // 이메일만 같으면 다른 사람일 수 있다(공용·오기입). 예전처럼 첫 후보를 재사용하며 name 을 덮으면
+    // 그 사람 기록이 오염된다(2026-10-06 김진주 → 박소현 번호 기록). 이름이 다르면 새 응답자를 만든다.
+    if (!respondentId && !phoneKey && row.email) {
+      const { data: candidates } = await supabase
         .from("respondents")
-        .select("id")
+        .select("id, name")
         .eq("email", row.email)
-        .limit(1)
-        .maybeSingle()
+        .limit(20)
 
-      if (existing) {
-        respondentId = existing.id
+      respondentId = pickSamePersonByEmail(candidates ?? [], row.name)
+      if (respondentId && customerId !== null) {
         await supabase
           .from("respondents")
-          .update({
-            name: row.name,
-            ...(customerId !== null ? { customer_id: customerId } : {}),
-            updated_at: new Date().toISOString(),
-          })
+          .update({ customer_id: customerId, updated_at: new Date().toISOString() })
           .eq("id", respondentId)
       }
     }
@@ -118,7 +120,7 @@ async function upsertRespondents(
         .insert({
           name: row.name,
           email: row.email || null,
-          phone: row.phoneNormalized || null,
+          phone: phoneKey,
           customer_id: customerId,
         })
         .select("id")
