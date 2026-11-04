@@ -14,15 +14,37 @@ export interface ParsedRow {
   phoneNormalized: string
 }
 
-const HEADER_MAP: Record<string, keyof Pick<ParsedRow, 'company' | 'project' | 'course' | 'name' | 'email' | 'phone' | 'am' | 'team'>> = {
+const HEADER_MAP: Record<string, keyof Pick<ParsedRow, 'company' | 'project' | 'course' | 'name' | 'email' | 'am' | 'team'>> = {
   '회사': 'company',
   '프로젝트명': 'project',
   '과정(차수)': 'course',
   '담당자': 'name',
   '이메일': 'email',
-  '전화': 'phone',
   'AM': 'am',
   '수행팀': 'team',
+}
+
+// 전화번호 열 — 발송이 SMS 라 휴대전화 열을 먼저 보고, 그 행이 비어 있으면 일반 열로 채운다.
+// T-073: 대상자관리 📥 대상자 CSV 의 번호 열 이름이 '휴대' 인데 '전화' 만 인식해서
+// 2026-09-30·10-06 업로드 23건의 번호가 통째로 빠졌다 (→ 설문이력 판정 누락).
+const MOBILE_PHONE_HEADERS = ['휴대', '휴대전화', '휴대폰', '핸드폰']
+const OTHER_PHONE_HEADERS = ['전화', '전화번호', '연락처']
+
+/** 경고 문구에 보여 줄 인식 가능한 전화번호 열 이름 */
+export const PHONE_HEADER_NAMES = ['전화', '휴대', '휴대전화', '연락처']
+
+export interface PhoneWarning {
+  /** all: 모든 행에 번호 없음(열 이름 문제일 가능성) · some: 일부 행 · none: 없음 */
+  level: 'all' | 'some' | 'none'
+  missing: number
+  total: number
+}
+
+/** 번호가 빠진 행 집계 — 번호 없이 만든 발송은 문자 발송이 안 되고 설문이력 판정에서 빠진다 */
+export function getPhoneWarning(rows: ParsedRow[]): PhoneWarning {
+  const missing = rows.filter((r) => !r.phoneNormalized).length
+  const level = missing === 0 ? 'none' : missing === rows.length ? 'all' : 'some'
+  return { level, missing, total: rows.length }
 }
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
@@ -93,9 +115,15 @@ export function decodeCSVBuffer(buffer: ArrayBuffer): string {
 function parseRowsFromGrid(headerRow: string[], dataRows: string[][]): ParsedRow[] {
   const columnIndices: Record<string, number> = {}
 
+  let mobilePhoneIdx: number | undefined
+  let otherPhoneIdx: number | undefined
+
   headerRow.forEach((header, idx) => {
-    const key = HEADER_MAP[header.trim()]
+    const h = header.trim()
+    const key = HEADER_MAP[h]
     if (key) columnIndices[key] = idx
+    if (mobilePhoneIdx === undefined && MOBILE_PHONE_HEADERS.includes(h)) mobilePhoneIdx = idx
+    if (otherPhoneIdx === undefined && OTHER_PHONE_HEADERS.includes(h)) otherPhoneIdx = idx
   })
 
   const rows: ParsedRow[] = []
@@ -107,9 +135,11 @@ function parseRowsFromGrid(headerRow: string[], dataRows: string[][]): ParsedRow
       return idx !== undefined ? (fields[idx] ?? '').trim() : ''
     }
 
+    const cell = (idx: number | undefined) => (idx !== undefined ? (fields[idx] ?? '').trim() : '')
+
     const name = get('name')
     const rawEmail = get('email')
-    const rawPhone = get('phone')
+    const rawPhone = cell(mobilePhoneIdx) || cell(otherPhoneIdx)
 
     if (!name && !rawEmail) continue
 

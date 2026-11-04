@@ -14,6 +14,7 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 import { parseDistributionCsv, parseDistributionXlsx, decodeCSVBuffer, type ParsedRow } from '@/lib/csv/parse-distribution-csv'
+import { PhoneWarningBanner } from './phone-warning-banner'
 import { createDistributionBatch, addToDistributionBatch, getDistributions, deleteDistributionBatch, updateBatchLabel } from './actions'
 import { resendDistributionEmail, resendBatchEmails } from './email-actions'
 import { resendDistributionSms, resendBatchSms } from './sms-actions'
@@ -673,6 +674,7 @@ export default function DistributeTabs({
                   )}
                   <div className="text-sm text-stone-400">전체 {parsedRows.length}건</div>
                 </div>
+                <PhoneWarningBanner rows={parsedRows} />
                 <div className="overflow-x-auto border border-stone-200 rounded-lg">
                   <table className="w-full text-sm">
                     <thead>
@@ -840,6 +842,7 @@ export default function DistributeTabs({
                             <span className="text-rose-500">제외 {addMoreParsedRows.filter((r) => !r.emailValid).length}건</span>
                           )}
                         </div>
+                        <PhoneWarningBanner rows={addMoreParsedRows} />
                         <div className="overflow-x-auto border border-stone-200 rounded-lg bg-white max-h-40 overflow-y-auto">
                           <table className="w-full text-xs">
                             <thead>
